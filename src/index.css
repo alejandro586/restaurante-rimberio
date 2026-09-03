@@ -5010,3 +5010,342 @@ input[type="checkbox"] {
     word-break: break-all;
   }
 }
+
+
+/* ==========================================================
+   SIDEBAR - CURSOS Y MODULOS RIMBERIO
+   ========================================================== */
+
+/*
+ * La barra ahora contiene:
+ *
+ * Curso
+ * ├── Modulo
+ * ├── Modulo
+ * └── Modulo
+ *
+ * Por eso los enlaces necesitan volver
+ * a comportarse como bloques completos.
+ */
+
+.sidebar {
+  width: 260px;
+  min-width: 260px;
+  padding: 26px 16px;
+}
+
+
+/* ==========================================================
+   LOGO
+   ========================================================== */
+
+.sidebar-brand {
+  padding: 0 10px 30px;
+  gap: 11px;
+}
+
+.sidebar-brand .brand-logo {
+  width: 38px;
+  height: 38px;
+}
+
+.sidebar-brand span {
+  font-size: 20px;
+  letter-spacing: 0.02em;
+}
+
+
+/* ==========================================================
+   CONTENEDOR DE NAVEGACION
+   ========================================================== */
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  flex: 1;
+
+  width: 100%;
+
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  padding-right: 2px;
+}
+
+
+/*
+ * Cada DIV directo representa
+ * un curso.
+ */
+.sidebar-nav > div {
+  width: 100%;
+  margin-bottom: 14px !important;
+}
+
+
+/* ==========================================================
+   NOMBRE DEL CURSO
+   ========================================================== */
+
+/*
+ * En Layout.jsx el nombre del curso
+ * es el primer DIV dentro del grupo.
+ */
+.sidebar-nav > div > div:first-child {
+  width: 100%;
+
+  padding: 7px 12px 9px !important;
+
+  margin-bottom: 3px;
+
+  color: rgba(247, 241, 230, 0.55);
+
+  font-size: 11px !important;
+  font-weight: 700 !important;
+
+  letter-spacing: 0.11em !important;
+
+  text-transform: uppercase;
+
+  line-height: 1.3;
+}
+
+
+/* ==========================================================
+   MODULOS
+   ========================================================== */
+
+.sidebar-nav > div > a {
+  display: flex;
+
+  width: 100%;
+
+  min-height: 42px;
+
+  align-items: center;
+
+  padding: 10px 12px;
+
+  margin-bottom: 4px;
+
+  border-radius: 9px;
+
+  color: rgba(247, 241, 230, 0.76);
+
+  text-decoration: none;
+
+  font-size: 13px;
+  font-weight: 500;
+
+  line-height: 1.25;
+
+  white-space: normal;
+
+  word-break: normal;
+
+  transition:
+    background 0.16s ease,
+    color 0.16s ease,
+    transform 0.16s ease;
+}
+
+
+/* ==========================================================
+   HOVER
+   ========================================================== */
+
+.sidebar-nav > div > a:hover {
+  background: rgba(255, 255, 255, 0.08);
+
+  color: #ffffff;
+
+  transform: translateX(2px);
+}
+
+
+/* ==========================================================
+   MODULO ACTIVO
+   ========================================================== */
+
+.sidebar-nav > div > a.active {
+  position: relative;
+
+  background: rgba(193, 84, 31, 0.95);
+
+  color: #ffffff;
+
+  font-weight: 600;
+
+  box-shadow:
+    0 4px 14px
+    rgba(0, 0, 0, 0.12);
+}
+
+
+/*
+ * Pequeño indicador lateral.
+ */
+.sidebar-nav > div > a.active::before {
+  content: "";
+
+  position: absolute;
+
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+
+  width: 3px;
+
+  border-radius: 0 4px 4px 0;
+
+  background: rgba(255, 255, 255, 0.85);
+}
+
+
+/* ==========================================================
+   SCROLL DEL SIDEBAR
+   ========================================================== */
+
+.sidebar-nav {
+  scrollbar-width: thin;
+
+  scrollbar-color:
+    rgba(255, 255, 255, 0.16)
+    transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+
+  border-radius: 20px;
+}
+
+
+/* ==========================================================
+   USUARIO
+   ========================================================== */
+
+.sidebar-foot {
+  margin-top: 10px;
+
+  padding-top: 16px;
+}
+
+.sidebar-user {
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+
+/* ==========================================================
+   CONTENIDO PRINCIPAL
+   ========================================================== */
+
+.main {
+  width: calc(100% - 260px);
+
+  padding: 28px 34px;
+}
+
+
+/* ==========================================================
+   TABLET
+   ========================================================== */
+
+@media (max-width: 1100px) {
+
+  .sidebar {
+    width: 230px;
+    min-width: 230px;
+  }
+
+  .main {
+    width: calc(100% - 230px);
+
+    padding:
+      24px
+      22px;
+  }
+
+}
+
+
+/* ==========================================================
+   MOVIL
+   ========================================================== */
+
+@media (max-width: 900px) {
+
+  .sidebar {
+    width: 86px;
+    min-width: 86px;
+
+    padding:
+      20px
+      8px;
+  }
+
+
+  .main {
+    width: calc(100% - 86px);
+
+    padding:
+      20px
+      14px;
+  }
+
+
+  /*
+   * Ocultamos el nombre BIG DATA
+   * cuando la barra esta compacta.
+   */
+  .sidebar-nav > div > div:first-child {
+    display: none;
+  }
+
+
+  .sidebar-nav > div {
+    margin-bottom:
+      5px !important;
+  }
+
+
+  .sidebar-nav > div > a {
+    min-height: 42px;
+
+    padding:
+      9px
+      5px;
+
+    justify-content: center;
+
+    text-align: center;
+
+    font-size: 10px;
+
+    line-height: 1.15;
+
+    border-radius: 8px;
+  }
+
+
+  .sidebar-nav > div > a:hover {
+    transform: none;
+  }
+
+
+  .sidebar-nav > div > a.active::before {
+    display: none;
+  }
+
+}
