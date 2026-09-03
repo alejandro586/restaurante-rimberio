@@ -1,16 +1,15 @@
 import {
-  Routes,
+  BrowserRouter,
+  Navigate,
+  Outlet,
   Route,
-  Navigate
+  Routes
 } from "react-router-dom"
 
 import {
-  isLogged,
-  esAdmin,
-  esSupervisor,
-  esTrabajador,
-  esInvitado,
-  inicioSegunRol
+  getRol,
+  inicioSegunRol,
+  isLogged
 } from "./api"
 
 import Layout from "./components/Layout"
@@ -20,72 +19,61 @@ import Register from "./pages/Register"
 
 import Importar from "./pages/Importar"
 import DatosEmpresa from "./pages/DatosEmpresa"
-
 import Archivos from "./pages/Archivos"
 import Comparar from "./pages/Comparar"
 
 import Proyectos from "./pages/Proyectos"
 import ProyectoDetalle from "./pages/ProyectoDetalle"
 
+import AceptarInvitacion from "./pages/AceptarInvitacion"
+
+
+/* ==========================================================
+   RUTA PRIVADA
+   ========================================================== */
+
 /**
- * Comprueba si el usuario tiene
- * alguno de los roles permitidos.
+ * Comprueba si existe una sesión.
+ *
+ * Si no existe:
+ * → /login
+ *
+ * Si existe:
+ * → permite continuar.
  */
-const tieneRol = (roles = []) => {
-  if (!roles || roles.length === 0) {
-    return true
-  }
-
+const RutaPrivada = () => {
   if (
-    roles.includes("admin") &&
-    esAdmin()
+    !isLogged()
   ) {
-    return true
+    return (
+      <Navigate
+        to="/login"
+        replace
+      />
+    )
   }
 
-  if (
-    roles.includes("supervisor") &&
-    esSupervisor()
-  ) {
-    return true
-  }
-
-  if (
-    roles.includes("trabajador") &&
-    esTrabajador()
-  ) {
-    return true
-  }
-
-  if (
-    roles.includes("invitado") &&
-    esInvitado()
-  ) {
-    return true
-  }
-
-  return false
+  return <Outlet />
 }
 
+
+/* ==========================================================
+   CONTROL DE ROLES
+   ========================================================== */
+
 /**
- * Ruta privada.
- *
- * Primero comprueba si existe
- * una sesion.
- *
- * Si la ruta tiene roles
- * especificos, tambien valida
- * que el usuario tenga uno
- * de ellos.
- *
- * El backend vuelve a validar
- * todos los permisos.
+ * Protege páginas según el rol general
+ * del usuario dentro de RIMBERIO.
  */
-const Privada = ({
-  roles = [],
-  children
+const RutaRol = ({
+  roles
 }) => {
-  if (!isLogged()) {
+  const rol =
+    getRol()
+
+  if (
+    !isLogged()
+  ) {
     return (
       <Navigate
         to="/login"
@@ -95,181 +83,243 @@ const Privada = ({
   }
 
   if (
-    roles.length > 0 &&
-    !tieneRol(roles)
+    !roles.includes(
+      rol
+    )
   ) {
     return (
       <Navigate
-        to={inicioSegunRol()}
+        to={
+          inicioSegunRol()
+        }
+        replace
+      />
+    )
+  }
+
+  return <Outlet />
+}
+
+
+/* ==========================================================
+   REDIRECCION INICIAL
+   ========================================================== */
+
+const Inicio = () => {
+  if (
+    !isLogged()
+  ) {
+    return (
+      <Navigate
+        to="/login"
         replace
       />
     )
   }
 
   return (
-    <Layout>
-      {children}
-    </Layout>
+    <Navigate
+      to={
+        inicioSegunRol()
+      }
+      replace
+    />
   )
 }
 
-/**
- * Ruta publica.
- *
- * Login y registro solamente
- * aparecen cuando no existe
- * una sesion activa.
- */
-const Publica = ({
-  children
-}) => {
-  if (isLogged()) {
-    return (
-      <Navigate
-        to={inicioSegunRol()}
-        replace
-      />
-    )
-  }
 
-  return children
-}
+/* ==========================================================
+   APP
+   ========================================================== */
 
-const App = () => {
+function App() {
   return (
-    <Routes>
-      {/* ====================== */}
-      {/* RUTAS PUBLICAS */}
-      {/* ====================== */}
+    <BrowserRouter>
 
-      <Route
-        path="/login"
-        element={
-          <Publica>
+      <Routes>
+
+        {/* ==================================================
+            INICIO
+            ================================================== */}
+
+        <Route
+          path="/"
+          element={
+            <Inicio />
+          }
+        />
+
+
+        {/* ==================================================
+            RUTAS PUBLICAS
+            ================================================== */}
+
+        <Route
+          path="/login"
+          element={
             <Login />
-          </Publica>
-        }
-      />
+          }
+        />
 
-      <Route
-        path="/registro"
-        element={
-          <Publica>
+        <Route
+          path="/registro"
+          element={
             <Register />
-          </Publica>
-        }
-      />
+          }
+        />
 
-      {/* ====================== */}
-      {/* PROYECTOS */}
-      {/* ====================== */}
 
-      {/*
-        Todos los usuarios
-        autenticados pueden entrar
-        al modulo Proyectos.
+        {/* ==================================================
+            INVITACIONES
+            ==================================================
 
-        El backend decide cuales
-        proyectos puede ver cada
-        usuario.
-      */}
+            IMPORTANTE:
 
-      <Route
-        path="/proyectos"
-        element={
-          <Privada>
-            <Proyectos />
-          </Privada>
-        }
-      />
+            Esta ruta debe ser PUBLICA.
 
-      <Route
-        path="/proyectos/:id"
-        element={
-          <Privada>
-            <ProyectoDetalle />
-          </Privada>
-        }
-      />
+            Una persona puede abrir el correo
+            sin tener todavía una cuenta en
+            RIMBERIO.
 
-      {/* ====================== */}
-      {/* TRABAJADOR */}
-      {/* ====================== */}
+            La pantalla AceptarInvitacion se
+            encargará de pedir login/registro
+            cuando sea necesario.
+        */}
 
-      <Route
-        path="/importar"
-        element={
-          <Privada
-            roles={[
-              "trabajador"
-            ]}
-          >
-            <Importar />
-          </Privada>
-        }
-      />
+        <Route
+          path="/invitaciones/aceptar"
+          element={
+            <AceptarInvitacion />
+          }
+        />
 
-      <Route
-        path="/datos-empresa"
-        element={
-          <Privada
-            roles={[
-              "trabajador"
-            ]}
-          >
-            <DatosEmpresa />
-          </Privada>
-        }
-      />
 
-      {/* ====================== */}
-      {/* ADMINISTRADOR */}
-      {/* ====================== */}
+        {/* ==================================================
+            SISTEMA PRIVADO
+            ================================================== */}
 
-      <Route
-        path="/archivos"
-        element={
-          <Privada
-            roles={[
-              "admin"
-            ]}
-          >
-            <Archivos />
-          </Privada>
-        }
-      />
+        <Route
+          element={
+            <RutaPrivada />
+          }
+        >
 
-      <Route
-        path="/comparar"
-        element={
-          <Privada
-            roles={[
-              "admin"
-            ]}
-          >
-            <Comparar />
-          </Privada>
-        }
-      />
-
-      {/* ====================== */}
-      {/* RUTA DESCONOCIDA */}
-      {/* ====================== */}
-
-      <Route
-        path="*"
-        element={
-          <Navigate
-            to={
-              isLogged()
-                ? inicioSegunRol()
-                : "/login"
+          <Route
+            element={
+              <Layout />
             }
-            replace
-          />
-        }
-      />
-    </Routes>
+          >
+
+            {/* ==============================================
+                PROYECTOS
+                ==============================================
+
+                Todos los usuarios del sistema pueden entrar
+                a Proyectos.
+
+                El backend determina cuáles proyectos puede
+                visualizar realmente cada usuario.
+            */}
+
+            <Route
+              path="/proyectos"
+              element={
+                <Proyectos />
+              }
+            />
+
+            <Route
+              path="/proyectos/:id"
+              element={
+                <ProyectoDetalle />
+              }
+            />
+
+
+            {/* ==============================================
+                TRABAJADOR
+                ============================================== */}
+
+            <Route
+              element={
+                <RutaRol
+                  roles={[
+                    "admin",
+                    "trabajador"
+                  ]}
+                />
+              }
+            >
+
+              <Route
+                path="/importar"
+                element={
+                  <Importar />
+                }
+              />
+
+              <Route
+                path="/datos-empresa"
+                element={
+                  <DatosEmpresa />
+                }
+              />
+
+            </Route>
+
+
+            {/* ==============================================
+                ADMINISTRADOR
+                ============================================== */}
+
+            <Route
+              element={
+                <RutaRol
+                  roles={[
+                    "admin"
+                  ]}
+                />
+              }
+            >
+
+              <Route
+                path="/archivos"
+                element={
+                  <Archivos />
+                }
+              />
+
+              <Route
+                path="/comparar"
+                element={
+                  <Comparar />
+                }
+              />
+
+            </Route>
+
+          </Route>
+
+        </Route>
+
+
+        {/* ==================================================
+            404
+            ================================================== */}
+
+        <Route
+          path="*"
+          element={
+            <Navigate
+              to="/"
+              replace
+            />
+          }
+        />
+
+      </Routes>
+
+    </BrowserRouter>
   )
 }
 
