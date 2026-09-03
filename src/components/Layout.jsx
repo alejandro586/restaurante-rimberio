@@ -23,27 +23,22 @@ import Confirm from "./Confirm"
 
 
 /* ==========================================================
-   RUTAS DE MODULOS YA DISPONIBLES
+   RUTAS REALES DE LOS MODULOS
    ========================================================== */
 
 /*
- * Solamente colocamos rutas que YA existen
- * realmente dentro del frontend.
+ * NO creamos nuevas paginas.
  *
- * Los otros modulos se iran conectando
- * en los siguientes pasos.
+ * Cada modulo apunta a un componente
+ * que YA existe en RIMBERIO.
  */
 const RUTAS_MODULOS = {
-  "big_data.importar": "/importar",
-
-  /*
-   * DatosEmpresa.jsx actualmente contiene:
-   * - tablas
-   * - agregar columnas
-   * - crear tablas
-   * - modificar estructura
-   */
-  "big_data.estructura": "/datos-empresa"
+  "big_data.importar": "/big-data/importar",
+  "big_data.datasets": "/big-data/datasets",
+  "big_data.analisis": "/big-data/analisis",
+  "big_data.comparar": "/big-data/comparar",
+  "big_data.estructura": "/big-data/estructura",
+  "big_data.graficos": "/big-data/graficos"
 }
 
 
@@ -68,29 +63,10 @@ const MENU_ADMIN = [
 
 
 /* ==========================================================
-   NORMALIZAR RESPUESTA DE /courses/me
+   NORMALIZAR RESPUESTA
    ========================================================== */
 
-const obtenerCursosRespuesta = (
-  respuesta
-) => {
-  /*
-   * Dejamos soporte para ambas formas:
-   *
-   * { cursos: [...] }
-   *
-   * o:
-   *
-   * {
-   *   permisos: {
-   *     cursos: [...]
-   *   }
-   * }
-   *
-   * Así evitamos problemas si el controlador
-   * devuelve uno u otro formato.
-   */
-
+const obtenerCursos = (respuesta) => {
   if (
     Array.isArray(
       respuesta?.cursos
@@ -138,30 +114,26 @@ const Layout = ({
 
 
   const [
-    cargandoCursos,
-    setCargandoCursos
+    cargando,
+    setCargando
   ] = useState(
     !esAdmin()
   )
 
 
   const [
-    errorCursos,
-    setErrorCursos
+    error,
+    setError
   ] = useState("")
 
 
   /* ========================================================
-     CARGAR PERMISOS DEL USUARIO
+     CARGAR PERMISOS
      ======================================================== */
 
   useEffect(() => {
-    /*
-     * El administrador no necesita
-     * permisos individuales.
-     */
     if (esAdmin()) {
-      setCargandoCursos(false)
+      setCargando(false)
       return
     }
 
@@ -170,8 +142,8 @@ const Layout = ({
 
 
     const cargar = async () => {
-      setCargandoCursos(true)
-      setErrorCursos("")
+      setCargando(true)
+      setError("")
 
 
       try {
@@ -185,7 +157,7 @@ const Layout = ({
 
 
         setCursos(
-          obtenerCursosRespuesta(
+          obtenerCursos(
             respuesta
           )
         )
@@ -198,13 +170,13 @@ const Layout = ({
 
         setCursos([])
 
-        setErrorCursos(
+        setError(
           getMessage(error)
         )
 
       } finally {
         if (activo) {
-          setCargandoCursos(false)
+          setCargando(false)
         }
       }
     }
@@ -220,7 +192,7 @@ const Layout = ({
 
 
   /* ========================================================
-     ORDENAR CURSOS
+     ORDENAR CURSOS Y MODULOS
      ======================================================== */
 
   const cursosOrdenados =
@@ -252,7 +224,7 @@ const Layout = ({
 
 
   /* ========================================================
-     CERRAR SESION
+     LOGOUT
      ======================================================== */
 
   const logout = () => {
@@ -267,10 +239,6 @@ const Layout = ({
   }
 
 
-  /* ========================================================
-     INTERFAZ
-     ======================================================== */
-
   return (
     <div className="layout">
 
@@ -281,7 +249,7 @@ const Layout = ({
       <aside className="sidebar">
 
         {/* ==================================================
-            MARCA
+            LOGO
             ================================================== */}
 
         <div className="sidebar-brand">
@@ -298,10 +266,11 @@ const Layout = ({
 
 
         {/* ==================================================
-            MENU ADMINISTRADOR
+            ADMINISTRADOR
             ================================================== */}
 
         {esAdmin() ? (
+
           <nav
             className="sidebar-nav"
             aria-label="Navegación principal"
@@ -316,7 +285,7 @@ const Layout = ({
                   }) =>
                     isActive
                       ? "active"
-                      : undefined
+                      : ""
                   }
                 >
                   {enlace.label}
@@ -324,38 +293,38 @@ const Layout = ({
               )
             )}
           </nav>
+
         ) : (
 
           /* ==================================================
-             MENU DINAMICO DEL USUARIO
+             USUARIO
              ================================================== */
 
           <nav
-            className="sidebar-nav sidebar-courses"
-            aria-label="Mis cursos"
+            className="sidebar-nav"
+            aria-label="Cursos y módulos"
           >
 
-            {/* ================================================
-                CARGANDO
-                ================================================ */}
-
-            {cargandoCursos && (
+            {cargando && (
               <div
-                className="sidebar-status"
+                style={{
+                  padding: "12px",
+                  fontSize: 13,
+                  opacity: 0.7
+                }}
               >
-                Cargando cursos...
+                Cargando permisos...
               </div>
             )}
 
 
-            {/* ================================================
-                ERROR
-                ================================================ */}
-
-            {!cargandoCursos &&
-              errorCursos && (
+            {!cargando &&
+              error && (
                 <div
-                  className="sidebar-status sidebar-status-error"
+                  style={{
+                    padding: "12px",
+                    fontSize: 13
+                  }}
                 >
                   No se pudieron cargar
                   tus permisos.
@@ -363,51 +332,52 @@ const Layout = ({
               )}
 
 
-            {/* ================================================
-                SIN CURSOS
-                ================================================ */}
-
-            {!cargandoCursos &&
-              !errorCursos &&
+            {!cargando &&
+              !error &&
               cursosOrdenados.length ===
                 0 && (
                 <div
-                  className="sidebar-empty"
+                  style={{
+                    padding: "12px",
+                    fontSize: 13,
+                    lineHeight: 1.5
+                  }}
                 >
-                  <strong>
-                    Sin cursos asignados
-                  </strong>
-
-                  <span>
-                    Un administrador debe
-                    asignarte acceso.
-                  </span>
+                  No tienes cursos
+                  asignados.
                 </div>
               )}
 
 
-            {/* ================================================
-                CURSOS
-                ================================================ */}
-
-            {!cargandoCursos &&
+            {!cargando &&
+              !error &&
               cursosOrdenados.map(
                 (curso) => (
                   <div
-                    className="sidebar-course"
                     key={curso.id}
+                    style={{
+                      marginBottom: 18
+                    }}
                   >
 
                     {/* ==============================
-                        NOMBRE DEL CURSO
+                        CURSO
                         ============================== */}
 
-                    <div className="sidebar-course-title">
-                      <span className="sidebar-course-dot" />
-
-                      <span>
-                        {curso.nombre}
-                      </span>
+                    <div
+                      style={{
+                        padding:
+                          "8px 13px 7px",
+                        fontSize: 12,
+                        fontWeight: 800,
+                        letterSpacing:
+                          "0.08em",
+                        textTransform:
+                          "uppercase",
+                        opacity: 0.65
+                      }}
+                    >
+                      {curso.nombre}
                     </div>
 
 
@@ -418,8 +388,16 @@ const Layout = ({
                     {(curso.modulos ||
                       []).length ===
                       0 && (
-                      <div className="sidebar-course-empty">
-                        Sin módulos habilitados
+                      <div
+                        style={{
+                          padding:
+                            "5px 14px",
+                          fontSize: 12,
+                          opacity: 0.55
+                        }}
+                      >
+                        Sin módulos
+                        habilitados
                       </div>
                     )}
 
@@ -428,76 +406,46 @@ const Layout = ({
                         MODULOS
                         ============================== */}
 
-                    <div className="sidebar-modules">
-                      {(curso.modulos ||
-                        []).map(
-                        (modulo) => {
+                    {(curso.modulos ||
+                      []).map(
+                      (modulo) => {
 
-                          const ruta =
-                            RUTAS_MODULOS[
-                              modulo.clave
-                            ]
-
-
-                          /*
-                           * Si el modulo ya tiene
-                           * una pantalla integrada,
-                           * mostramos un NavLink.
-                           */
-                          if (ruta) {
-                            return (
-                              <NavLink
-                                key={
-                                  modulo.id
-                                }
-                                to={ruta}
-                                className={({
-                                  isActive
-                                }) =>
-                                  `sidebar-module-link ${
-                                    isActive
-                                      ? "active"
-                                      : ""
-                                  }`
-                                }
-                              >
-                                {
-                                  modulo.nombre
-                                }
-                              </NavLink>
-                            )
-                          }
+                        const ruta =
+                          RUTAS_MODULOS[
+                            modulo.clave
+                          ]
 
 
-                          /*
-                           * El permiso existe y
-                           * debe mostrarse.
-                           *
-                           * Todavia no le damos
-                           * una URL incorrecta.
-                           */
-                          return (
-                            <div
-                              key={
-                                modulo.id
-                              }
-                              className="sidebar-module-link sidebar-module-pending"
-                              title="Este módulo se conectará en la siguiente etapa"
-                            >
-                              <span>
-                                {
-                                  modulo.nombre
-                                }
-                              </span>
-
-                              <small>
-                                Por integrar
-                              </small>
-                            </div>
-                          )
+                        /*
+                         * Si existe un permiso pero
+                         * todavía no existe una ruta
+                         * conocida, simplemente no
+                         * mostramos un enlace roto.
+                         */
+                        if (!ruta) {
+                          return null
                         }
-                      )}
-                    </div>
+
+
+                        return (
+                          <NavLink
+                            key={
+                              modulo.id
+                            }
+                            to={ruta}
+                            className={({
+                              isActive
+                            }) =>
+                              isActive
+                                ? "active"
+                                : ""
+                            }
+                          >
+                            {modulo.nombre}
+                          </NavLink>
+                        )
+                      }
+                    )}
 
                   </div>
                 )
@@ -508,7 +456,7 @@ const Layout = ({
 
 
         {/* ==================================================
-            INFORMACION DEL USUARIO
+            PIE DEL SIDEBAR
             ================================================== */}
 
         <div className="sidebar-foot">
@@ -571,19 +519,13 @@ const Layout = ({
           CONTENIDO
           ==================================================== */}
 
-      {/*
-       * Quitamos la key={location.pathname}.
-       *
-       * No necesitamos forzar que todo el contenido
-       * se desmonte y vuelva a montarse artificialmente.
-       */}
       <main className="main">
         {children}
       </main>
 
 
       {/* ====================================================
-          CONFIRMAR LOGOUT
+          CONFIRMACION
           ==================================================== */}
 
       {asking && (
