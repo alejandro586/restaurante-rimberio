@@ -1,709 +1,2208 @@
-import { useState, useEffect } from "react"
-import { getUserName, getInitials, getEmpresa, miles } from "../api"
-import * as db from "../empresaDb"
-import Modal from "../components/Modal"
-import Confirm from "../components/Confirm"
+import {
+  useEffect,
+  useState
+} from "react"
+
+import {
+  getEmpresa,
+  getInitials,
+  getUserName,
+  miles
+} from "../api"
+
+import * as db
+  from "../empresaDb"
+
+import Modal
+  from "../components/Modal"
+
+import Confirm
+  from "../components/Confirm"
+
 
 const PAGINA = 25
 
+
+/* ==========================================================
+   ESTRUCTURA DE DATOS
+   ========================================================== */
+
 /**
- * Modulo 2 del trabajador.
+ * Modulo:
+ * big_data.estructura
  *
- * Todas las operaciones salen de aqui, del navegador, sin pasar por el
- * backend: son llamadas RPC contra Postgres.
+ * Permite:
  *
- * El trabajo que tiene que hacer el trabajador viene unicamente de las
- * tareas que le asigna el administrador. No hay sugerencias automaticas:
- * si nadie se lo pidio, no aparece.
+ * - consultar las tablas de datos
+ * - revisar columnas
+ * - agregar columnas
+ * - eliminar columnas
+ * - editar valores
+ * - crear tablas auxiliares
+ * - revisar cambios realizados
+ * - atender tareas relacionadas
+ *
+ * Las operaciones de estructura se realizan
+ * mediante las funciones RPC protegidas
+ * de Supabase.
  */
 const DatosEmpresa = () => {
-  const [tabla, setTabla] = useState("empresa_datos")
-  const [tablas, setTablas] = useState([])
-  const [datos, setDatos] = useState(null)
-  const [pagina, setPagina] = useState(0)
-  const [cargando, setCargando] = useState(true)
-  const [error, setError] = useState("")
-  const [aviso, setAviso] = useState("")
 
-  const [cambios, setCambios] = useState([])
-  const [tareas, setTareas] = useState([])
-  const [verTareas, setVerTareas] = useState(false)
+  const [
+    tabla,
+    setTabla
+  ] = useState(
+    "empresa_datos"
+  )
 
-  const [formColumna, setFormColumna] = useState(null)
-  const [formTabla, setFormTabla] = useState(null)
-  const [borrando, setBorrando] = useState(null)
-  const [editando, setEditando] = useState(null)
-  const [guardando, setGuardando] = useState(false)
 
-  const cargarDatos = async (destino = tabla, desde = 0) => {
-    setCargando(true)
-    setError("")
+  const [
+    tablas,
+    setTablas
+  ] = useState([])
 
-    try {
-      setDatos(await db.leer(destino, PAGINA, desde))
-    } catch (problema) {
-      setError(problema.message)
-    } finally {
-      setCargando(false)
+
+  const [
+    datos,
+    setDatos
+  ] = useState(null)
+
+
+  const [
+    pagina,
+    setPagina
+  ] = useState(0)
+
+
+  const [
+    cargando,
+    setCargando
+  ] = useState(true)
+
+
+  const [
+    error,
+    setError
+  ] = useState("")
+
+
+  const [
+    aviso,
+    setAviso
+  ] = useState("")
+
+
+  const [
+    cambios,
+    setCambios
+  ] = useState([])
+
+
+  const [
+    tareas,
+    setTareas
+  ] = useState([])
+
+
+  const [
+    verTareas,
+    setVerTareas
+  ] = useState(false)
+
+
+  const [
+    formColumna,
+    setFormColumna
+  ] = useState(null)
+
+
+  const [
+    formTabla,
+    setFormTabla
+  ] = useState(null)
+
+
+  const [
+    borrando,
+    setBorrando
+  ] = useState(null)
+
+
+  const [
+    editando,
+    setEditando
+  ] = useState(null)
+
+
+  const [
+    guardando,
+    setGuardando
+  ] = useState(false)
+
+
+  /* ========================================================
+     CARGAR DATOS DE UNA TABLA
+     ======================================================== */
+
+  const cargarDatos =
+    async (
+      destino = tabla,
+      desde = 0
+    ) => {
+
+      setCargando(true)
+      setError("")
+
+
+      try {
+
+        const respuesta =
+          await db.leer(
+            destino,
+            PAGINA,
+            desde
+          )
+
+
+        setDatos(
+          respuesta
+        )
+
+      } catch (problema) {
+
+        setError(
+          problema.message
+        )
+
+      } finally {
+
+        setCargando(false)
+
+      }
     }
-  }
 
-  const cargarContexto = async () => {
-    try {
-      setTablas(await db.tablas())
-      setCambios(await db.cambios())
-      setTareas(await db.tareas())
-    } catch (problema) {
-      setError(problema.message)
+
+  /* ========================================================
+     CARGAR CONTEXTO
+     ======================================================== */
+
+  const cargarContexto =
+    async () => {
+
+      try {
+
+        const [
+          nuevasTablas,
+          nuevosCambios,
+          nuevasTareas
+        ] =
+          await Promise.all([
+            db.tablas(),
+            db.cambios(),
+            db.tareas()
+          ])
+
+
+        setTablas(
+          nuevasTablas
+        )
+
+
+        setCambios(
+          nuevosCambios
+        )
+
+
+        setTareas(
+          nuevasTareas
+        )
+
+      } catch (problema) {
+
+        setError(
+          problema.message
+        )
+
+      }
     }
-  }
+
+
+  /* ========================================================
+     CAMBIO DE TABLA
+     ======================================================== */
 
   useEffect(() => {
-    cargarDatos(tabla, 0)
+
+    cargarDatos(
+      tabla,
+      0
+    )
+
+
     setPagina(0)
-  }, [tabla])
+
+  }, [
+    tabla
+  ])
+
+
+  /* ========================================================
+     CARGA INICIAL
+     ======================================================== */
 
   useEffect(() => {
+
     cargarContexto()
+
   }, [])
 
+
+  /* ========================================================
+     REFRESCAR
+     ======================================================== */
+
   const refrescar = () => {
-    cargarDatos(tabla, pagina * PAGINA)
+
+    cargarDatos(
+      tabla,
+      pagina * PAGINA
+    )
+
+
     cargarContexto()
   }
 
-  const mostrarAviso = (texto) => {
-    setAviso(texto)
-    setTimeout(() => setAviso(""), 6000)
-  }
 
-  const agregarColumna = async () => {
-    setGuardando(true)
+  /* ========================================================
+     MENSAJE TEMPORAL
+     ======================================================== */
 
-    try {
-      const r = await db.agregarColumna({ ...formColumna, tabla })
-      setFormColumna(null)
+  const mostrarAviso =
+    (texto) => {
 
-      // El cierre de la tarea lo hace la propia funcion en la base, asi
-      // que aqui solo se avisa de lo que ya paso.
-      mostrarAviso(
-        `Se agrego la columna "${r.columna}" (${r.tipo}) a ${r.tabla}` +
-          (r.tareasCerradas > 0
-            ? `. Se cerro ${r.tareasCerradas === 1 ? "la tarea que la pedia" : `${r.tareasCerradas} tareas que la pedian`}`
-            : "")
+      setAviso(
+        texto
       )
 
-      refrescar()
-    } catch (problema) {
-      setFormColumna({ ...formColumna, error: problema.message })
-    } finally {
-      setGuardando(false)
-    }
-  }
 
-  const completarTarea = async (id) => {
-    try {
-      await db.completarTarea(id)
-      setTareas(await db.tareas())
-    } catch (problema) {
-      setError(problema.message)
-    }
-  }
-
-  const crearTabla = async () => {
-    const limpias = formTabla.columnas.filter((c) => c.nombre.trim())
-
-    if (limpias.length === 0) {
-      return setFormTabla({ ...formTabla, error: "Define al menos una columna" })
+      setTimeout(
+        () =>
+          setAviso(""),
+        6000
+      )
     }
 
-    setGuardando(true)
 
-    try {
-      const r = await db.crearTabla({ ...formTabla, columnas: limpias })
-      setFormTabla(null)
-      mostrarAviso(`Se creo la tabla "${r.tabla}" con ${r.columnas} columnas`)
-      await cargarContexto()
-      setTabla(r.tabla)
-    } catch (problema) {
-      setFormTabla({ ...formTabla, error: problema.message })
-    } finally {
-      setGuardando(false)
+  /* ========================================================
+     AGREGAR COLUMNA
+     ======================================================== */
+
+  const agregarColumna =
+    async () => {
+
+      setGuardando(true)
+
+
+      try {
+
+        const resultado =
+          await db.agregarColumna({
+            ...formColumna,
+            tabla
+          })
+
+
+        setFormColumna(
+          null
+        )
+
+
+        mostrarAviso(
+          `Se agregó la columna "${resultado.columna}" (${resultado.tipo}) a ${resultado.tabla}` +
+          (
+            resultado.tareasCerradas >
+            0
+              ? `. Se cerró ${
+                  resultado.tareasCerradas ===
+                  1
+                    ? "la tarea relacionada"
+                    : `${resultado.tareasCerradas} tareas relacionadas`
+                }`
+              : ""
+          )
+        )
+
+
+        refrescar()
+
+      } catch (problema) {
+
+        setFormColumna({
+          ...formColumna,
+
+          error:
+            problema.message
+        })
+
+      } finally {
+
+        setGuardando(false)
+
+      }
     }
-  }
 
-  const eliminarColumna = async () => {
-    try {
-      await db.eliminarColumna({ tabla, nombre: borrando })
-      mostrarAviso(`Se elimino la columna "${borrando}"`)
-      setBorrando(null)
-      refrescar()
-    } catch (problema) {
-      setError(problema.message)
-      setBorrando(null)
+
+  /* ========================================================
+     COMPLETAR TAREA
+     ======================================================== */
+
+  const completarTarea =
+    async (id) => {
+
+      try {
+
+        await db.completarTarea(
+          id
+        )
+
+
+        setTareas(
+          await db.tareas()
+        )
+
+      } catch (problema) {
+
+        setError(
+          problema.message
+        )
+
+      }
     }
-  }
 
-  const guardarCelda = async () => {
-    try {
-      await db.actualizarCelda({ tabla, id: editando.id, columna: editando.columna, valor: editando.valor })
-      setEditando(null)
-      cargarDatos(tabla, pagina * PAGINA)
-    } catch (problema) {
-      setEditando({ ...editando, error: problema.message })
+
+  /* ========================================================
+     CREAR TABLA
+     ======================================================== */
+
+  const crearTabla =
+    async () => {
+
+      const columnas =
+        formTabla.columnas.filter(
+          (columna) =>
+            columna.nombre.trim()
+        )
+
+
+      if (
+        columnas.length ===
+        0
+      ) {
+
+        return setFormTabla({
+          ...formTabla,
+
+          error:
+            "Define al menos una columna"
+        })
+      }
+
+
+      setGuardando(true)
+
+
+      try {
+
+        const resultado =
+          await db.crearTabla({
+            ...formTabla,
+            columnas
+          })
+
+
+        setFormTabla(
+          null
+        )
+
+
+        mostrarAviso(
+          `Se creó la tabla "${resultado.tabla}" con ${resultado.columnas} columnas`
+        )
+
+
+        await cargarContexto()
+
+
+        setTabla(
+          resultado.tabla
+        )
+
+      } catch (problema) {
+
+        setFormTabla({
+          ...formTabla,
+
+          error:
+            problema.message
+        })
+
+      } finally {
+
+        setGuardando(false)
+
+      }
     }
-  }
 
-  const cambiarPagina = (siguiente) => {
-    setPagina(siguiente)
-    cargarDatos(tabla, siguiente * PAGINA)
-  }
+
+  /* ========================================================
+     ELIMINAR COLUMNA
+     ======================================================== */
+
+  const eliminarColumna =
+    async () => {
+
+      try {
+
+        await db.eliminarColumna({
+          tabla,
+          nombre:
+            borrando
+        })
+
+
+        mostrarAviso(
+          `Se eliminó la columna "${borrando}"`
+        )
+
+
+        setBorrando(
+          null
+        )
+
+
+        refrescar()
+
+      } catch (problema) {
+
+        setError(
+          problema.message
+        )
+
+
+        setBorrando(
+          null
+        )
+
+      }
+    }
+
+
+  /* ========================================================
+     EDITAR CELDA
+     ======================================================== */
+
+  const guardarCelda =
+    async () => {
+
+      try {
+
+        await db.actualizarCelda({
+          tabla,
+
+          id:
+            editando.id,
+
+          columna:
+            editando.columna,
+
+          valor:
+            editando.valor
+        })
+
+
+        setEditando(
+          null
+        )
+
+
+        cargarDatos(
+          tabla,
+          pagina * PAGINA
+        )
+
+      } catch (problema) {
+
+        setEditando({
+          ...editando,
+
+          error:
+            problema.message
+        })
+
+      }
+    }
+
+
+  /* ========================================================
+     PAGINACION
+     ======================================================== */
+
+  const cambiarPagina =
+    (siguiente) => {
+
+      setPagina(
+        siguiente
+      )
+
+
+      cargarDatos(
+        tabla,
+        siguiente * PAGINA
+      )
+    }
+
+
+  /* ========================================================
+     DATOS DERIVADOS
+     ======================================================== */
 
   const columnasVisibles =
-    datos && datos.existe ? datos.columnas.filter((c) => c.columna !== "created_at") : []
+    datos &&
+    datos.existe
+      ? datos.columnas.filter(
+          (columna) =>
+            columna.columna !==
+            "created_at"
+        )
+      : []
 
-  const pendientes = tareas.filter((t) => t.estado === "pendiente")
-  const completadas = tareas.filter((t) => t.estado === "completada")
 
-  const totalPaginas = datos && datos.total ? Math.ceil(datos.total / PAGINA) : 1
+  const pendientes =
+    tareas.filter(
+      (tarea) =>
+        tarea.estado ===
+        "pendiente"
+    )
+
+
+  const completadas =
+    tareas.filter(
+      (tarea) =>
+        tarea.estado ===
+        "completada"
+    )
+
+
+  const totalPaginas =
+    datos &&
+    datos.total
+      ? Math.ceil(
+          datos.total /
+            PAGINA
+        )
+      : 1
+
+
+  /* ========================================================
+     INTERFAZ
+     ======================================================== */
 
   return (
     <>
+
+      {/* ====================================================
+          CABECERA
+          ==================================================== */}
+
       <div className="topbar">
+
         <div>
-          <h1>Datos de la empresa</h1>
+
+          <h1>
+            Estructura de datos
+          </h1>
+
+
           <p>
-            Informacion de {getEmpresa()}. Agrega las columnas que hagan falta para registrar lo que
-            hoy no se mide
+            Gestiona la estructura de los datos de{" "}
+            <strong>
+              {getEmpresa()}
+            </strong>
+            , incluyendo tablas, columnas y valores registrados.
           </p>
+
         </div>
+
 
         <div className="topbar-actions">
+
           <div className="topbar-user">
-            <span className="avatar">{getInitials()}</span>
-            <span>{getUserName()}</span>
+
+            <span className="avatar">
+              {getInitials()}
+            </span>
+
+
+            <span>
+              {getUserName()}
+            </span>
+
           </div>
+
         </div>
+
       </div>
 
-      {aviso && <div className="alert alert-success">{aviso}</div>}
-      {error && <div className="alert alert-error">{error}</div>}
+
+      {/* ====================================================
+          MENSAJES
+          ==================================================== */}
+
+      {aviso && (
+        <div className="alert alert-success">
+          {aviso}
+        </div>
+      )}
+
+
+      {error && (
+        <div className="alert alert-error">
+          {error}
+        </div>
+      )}
+
+
+      {/* ====================================================
+          HERRAMIENTAS
+          ==================================================== */}
 
       <div className="toolbar">
+
         <div className="toolbar-left">
-          <select value={tabla} onChange={(e) => setTabla(e.target.value)}>
-            {tablas.map((t) => (
-              <option key={t.tabla} value={t.tabla}>
-                {t.tabla}
-              </option>
-            ))}
+
+          <select
+            value={tabla}
+            onChange={
+              (event) =>
+                setTabla(
+                  event.target.value
+                )
+            }
+          >
+
+            {tablas.map(
+              (item) => (
+                <option
+                  key={
+                    item.tabla
+                  }
+                  value={
+                    item.tabla
+                  }
+                >
+                  {item.tabla}
+                </option>
+              )
+            )}
+
           </select>
 
-          {datos && datos.existe && (
+
+          {datos &&
+            datos.existe && (
             <span className="muted">
-              {miles(datos.total)} filas &middot; {datos.columnas.length} columnas
+
+              {miles(
+                datos.total
+              )}
+
+              {" filas · "}
+
+              {
+                datos.columnas
+                  .length
+              }
+
+              {" columnas"}
+
             </span>
           )}
+
         </div>
 
+
         <div className="row-actions">
+
           <button
             type="button"
-            className={`btn btn-ghost btn-tareas ${pendientes.length > 0 ? "con-pendientes" : ""}`}
-            onClick={() => setVerTareas(true)}
+            className={
+              `btn btn-ghost btn-tareas ${
+                pendientes.length >
+                0
+                  ? "con-pendientes"
+                  : ""
+              }`
+            }
+            onClick={
+              () =>
+                setVerTareas(
+                  true
+                )
+            }
           >
+
             Mis tareas
-            {pendientes.length > 0 && <span className="badge">{pendientes.length}</span>}
+
+            {pendientes.length >
+              0 && (
+              <span className="badge">
+                {pendientes.length}
+              </span>
+            )}
+
           </button>
+
 
           <button
             type="button"
             className="btn btn-light"
-            onClick={() =>
-              setFormTabla({ nombre: "", motivo: "", columnas: [{ nombre: "", tipo: "texto" }] })
+            onClick={
+              () =>
+                setFormTabla({
+                  nombre:
+                    "",
+
+                  motivo:
+                    "",
+
+                  columnas: [
+                    {
+                      nombre:
+                        "",
+
+                      tipo:
+                        "texto"
+                    }
+                  ]
+                })
             }
           >
             Crear tabla
           </button>
 
+
           <button
             type="button"
             className="btn"
-            onClick={() => setFormColumna({ nombre: "", tipo: "texto", valorDefecto: "", motivo: "" })}
-            disabled={!datos || !datos.existe}
+            disabled={
+              !datos ||
+              !datos.existe
+            }
+            onClick={
+              () =>
+                setFormColumna({
+                  nombre:
+                    "",
+
+                  tipo:
+                    "texto",
+
+                  valorDefecto:
+                    "",
+
+                  motivo:
+                    ""
+                })
+            }
           >
             Agregar columna
           </button>
+
         </div>
+
       </div>
+
+
+      {/* ====================================================
+          TABLA
+          ==================================================== */}
 
       <div className="card">
-        {cargando && <div className="loading">Cargando datos</div>}
 
-        {!cargando && datos && !datos.existe && (
-          <div className="empty">
-            Todavia no hay datos de la empresa. Importa un archivo en la seccion &quot;CSV o Excel de
-            la empresa&quot; y la tabla se crea sola.
+        {cargando && (
+          <div className="loading">
+            Cargando estructura...
           </div>
         )}
 
-        {!cargando && datos && datos.existe && datos.filas.length === 0 && (
-          <div className="empty">La tabla existe pero todavia no tiene filas</div>
+
+        {!cargando &&
+          datos &&
+          !datos.existe && (
+          <div className="empty">
+
+            Todavía no existen datos estructurados de la empresa.
+
+            <br />
+
+            Importa primero un archivo desde el módulo{" "}
+
+            <strong>
+              Importar datos
+            </strong>
+
+            {" "}para crear la estructura inicial.
+
+          </div>
         )}
 
-        {!cargando && datos && datos.existe && datos.filas.length > 0 && (
+
+        {!cargando &&
+          datos &&
+          datos.existe &&
+          datos.filas.length ===
+            0 && (
+          <div className="empty">
+            La tabla existe, pero todavía no contiene filas.
+          </div>
+        )}
+
+
+        {!cargando &&
+          datos &&
+          datos.existe &&
+          datos.filas.length >
+            0 && (
           <>
+
             <div className="table-wrap">
+
               <table className="tabla-dinamica">
+
                 <thead>
+
                   <tr>
-                    {columnasVisibles.map((columna) => (
-                      <th key={columna.columna}>
-                        <span>{columna.columna}</span>
-                        {!db.COLUMNAS_SISTEMA.includes(columna.columna) && (
-                          <button
-                            type="button"
-                            className="col-borrar"
-                            title={`Eliminar la columna ${columna.columna}`}
-                            onClick={() => setBorrando(columna.columna)}
-                          >
-                            &times;
-                          </button>
-                        )}
-                      </th>
-                    ))}
+
+                    {columnasVisibles.map(
+                      (columna) => (
+                        <th
+                          key={
+                            columna.columna
+                          }
+                        >
+
+                          <span>
+                            {
+                              columna.columna
+                            }
+                          </span>
+
+
+                          {!db.COLUMNAS_SISTEMA.includes(
+                            columna.columna
+                          ) && (
+                            <button
+                              type="button"
+                              className="col-borrar"
+                              title={
+                                `Eliminar la columna ${columna.columna}`
+                              }
+                              onClick={
+                                () =>
+                                  setBorrando(
+                                    columna.columna
+                                  )
+                              }
+                            >
+                              ×
+                            </button>
+                          )}
+
+                        </th>
+                      )
+                    )}
+
                   </tr>
+
                 </thead>
 
-                <tbody>
-                  {datos.filas.map((fila) => (
-                    <tr key={fila.id}>
-                      {columnasVisibles.map((columna) => {
-                        const valor = fila[columna.columna]
-                        const editable = !db.COLUMNAS_SISTEMA.includes(columna.columna)
 
-                        return (
-                          <td
-                            key={columna.columna}
-                            className={editable ? "celda-editable" : ""}
-                            onClick={() =>
-                              editable &&
-                              setEditando({
-                                id: fila.id,
-                                columna: columna.columna,
-                                tipo: columna.tipo,
-                                valor: valor === null || valor === undefined ? "" : String(valor)
-                              })
-                            }
-                          >
-                            {valor === null || valor === undefined || valor === "" ? (
-                              <span className="vacio">&mdash;</span>
-                            ) : typeof valor === "boolean" ? (
-                              valor ? "Si" : "No"
-                            ) : (
-                              String(valor)
-                            )}
-                          </td>
-                        )
-                      })}
-                    </tr>
-                  ))}
+                <tbody>
+
+                  {datos.filas.map(
+                    (fila) => (
+
+                      <tr
+                        key={
+                          fila.id
+                        }
+                      >
+
+                        {columnasVisibles.map(
+                          (columna) => {
+
+                            const valor =
+                              fila[
+                                columna
+                                  .columna
+                              ]
+
+
+                            const editable =
+                              !db.COLUMNAS_SISTEMA.includes(
+                                columna.columna
+                              )
+
+
+                            return (
+                              <td
+                                key={
+                                  columna.columna
+                                }
+                                className={
+                                  editable
+                                    ? "celda-editable"
+                                    : ""
+                                }
+                                onClick={
+                                  () => {
+
+                                    if (
+                                      !editable
+                                    ) {
+                                      return
+                                    }
+
+
+                                    setEditando({
+                                      id:
+                                        fila.id,
+
+                                      columna:
+                                        columna.columna,
+
+                                      tipo:
+                                        columna.tipo,
+
+                                      valor:
+                                        valor ===
+                                          null ||
+                                        valor ===
+                                          undefined
+                                          ? ""
+                                          : String(
+                                              valor
+                                            )
+                                    })
+
+                                  }
+                                }
+                              >
+
+                                {valor ===
+                                  null ||
+                                valor ===
+                                  undefined ||
+                                valor ===
+                                  "" ? (
+
+                                  <span className="vacio">
+                                    —
+                                  </span>
+
+                                ) : typeof valor ===
+                                  "boolean" ? (
+
+                                  valor
+                                    ? "Sí"
+                                    : "No"
+
+                                ) : (
+
+                                  String(
+                                    valor
+                                  )
+
+                                )}
+
+                              </td>
+                            )
+                          }
+                        )}
+
+                      </tr>
+                    )
+                  )}
+
                 </tbody>
+
               </table>
+
             </div>
+
 
             <div className="table-foot">
+
               <span>
-                Mostrando {pagina * PAGINA + 1} a {Math.min((pagina + 1) * PAGINA, datos.total)} de{" "}
-                {miles(datos.total)}
+
+                Mostrando{" "}
+
+                {
+                  pagina *
+                    PAGINA +
+                  1
+                }
+
+                {" a "}
+
+                {Math.min(
+                  (
+                    pagina +
+                    1
+                  ) *
+                    PAGINA,
+
+                  datos.total
+                )}
+
+                {" de "}
+
+                {miles(
+                  datos.total
+                )}
+
               </span>
 
+
               <div className="pagination">
-                <button type="button" onClick={() => cambiarPagina(pagina - 1)} disabled={pagina === 0}>
-                  &lsaquo;
-                </button>
-                <button type="button" className="active">
-                  {pagina + 1}
-                </button>
+
                 <button
                   type="button"
-                  onClick={() => cambiarPagina(pagina + 1)}
-                  disabled={pagina + 1 >= totalPaginas}
+                  disabled={
+                    pagina ===
+                    0
+                  }
+                  onClick={
+                    () =>
+                      cambiarPagina(
+                        pagina -
+                          1
+                      )
+                  }
                 >
-                  &rsaquo;
+                  ‹
                 </button>
+
+
+                <button
+                  type="button"
+                  className="active"
+                >
+                  {pagina + 1}
+                </button>
+
+
+                <button
+                  type="button"
+                  disabled={
+                    pagina +
+                      1 >=
+                    totalPaginas
+                  }
+                  onClick={
+                    () =>
+                      cambiarPagina(
+                        pagina +
+                          1
+                      )
+                  }
+                >
+                  ›
+                </button>
+
               </div>
+
             </div>
+
           </>
         )}
+
       </div>
 
-      {cambios.length > 0 && (
+
+      {/* ====================================================
+          HISTORIAL
+          ==================================================== */}
+
+      {cambios.length >
+        0 && (
+
         <div className="card">
-          <div className="chart-title">Cambios de estructura aplicados</div>
+
+          <div className="chart-title">
+            Cambios de estructura aplicados
+          </div>
+
 
           <div className="table-wrap">
+
             <table>
+
               <thead>
+
                 <tr>
-                  <th>Operacion</th>
-                  <th>Tabla</th>
-                  <th>Detalle</th>
-                  <th>Motivo</th>
-                  <th>Fecha</th>
+                  <th>
+                    Operación
+                  </th>
+
+                  <th>
+                    Tabla
+                  </th>
+
+                  <th>
+                    Detalle
+                  </th>
+
+                  <th>
+                    Motivo
+                  </th>
+
+                  <th>
+                    Fecha
+                  </th>
                 </tr>
+
               </thead>
+
+
               <tbody>
-                {cambios.map((cambio) => (
-                  <tr key={cambio.id}>
-                    <td>
-                      <span className={`chip chip-${cambio.operacion}`}>
-                        {cambio.operacion === "add_column"
-                          ? "Columna agregada"
-                          : cambio.operacion === "create_table"
-                            ? "Tabla creada"
-                            : "Columna eliminada"}
-                      </span>
-                    </td>
-                    <td className="cell-main">{cambio.tabla}</td>
-                    <td className="muted ellipsis">
-                      {cambio.detalle.columna ||
-                        (Array.isArray(cambio.detalle.columnas)
-                          ? cambio.detalle.columnas.map((c) => c.columna || c.nombre).join(", ")
-                          : "-")}
-                    </td>
-                    <td className="muted ellipsis">{cambio.motivo || "-"}</td>
-                    <td className="muted">{new Date(cambio.created_at).toLocaleDateString("es-PE")}</td>
-                  </tr>
-                ))}
+
+                {cambios.map(
+                  (cambio) => (
+
+                    <tr
+                      key={
+                        cambio.id
+                      }
+                    >
+
+                      <td>
+
+                        <span
+                          className={
+                            `chip chip-${cambio.operacion}`
+                          }
+                        >
+
+                          {cambio.operacion ===
+                          "add_column"
+                            ? "Columna agregada"
+                            : cambio.operacion ===
+                              "create_table"
+                              ? "Tabla creada"
+                              : "Columna eliminada"}
+
+                        </span>
+
+                      </td>
+
+
+                      <td className="cell-main">
+                        {cambio.tabla}
+                      </td>
+
+
+                      <td className="muted ellipsis">
+
+                        {cambio.detalle
+                          .columna ||
+                          (
+                            Array.isArray(
+                              cambio.detalle
+                                .columnas
+                            )
+                              ? cambio.detalle.columnas
+                                  .map(
+                                    (columna) =>
+                                      columna.columna ||
+                                      columna.nombre
+                                  )
+                                  .join(
+                                    ", "
+                                  )
+                              : "-"
+                          )}
+
+                      </td>
+
+
+                      <td className="muted ellipsis">
+                        {cambio.motivo ||
+                          "-"}
+                      </td>
+
+
+                      <td className="muted">
+
+                        {new Date(
+                          cambio.created_at
+                        ).toLocaleDateString(
+                          "es-PE"
+                        )}
+
+                      </td>
+
+                    </tr>
+                  )
+                )}
+
               </tbody>
+
             </table>
+
           </div>
+
         </div>
       )}
 
+
+      {/* ====================================================
+          MODAL AGREGAR COLUMNA
+          ==================================================== */}
+
       {formColumna && (
+
         <Modal
           title="Agregar columna"
-          onClose={() => setFormColumna(null)}
-          footer={(cerrar) => (
-            <>
-              <button type="button" className="btn btn-ghost" onClick={cerrar}>
-                Cancelar
-              </button>
-              <button type="button" className="btn" onClick={agregarColumna} disabled={guardando}>
-                {guardando ? "Aplicando..." : "Agregar a la tabla"}
-              </button>
-            </>
-          )}
+          onClose={
+            () =>
+              setFormColumna(
+                null
+              )
+          }
+          footer={
+            (cerrar) => (
+              <>
+
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={
+                    cerrar
+                  }
+                >
+                  Cancelar
+                </button>
+
+
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={
+                    guardando
+                  }
+                  onClick={
+                    agregarColumna
+                  }
+                >
+                  {guardando
+                    ? "Aplicando..."
+                    : "Agregar columna"}
+                </button>
+
+              </>
+            )
+          }
         >
-          <p className="muted" style={{ marginBottom: "16px" }}>
-            Se ejecuta un <code>ALTER TABLE</code> real sobre <strong>{tabla}</strong>, desde el
-            navegador.
+
+          <p
+            className="muted"
+            style={{
+              marginBottom:
+                "16px"
+            }}
+          >
+            La columna se agregará de forma permanente a la estructura de{" "}
+
+            <strong>
+              {tabla}
+            </strong>
+            .
           </p>
 
+
           <div className="field">
-            <label>Nombre de la columna</label>
+
+            <label>
+              Nombre de la columna
+            </label>
+
+
             <input
-              value={formColumna.nombre}
-              onChange={(e) => setFormColumna({ ...formColumna, nombre: e.target.value })}
+              value={
+                formColumna.nombre
+              }
               placeholder="Ej. canal_venta"
               autoFocus
+              onChange={
+                (event) =>
+                  setFormColumna({
+                    ...formColumna,
+
+                    nombre:
+                      event.target
+                        .value
+                  })
+              }
             />
-            {formColumna.nombre && db.aIdentificador(formColumna.nombre) !== formColumna.nombre && (
+
+
+            {formColumna.nombre &&
+              db.aIdentificador(
+                formColumna.nombre
+              ) !==
+                formColumna.nombre && (
+
               <span className="muted">
-                Se guardara como <code>{db.aIdentificador(formColumna.nombre) || "(invalido)"}</code>
+
+                Se guardará como{" "}
+
+                <code>
+                  {db.aIdentificador(
+                    formColumna.nombre
+                  ) ||
+                    "(inválido)"}
+                </code>
+
               </span>
             )}
+
           </div>
+
 
           <div className="field-row">
-            <div className="field">
-              <label>Tipo de dato</label>
-              <select
-                value={formColumna.tipo}
-                onChange={(e) => setFormColumna({ ...formColumna, tipo: e.target.value })}
-              >
-                {db.TIPOS.map((tipo) => (
-                  <option key={tipo.valor} value={tipo.valor}>
-                    {tipo.label}
-                  </option>
-                ))}
-              </select>
-            </div>
 
             <div className="field">
-              <label>Valor por defecto (opcional)</label>
-              <input
-                value={formColumna.valorDefecto}
-                onChange={(e) => setFormColumna({ ...formColumna, valorDefecto: e.target.value })}
-                placeholder="Ej. Salon"
-              />
+
+              <label>
+                Tipo de dato
+              </label>
+
+
+              <select
+                value={
+                  formColumna.tipo
+                }
+                onChange={
+                  (event) =>
+                    setFormColumna({
+                      ...formColumna,
+
+                      tipo:
+                        event.target
+                          .value
+                    })
+                }
+              >
+
+                {db.TIPOS.map(
+                  (tipo) => (
+                    <option
+                      key={
+                        tipo.valor
+                      }
+                      value={
+                        tipo.valor
+                      }
+                    >
+                      {tipo.label}
+                    </option>
+                  )
+                )}
+
+              </select>
+
             </div>
+
+
+            <div className="field">
+
+              <label>
+                Valor por defecto
+                (opcional)
+              </label>
+
+
+              <input
+                value={
+                  formColumna
+                    .valorDefecto
+                }
+                placeholder="Ej. Salón"
+                onChange={
+                  (event) =>
+                    setFormColumna({
+                      ...formColumna,
+
+                      valorDefecto:
+                        event.target
+                          .value
+                    })
+                }
+              />
+
+            </div>
+
           </div>
+
 
           <div className="field">
-            <label>Por que se agrega</label>
+
+            <label>
+              Motivo del cambio
+            </label>
+
+
             <textarea
               rows="2"
-              value={formColumna.motivo}
-              onChange={(e) => setFormColumna({ ...formColumna, motivo: e.target.value })}
-              placeholder="Ej. La competencia saca el 40 por ciento de sus ventas del delivery"
+              value={
+                formColumna.motivo
+              }
+              placeholder="Describe por qué necesitas registrar esta información"
+              onChange={
+                (event) =>
+                  setFormColumna({
+                    ...formColumna,
+
+                    motivo:
+                      event.target
+                        .value
+                  })
+              }
             />
+
           </div>
 
-          {formColumna.error && <div className="alert alert-error">{formColumna.error}</div>}
+
+          {formColumna.error && (
+            <div className="alert alert-error">
+              {formColumna.error}
+            </div>
+          )}
+
         </Modal>
       )}
 
+
+      {/* ====================================================
+          MODAL CREAR TABLA
+          ==================================================== */}
+
       {formTabla && (
+
         <Modal
-          title="Crear tabla nueva"
-          onClose={() => setFormTabla(null)}
-          footer={(cerrar) => (
-            <>
-              <button type="button" className="btn btn-ghost" onClick={cerrar}>
-                Cancelar
-              </button>
-              <button type="button" className="btn" onClick={crearTabla} disabled={guardando}>
-                {guardando ? "Creando..." : "Crear tabla"}
-              </button>
-            </>
-          )}
+          title="Crear tabla"
+          onClose={
+            () =>
+              setFormTabla(
+                null
+              )
+          }
+          footer={
+            (cerrar) => (
+              <>
+
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={
+                    cerrar
+                  }
+                >
+                  Cancelar
+                </button>
+
+
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={
+                    guardando
+                  }
+                  onClick={
+                    crearTabla
+                  }
+                >
+                  {guardando
+                    ? "Creando..."
+                    : "Crear tabla"}
+                </button>
+
+              </>
+            )
+          }
         >
-          <p className="muted" style={{ marginBottom: "16px" }}>
-            Para registrar algo que hoy no existe en la base. El nombre lleva el prefijo{" "}
-            <code>emp_</code> automaticamente.
+
+          <p
+            className="muted"
+            style={{
+              marginBottom:
+                "16px"
+            }}
+          >
+            Crea una tabla auxiliar para almacenar información que todavía no existe en la estructura actual.
+            El prefijo{" "}
+
+            <code>
+              emp_
+            </code>
+
+            {" "}se agregará automáticamente.
           </p>
 
+
           <div className="field">
-            <label>Nombre de la tabla</label>
+
+            <label>
+              Nombre de la tabla
+            </label>
+
+
             <input
-              value={formTabla.nombre}
-              onChange={(e) => setFormTabla({ ...formTabla, nombre: e.target.value })}
+              value={
+                formTabla.nombre
+              }
               placeholder="Ej. programa_fidelidad"
               autoFocus
-            />
-          </div>
-
-          <label className="etiqueta-bloque">Columnas</label>
-
-          {formTabla.columnas.map((columna, indice) => (
-            <div className="field-row" key={indice}>
-              <div className="field">
-                <input
-                  value={columna.nombre}
-                  onChange={(e) => {
-                    const copia = [...formTabla.columnas]
-                    copia[indice] = { ...copia[indice], nombre: e.target.value }
-                    setFormTabla({ ...formTabla, columnas: copia })
-                  }}
-                  placeholder="nombre_columna"
-                />
-              </div>
-
-              <div className="field">
-                <select
-                  value={columna.tipo}
-                  onChange={(e) => {
-                    const copia = [...formTabla.columnas]
-                    copia[indice] = { ...copia[indice], tipo: e.target.value }
-                    setFormTabla({ ...formTabla, columnas: copia })
-                  }}
-                >
-                  {db.TIPOS.map((tipo) => (
-                    <option key={tipo.valor} value={tipo.valor}>
-                      {tipo.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <button
-                type="button"
-                className="btn btn-ghost btn-sm"
-                onClick={() =>
+              onChange={
+                (event) =>
                   setFormTabla({
                     ...formTabla,
-                    columnas: formTabla.columnas.filter((c, i) => i !== indice)
+
+                    nombre:
+                      event.target
+                        .value
                   })
-                }
-                disabled={formTabla.columnas.length === 1}
+              }
+            />
+
+          </div>
+
+
+          <label className="etiqueta-bloque">
+            Columnas
+          </label>
+
+
+          {formTabla.columnas.map(
+            (
+              columna,
+              indice
+            ) => (
+
+              <div
+                className="field-row"
+                key={indice}
               >
-                Quitar
-              </button>
-            </div>
-          ))}
+
+                <div className="field">
+
+                  <input
+                    value={
+                      columna.nombre
+                    }
+                    placeholder="nombre_columna"
+                    onChange={
+                      (event) => {
+
+                        const copia =
+                          [
+                            ...formTabla.columnas
+                          ]
+
+
+                        copia[indice] = {
+                          ...copia[indice],
+
+                          nombre:
+                            event.target
+                              .value
+                        }
+
+
+                        setFormTabla({
+                          ...formTabla,
+
+                          columnas:
+                            copia
+                        })
+
+                      }
+                    }
+                  />
+
+                </div>
+
+
+                <div className="field">
+
+                  <select
+                    value={
+                      columna.tipo
+                    }
+                    onChange={
+                      (event) => {
+
+                        const copia =
+                          [
+                            ...formTabla.columnas
+                          ]
+
+
+                        copia[indice] = {
+                          ...copia[indice],
+
+                          tipo:
+                            event.target
+                              .value
+                        }
+
+
+                        setFormTabla({
+                          ...formTabla,
+
+                          columnas:
+                            copia
+                        })
+
+                      }
+                    }
+                  >
+
+                    {db.TIPOS.map(
+                      (tipo) => (
+                        <option
+                          key={
+                            tipo.valor
+                          }
+                          value={
+                            tipo.valor
+                          }
+                        >
+                          {tipo.label}
+                        </option>
+                      )
+                    )}
+
+                  </select>
+
+                </div>
+
+
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  disabled={
+                    formTabla
+                      .columnas
+                      .length ===
+                    1
+                  }
+                  onClick={
+                    () =>
+                      setFormTabla({
+                        ...formTabla,
+
+                        columnas:
+                          formTabla.columnas.filter(
+                            (
+                              _,
+                              posicion
+                            ) =>
+                              posicion !==
+                              indice
+                          )
+                      })
+                  }
+                >
+                  Quitar
+                </button>
+
+              </div>
+            )
+          )}
+
 
           <button
             type="button"
             className="btn btn-light btn-sm"
-            onClick={() =>
-              setFormTabla({
-                ...formTabla,
-                columnas: [...formTabla.columnas, { nombre: "", tipo: "texto" }]
-              })
+            onClick={
+              () =>
+                setFormTabla({
+                  ...formTabla,
+
+                  columnas: [
+                    ...formTabla.columnas,
+
+                    {
+                      nombre:
+                        "",
+
+                      tipo:
+                        "texto"
+                    }
+                  ]
+                })
             }
           >
-            Anadir otra columna
+            Añadir columna
           </button>
 
-          <div className="field" style={{ marginTop: "16px" }}>
-            <label>Por que se crea</label>
+
+          <div
+            className="field"
+            style={{
+              marginTop:
+                "16px"
+            }}
+          >
+
+            <label>
+              Motivo del cambio
+            </label>
+
+
             <textarea
               rows="2"
-              value={formTabla.motivo}
-              onChange={(e) => setFormTabla({ ...formTabla, motivo: e.target.value })}
-              placeholder="Ej. La Buena Mesa tiene club de socios y nosotros no"
+              value={
+                formTabla.motivo
+              }
+              placeholder="Describe por qué necesitas esta nueva estructura"
+              onChange={
+                (event) =>
+                  setFormTabla({
+                    ...formTabla,
+
+                    motivo:
+                      event.target
+                        .value
+                  })
+              }
             />
+
           </div>
 
-          {formTabla.error && <div className="alert alert-error">{formTabla.error}</div>}
+
+          {formTabla.error && (
+            <div className="alert alert-error">
+              {formTabla.error}
+            </div>
+          )}
+
         </Modal>
       )}
+
+
+      {/* ====================================================
+          EDITAR CELDA
+          ==================================================== */}
 
       {editando && (
+
         <Modal
-          title={`Editar ${editando.columna}`}
-          onClose={() => setEditando(null)}
-          footer={(cerrar) => (
-            <>
-              <button type="button" className="btn btn-ghost" onClick={cerrar}>
-                Cancelar
-              </button>
-              <button type="button" className="btn" onClick={guardarCelda}>
-                Guardar
-              </button>
-            </>
-          )}
+          title={
+            `Editar ${editando.columna}`
+          }
+          onClose={
+            () =>
+              setEditando(
+                null
+              )
+          }
+          footer={
+            (cerrar) => (
+              <>
+
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={
+                    cerrar
+                  }
+                >
+                  Cancelar
+                </button>
+
+
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={
+                    guardarCelda
+                  }
+                >
+                  Guardar
+                </button>
+
+              </>
+            )
+          }
         >
+
           <div className="field">
+
             <label>
-              Valor <span className="muted">({editando.tipo})</span>
+
+              Valor{" "}
+
+              <span className="muted">
+                ({editando.tipo})
+              </span>
+
             </label>
+
+
             <input
-              value={editando.valor}
-              onChange={(e) => setEditando({ ...editando, valor: e.target.value })}
+              value={
+                editando.valor
+              }
               autoFocus
+              onChange={
+                (event) =>
+                  setEditando({
+                    ...editando,
+
+                    valor:
+                      event.target
+                        .value
+                  })
+              }
             />
+
           </div>
 
-          {editando.error && <div className="alert alert-error">{editando.error}</div>}
+
+          {editando.error && (
+            <div className="alert alert-error">
+              {editando.error}
+            </div>
+          )}
+
         </Modal>
       )}
 
+
+      {/* ====================================================
+          TAREAS
+          ==================================================== */}
+
       {verTareas && (
-        <Modal ancho title="Mis tareas" onClose={() => setVerTareas(false)}>
-          {tareas.length === 0 && (
-            <div className="empty">El administrador todavia no te asigno ninguna tarea</div>
+
+        <Modal
+          ancho
+          title="Mis tareas"
+          onClose={
+            () =>
+              setVerTareas(
+                false
+              )
+          }
+        >
+
+          {tareas.length ===
+            0 && (
+            <div className="empty">
+              No tienes tareas asignadas.
+            </div>
           )}
 
-          {pendientes.length > 0 && (
+
+          {pendientes.length >
+            0 && (
             <>
-              <div className="chart-title">Pendientes ({pendientes.length})</div>
 
-              {pendientes.map((tarea) => (
-                <div className="tarea" key={tarea.id}>
-                  <div className={`insight-bar ${tarea.nivel}`} />
+              <div className="chart-title">
+                Pendientes ({pendientes.length})
+              </div>
 
-                  <div className="tarea-cuerpo">
-                    <h4>{tarea.titulo}</h4>
-                    <p>{tarea.mensaje}</p>
 
-                    {tarea.columna_sugerida ? (
-                      <div className="tarea-instruccion">
-                        Crea la columna <code>{tarea.columna_sugerida}</code> de tipo{" "}
-                        <strong>{tarea.tipo_sugerido}</strong> en{" "}
-                        <code>{tarea.tabla_destino}</code>
-                        {tarea.ejemplo && <> &mdash; {tarea.ejemplo}</>}
-                        <span className="muted">
-                          Usa el boton &quot;Agregar columna&quot;. La tarea se cierra sola cuando la
-                          columna exista.
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="tarea-instruccion tarea-lectura">
-                        Esta tarea no pide crear ninguna columna. Marcala como hecha cuando hayas
-                        actuado sobre lo que indica.
-                      </div>
-                    )}
+              {pendientes.map(
+                (tarea) => (
 
-                    <div className="tarea-pie">
-                      <span className="muted">
-                        {tarea.origen && `Detectado en ${tarea.origen} · `}
-                        {new Date(tarea.created_at).toLocaleDateString("es-PE")}
-                      </span>
+                  <div
+                    className="tarea"
+                    key={
+                      tarea.id
+                    }
+                  >
 
-                      {!tarea.columna_sugerida && (
-                        <button
-                          type="button"
-                          className="btn btn-sm"
-                          onClick={() => completarTarea(tarea.id)}
-                        >
-                          Marcar como hecha
-                        </button>
+                    <div
+                      className={
+                        `insight-bar ${tarea.nivel}`
+                      }
+                    />
+
+
+                    <div className="tarea-cuerpo">
+
+                      <h4>
+                        {tarea.titulo}
+                      </h4>
+
+
+                      <p>
+                        {tarea.mensaje}
+                      </p>
+
+
+                      {tarea.columna_sugerida ? (
+
+                        <div className="tarea-instruccion">
+
+                          Crea la columna{" "}
+
+                          <code>
+                            {
+                              tarea.columna_sugerida
+                            }
+                          </code>
+
+                          {" de tipo "}
+
+                          <strong>
+                            {
+                              tarea.tipo_sugerido
+                            }
+                          </strong>
+
+                          {" en "}
+
+                          <code>
+                            {
+                              tarea.tabla_destino
+                            }
+                          </code>
+
+
+                          {tarea.ejemplo && (
+                            <>
+                              {" — "}
+                              {tarea.ejemplo}
+                            </>
+                          )}
+
+
+                          <span className="muted">
+
+                            Utiliza el botón{" "}
+
+                            <strong>
+                              Agregar columna
+                            </strong>
+                            .
+
+                            La tarea se completará automáticamente cuando la columna sea creada.
+
+                          </span>
+
+                        </div>
+
+                      ) : (
+
+                        <div className="tarea-instruccion tarea-lectura">
+
+                          Esta tarea no requiere crear una columna.
+
+                          Márcala como completada cuando hayas realizado la acción indicada.
+
+                        </div>
+
                       )}
+
+
+                      <div className="tarea-pie">
+
+                        <span className="muted">
+
+                          {tarea.origen &&
+                            `Origen: ${tarea.origen} · `}
+
+
+                          {new Date(
+                            tarea.created_at
+                          ).toLocaleDateString(
+                            "es-PE"
+                          )}
+
+                        </span>
+
+
+                        {!tarea.columna_sugerida && (
+
+                          <button
+                            type="button"
+                            className="btn btn-sm"
+                            onClick={
+                              () =>
+                                completarTarea(
+                                  tarea.id
+                                )
+                            }
+                          >
+                            Marcar como completada
+                          </button>
+
+                        )}
+
+                      </div>
+
                     </div>
+
                   </div>
-                </div>
-              ))}
+                )
+              )}
+
             </>
           )}
 
-          {completadas.length > 0 && (
+
+          {completadas.length >
+            0 && (
             <>
-              <div className="chart-title" style={{ marginTop: "24px" }}>
+
+              <div
+                className="chart-title"
+                style={{
+                  marginTop:
+                    "24px"
+                }}
+              >
                 Completadas ({completadas.length})
               </div>
 
+
               <div className="table-wrap">
+
                 <table>
+
                   <thead>
+
                     <tr>
-                      <th>Tarea</th>
-                      <th>Columna</th>
-                      <th>Cierre</th>
-                      <th>Fecha</th>
+                      <th>
+                        Tarea
+                      </th>
+
+                      <th>
+                        Columna
+                      </th>
+
+                      <th>
+                        Cierre
+                      </th>
+
+                      <th>
+                        Fecha
+                      </th>
                     </tr>
+
                   </thead>
+
+
                   <tbody>
-                    {completadas.map((tarea) => (
-                      <tr key={tarea.id}>
-                        <td className="cell-main ellipsis">{tarea.titulo}</td>
-                        <td className="muted">{tarea.columna_sugerida || "-"}</td>
-                        <td>
-                          <span className="chip chip-tipo">
-                            {tarea.cierre === "automatico" ? "Automatico" : "Manual"}
-                          </span>
-                        </td>
-                        <td className="muted">
-                          {tarea.completada_at
-                            ? new Date(tarea.completada_at).toLocaleDateString("es-PE")
-                            : "-"}
-                        </td>
-                      </tr>
-                    ))}
+
+                    {completadas.map(
+                      (tarea) => (
+
+                        <tr
+                          key={
+                            tarea.id
+                          }
+                        >
+
+                          <td className="cell-main ellipsis">
+                            {tarea.titulo}
+                          </td>
+
+
+                          <td className="muted">
+                            {tarea.columna_sugerida ||
+                              "-"}
+                          </td>
+
+
+                          <td>
+
+                            <span className="chip chip-tipo">
+
+                              {tarea.cierre ===
+                              "automatico"
+                                ? "Automático"
+                                : "Manual"}
+
+                            </span>
+
+                          </td>
+
+
+                          <td className="muted">
+
+                            {tarea.completada_at
+                              ? new Date(
+                                  tarea.completada_at
+                                ).toLocaleDateString(
+                                  "es-PE"
+                                )
+                              : "-"}
+
+                          </td>
+
+                        </tr>
+                      )
+                    )}
+
                   </tbody>
+
                 </table>
+
               </div>
+
             </>
           )}
+
         </Modal>
       )}
 
+
+      {/* ====================================================
+          CONFIRMAR ELIMINACION
+          ==================================================== */}
+
       {borrando && (
+
         <Confirm
           title="Eliminar columna"
-          message={`Se eliminara la columna "${borrando}" de ${tabla}.`}
-          detail="Los datos que contenga se pierden y la operacion no se puede deshacer."
+          message={
+            `Se eliminará la columna "${borrando}" de ${tabla}.`
+          }
+          detail="Los datos almacenados en esta columna se perderán permanentemente. Esta operación no se puede deshacer."
           confirmLabel="Eliminar"
           danger
-          onCancel={() => setBorrando(null)}
-          onConfirm={eliminarColumna}
+          onCancel={
+            () =>
+              setBorrando(
+                null
+              )
+          }
+          onConfirm={
+            eliminarColumna
+          }
         />
+
       )}
+
     </>
   )
 }
+
 
 export default DatosEmpresa
