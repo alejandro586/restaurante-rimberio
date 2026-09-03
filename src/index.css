@@ -3186,3 +3186,429 @@ tbody tr.selected .row-actions button:hover {
     width: 100%;
   }
 }
+
+/* ============================================================
+   MODULO DE ACTIVIDADES
+   ============================================================ */
+
+
+/* ------------------------------------------------------------
+   RESUMEN DE ACTIVIDADES
+   ------------------------------------------------------------ */
+
+.task-summary {
+  display: grid;
+  grid-template-columns:
+    repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.task-summary > div {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 13px 14px;
+}
+
+.task-summary span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  margin-bottom: 5px;
+}
+
+.task-summary strong {
+  display: block;
+  font-size: 19px;
+  color: var(--text);
+}
+
+
+/* ------------------------------------------------------------
+   LISTA
+   ------------------------------------------------------------ */
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.task-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  padding: 17px;
+  transition:
+    border-color var(--rapido),
+    box-shadow var(--rapido),
+    transform var(--rapido);
+}
+
+.task-card:hover {
+  border-color: #dec7b3;
+  box-shadow:
+    0 5px 18px rgba(38, 23, 15, 0.07);
+  transform: translateY(-1px);
+}
+
+
+/* ------------------------------------------------------------
+   CABECERA
+   ------------------------------------------------------------ */
+
+.task-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.task-number {
+  flex-shrink: 0;
+  min-width: 38px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  padding-top: 2px;
+}
+
+.task-title-area {
+  min-width: 0;
+  flex: 1;
+}
+
+.task-title-area h3 {
+  font-size: 15px;
+  line-height: 1.4;
+  margin-bottom: 8px;
+  word-break: break-word;
+}
+
+.task-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+
+/* ------------------------------------------------------------
+   ESTADOS
+   ------------------------------------------------------------ */
+
+.task-status,
+.task-priority {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 4px 9px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.task-status-pending {
+  background: #eee8e2;
+  color: #715f50;
+}
+
+.task-status-progress {
+  background: #e7eef9;
+  color: #3d5f8b;
+}
+
+.task-status-review {
+  background: #f6ecd7;
+  color: #89621f;
+}
+
+.task-status-done {
+  background: #e0efe4;
+  color: #31673d;
+}
+
+
+/* ------------------------------------------------------------
+   PRIORIDADES
+   ------------------------------------------------------------ */
+
+.task-priority-low {
+  background: #edf2ed;
+  color: #607064;
+}
+
+.task-priority-medium {
+  background: #eee8e2;
+  color: #78685b;
+}
+
+.task-priority-high {
+  background: #f7e4d6;
+  color: #a45126;
+}
+
+.task-priority-urgent {
+  background: #f9dddd;
+  color: #a63232;
+}
+
+
+/* ------------------------------------------------------------
+   DESCRIPCION
+   ------------------------------------------------------------ */
+
+.task-description {
+  margin:
+    14px 0 15px 50px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.65;
+  white-space: pre-line;
+}
+
+
+/* ------------------------------------------------------------
+   INFORMACION SECUNDARIA
+   ------------------------------------------------------------ */
+
+.task-meta {
+  display: grid;
+  grid-template-columns:
+    minmax(180px, 1fr)
+    minmax(160px, 1fr);
+  gap: 16px;
+  margin-left: 50px;
+  padding: 13px 0;
+  border-top: 1px solid var(--border);
+}
+
+.task-assignee {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.task-assignee > div {
+  min-width: 0;
+}
+
+.task-assignee span,
+.task-date span {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  margin-bottom: 2px;
+}
+
+.task-assignee strong,
+.task-date strong {
+  display: block;
+  font-size: 12px;
+}
+
+.task-assignee strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+/* ------------------------------------------------------------
+   ACCIONES
+   ------------------------------------------------------------ */
+
+.task-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-left: 50px;
+  padding-top: 13px;
+  border-top: 1px solid var(--border);
+}
+
+.task-actions select {
+  min-width: 155px;
+  min-height: 36px;
+  padding:
+    7px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.task-actions select:focus {
+  border-color: var(--primary);
+  box-shadow:
+    0 0 0 3px rgba(193, 84, 31, 0.08);
+}
+
+.task-actions select:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+
+/* ------------------------------------------------------------
+   ESTADO VACIO
+   ------------------------------------------------------------ */
+
+.task-empty {
+  text-align: center;
+  padding:
+    50px 20px;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.task-empty h3 {
+  font-size: 18px;
+  margin-bottom: 7px;
+}
+
+.task-empty p {
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+
+/* ------------------------------------------------------------
+   FORMULARIO
+   ------------------------------------------------------------ */
+
+.task-form-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+
+/* ------------------------------------------------------------
+   MEJORAS DE TEXTAREA
+   ------------------------------------------------------------ */
+
+#form-nueva-actividad textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+
+/* ------------------------------------------------------------
+   ANIMACION
+   ------------------------------------------------------------ */
+
+.task-card {
+  animation:
+    aparecer-escala
+    var(--medio)
+    var(--curva)
+    backwards;
+}
+
+.task-card:nth-child(1) {
+  animation-delay: 30ms;
+}
+
+.task-card:nth-child(2) {
+  animation-delay: 60ms;
+}
+
+.task-card:nth-child(3) {
+  animation-delay: 90ms;
+}
+
+.task-card:nth-child(4) {
+  animation-delay: 120ms;
+}
+
+.task-card:nth-child(5) {
+  animation-delay: 150ms;
+}
+
+.task-card:nth-child(n + 6) {
+  animation-delay: 180ms;
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 950px) {
+  .task-summary {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+  }
+}
+
+
+@media (max-width: 700px) {
+  .task-summary {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .task-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .task-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .task-actions select,
+  .task-actions .btn {
+    width: 100%;
+  }
+
+  .task-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+@media (max-width: 520px) {
+  .task-summary {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .task-summary > div:last-child {
+    grid-column: span 2;
+  }
+
+  .task-card {
+    padding: 14px;
+  }
+
+  .task-card-head {
+    gap: 8px;
+  }
+
+  .task-number {
+    min-width: 30px;
+  }
+
+  .task-description,
+  .task-meta,
+  .task-actions {
+    margin-left: 0;
+  }
+
+  .task-description {
+    margin-top: 13px;
+  }
+
+  .task-meta {
+    margin-top: 10px;
+  }
+}
