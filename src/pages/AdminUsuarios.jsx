@@ -161,41 +161,47 @@ const AdminUsuarios = () => {
      CARGAR PERMISOS
      ========================================================== */
 
-  const cargarPermisos =
-    async (userId) => {
+    const cargarPermisos =
+    async (
+        userId,
+        mostrarCarga = true
+    ) => {
 
-      if (!userId) {
+        if (!userId) {
         setPermisos([])
         return
-      }
+        }
 
 
-      setCargandoPermisos(true)
-      setError("")
+        if (mostrarCarga) {
+        setCargandoPermisos(true)
+        }
+
+        setError("")
 
 
-      try {
+        try {
         const respuesta =
-          await obtenerPermisosUsuario(
+            await obtenerPermisosUsuario(
             userId
-          )
+            )
 
 
         setPermisos(
-          respuesta.permisos
+            respuesta.permisos
             ?.cursos || []
         )
 
-      } catch (error) {
-        setPermisos([])
-
+        } catch (error) {
         setError(
-          getMessage(error)
+            getMessage(error)
         )
 
-      } finally {
-        setCargandoPermisos(false)
-      }
+        } finally {
+        if (mostrarCarga) {
+            setCargandoPermisos(false)
+        }
+        }
     }
 
 
@@ -440,7 +446,8 @@ const AdminUsuarios = () => {
 
 
         await cargarPermisos(
-          usuarioSeleccionado.id
+        usuarioSeleccionado.id,
+        false
         )
 
       } catch (error) {
@@ -504,7 +511,8 @@ const AdminUsuarios = () => {
 
 
         await cargarPermisos(
-          usuarioSeleccionado.id
+        usuarioSeleccionado.id,
+        false
         )
 
       } catch (error) {
