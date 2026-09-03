@@ -1,18 +1,35 @@
 import axios from "axios"
 
+
+/* ==========================================================
+   CLIENTE API
+   ========================================================== */
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL
 })
 
+
+/* ==========================================================
+   TOKEN
+   ========================================================== */
+
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token")
+  const token =
+    localStorage.getItem("token")
 
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+    config.headers.Authorization =
+      `Bearer ${token}`
   }
 
   return config
 })
+
+
+/* ==========================================================
+   RESPUESTAS / SESION EXPIRADA
+   ========================================================== */
 
 api.interceptors.response.use(
   (response) => response,
@@ -26,17 +43,19 @@ api.interceptors.response.use(
       localStorage.removeItem("user")
       localStorage.removeItem("perfil")
 
-      window.location.href = "/login"
+      window.location.href =
+        "/login"
     }
 
     return Promise.reject(error)
   }
 )
 
-/**
- * Obtiene un mensaje de error legible
- * proveniente del backend.
- */
+
+/* ==========================================================
+   ERRORES
+   ========================================================== */
+
 export const getMessage = (error) => {
   if (
     error.response &&
@@ -49,9 +68,11 @@ export const getMessage = (error) => {
   return "No se pudo conectar con el servidor"
 }
 
-/**
- * Guarda la sesion en el navegador.
- */
+
+/* ==========================================================
+   SESION
+   ========================================================== */
+
 export const saveSession = (
   token,
   user,
@@ -64,29 +85,34 @@ export const saveSession = (
 
   localStorage.setItem(
     "user",
-    JSON.stringify(user || {})
+    JSON.stringify(
+      user || {}
+    )
   )
 
   localStorage.setItem(
     "perfil",
-    JSON.stringify(perfil || {})
+    JSON.stringify(
+      perfil || {}
+    )
   )
 }
 
-/**
- * Devuelve el perfil guardado.
+
+/*
+ * El perfil guardado solo decide
+ * que se dibuja en el frontend.
  *
- * Este perfil solamente controla
- * lo que se muestra visualmente.
- *
- * El backend vuelve a comprobar
- * los permisos en cada endpoint.
+ * El backend vuelve a verificar
+ * el rol contra la base de datos.
  */
 export const getPerfil = () => {
   try {
     return (
       JSON.parse(
-        localStorage.getItem("perfil")
+        localStorage.getItem(
+          "perfil"
+        )
       ) || {}
     )
   } catch (error) {
@@ -94,98 +120,37 @@ export const getPerfil = () => {
   }
 }
 
-/**
- * Rol general del usuario.
- */
-export const getRol = () => {
-  return getPerfil().role || ""
-}
 
-/**
- * Roles generales del ERP.
- */
+export const getRol = () =>
+  getPerfil().role || ""
+
+
 export const esAdmin = () =>
   getRol() === "admin"
 
-export const esSupervisor = () =>
-  getRol() === "supervisor"
 
 export const esTrabajador = () =>
   getRol() === "trabajador"
 
-export const esInvitado = () =>
-  getRol() === "invitado"
 
-/**
- * Indica si el usuario puede
- * crear nuevos proyectos.
- */
-export const puedeCrearProyecto = () => {
-  return [
-    "admin",
-    "supervisor"
-  ].includes(getRol())
-}
+export const getEmpresa = () =>
+  getPerfil().empresa ||
+  "Mi empresa"
 
-/**
- * Indica si el usuario puede
- * colaborar activamente.
- *
- * Invitado sera principalmente
- * de solo lectura.
- */
-export const puedeColaborar = () => {
-  return [
-    "admin",
-    "supervisor",
-    "trabajador"
-  ].includes(getRol())
-}
 
-/**
- * Nombre de la empresa.
- */
-export const getEmpresa = () => {
-  return (
-    getPerfil().empresa ||
-    "Mi empresa"
-  )
-}
+export const inicioSegunRol = () =>
+  esAdmin()
+    ? "/archivos"
+    : "/importar"
 
-/**
- * Ruta inicial dependiendo
- * del rol del usuario.
- */
-export const inicioSegunRol = () => {
-  const rol = getRol()
 
-  if (rol === "admin") {
-    return "/archivos"
-  }
-
-  if (rol === "supervisor") {
-    return "/proyectos"
-  }
-
-  if (rol === "trabajador") {
-    return "/importar"
-  }
-
-  if (rol === "invitado") {
-    return "/proyectos"
-  }
-
-  return "/proyectos"
-}
-
-/**
- * Datos de Supabase Auth.
- */
 export const getUser = () => {
   try {
     return (
       JSON.parse(
-        localStorage.getItem("user")
+        localStorage.getItem(
+          "user"
+        )
       ) || {}
     )
   } catch (error) {
@@ -193,48 +158,55 @@ export const getUser = () => {
   }
 }
 
-/**
- * Nombre visible del usuario.
- */
+
 export const getUserName = () => {
-  const perfil = getPerfil()
+  const perfil =
+    getPerfil()
 
   if (perfil.full_name) {
     return perfil.full_name
   }
 
-  const user = getUser()
+
+  const user =
+    getUser()
 
   const meta =
     user.user_metadata || {}
+
 
   if (meta.full_name) {
     return meta.full_name
   }
 
+
   if (user.email) {
-    return user.email.split("@")[0]
+    return user.email
+      .split("@")[0]
   }
+
 
   return "Usuario"
 }
 
-/**
- * Iniciales para el avatar.
- */
+
 export const getInitials = () => {
-  const parts = getUserName()
-    .trim()
-    .split(" ")
-    .filter(Boolean)
+  const parts =
+    getUserName()
+      .trim()
+      .split(" ")
+      .filter(Boolean)
+
 
   if (parts.length === 0) {
     return "U"
   }
 
+
   if (parts.length === 1) {
     return parts[0].charAt(0)
   }
+
 
   return (
     parts[0].charAt(0) +
@@ -242,29 +214,307 @@ export const getInitials = () => {
   )
 }
 
-/**
- * Comprueba si existe una sesion.
- */
-export const isLogged = () => {
-  return Boolean(
-    localStorage.getItem("token")
+
+export const isLogged = () =>
+  Boolean(
+    localStorage.getItem(
+      "token"
+    )
+  )
+
+
+export const clearSession = () => {
+  localStorage.removeItem(
+    "token"
+  )
+
+  localStorage.removeItem(
+    "user"
+  )
+
+  localStorage.removeItem(
+    "perfil"
   )
 }
 
-/**
- * Cierra la sesion local.
- */
-export const clearSession = () => {
-  localStorage.removeItem("token")
-  localStorage.removeItem("user")
-  localStorage.removeItem("perfil")
-}
 
-/**
- * Formatea importes en soles.
+/* ==========================================================
+   CURSOS DEL USUARIO
+   ========================================================== */
+
+export const listarCursos =
+  async () => {
+
+    const response =
+      await api.get(
+        "/courses"
+      )
+
+    return response.data
+  }
+
+
+export const obtenerMisPermisos =
+  async () => {
+
+    const response =
+      await api.get(
+        "/courses/me"
+      )
+
+    return response.data
+  }
+
+
+export const obtenerCurso =
+  async (curso) => {
+
+    const valor =
+      encodeURIComponent(
+        String(curso)
+      )
+
+    const response =
+      await api.get(
+        `/courses/${valor}`
+      )
+
+    return response.data
+  }
+
+
+export const obtenerModulosCurso =
+  async (curso) => {
+
+    const valor =
+      encodeURIComponent(
+        String(curso)
+      )
+
+    const response =
+      await api.get(
+        `/courses/${valor}/modules`
+      )
+
+    return response.data
+  }
+
+
+/* ==========================================================
+   ADMINISTRACION - USUARIOS
+   ========================================================== */
+
+/*
+ * GET /api/admin/users
  */
+export const listarUsuarios =
+  async () => {
+
+    const response =
+      await api.get(
+        "/admin/users"
+      )
+
+    return response.data
+  }
+
+
+/*
+ * GET /api/admin/users/:userId
+ */
+export const obtenerUsuario =
+  async (userId) => {
+
+    const id =
+      encodeURIComponent(
+        String(userId)
+      )
+
+    const response =
+      await api.get(
+        `/admin/users/${id}`
+      )
+
+    return response.data
+  }
+
+
+/* ==========================================================
+   ADMINISTRACION - CATALOGO
+   ========================================================== */
+
+/*
+ * GET /api/admin/users/catalog
+ */
+export const obtenerCatalogoCursos =
+  async () => {
+
+    const response =
+      await api.get(
+        "/admin/users/catalog"
+      )
+
+    return response.data
+  }
+
+
+/* ==========================================================
+   ADMINISTRACION - PERMISOS
+   ========================================================== */
+
+/*
+ * GET
+ * /api/admin/users/:userId/permissions
+ */
+export const obtenerPermisosUsuario =
+  async (userId) => {
+
+    const id =
+      encodeURIComponent(
+        String(userId)
+      )
+
+    const response =
+      await api.get(
+        `/admin/users/${id}/permissions`
+      )
+
+    return response.data
+  }
+
+
+/* ==========================================================
+   ADMINISTRACION - ASIGNAR CURSO
+   ========================================================== */
+
+export const asignarCurso =
+  async (
+    userId,
+    courseId
+  ) => {
+
+    const usuario =
+      encodeURIComponent(
+        String(userId)
+      )
+
+    const curso =
+      encodeURIComponent(
+        String(courseId)
+      )
+
+
+    const response =
+      await api.post(
+        `/admin/users/${usuario}/courses/${curso}`
+      )
+
+
+    return response.data
+  }
+
+
+/* ==========================================================
+   ADMINISTRACION - QUITAR CURSO
+   ========================================================== */
+
+export const quitarCurso =
+  async (
+    userId,
+    courseId
+  ) => {
+
+    const usuario =
+      encodeURIComponent(
+        String(userId)
+      )
+
+    const curso =
+      encodeURIComponent(
+        String(courseId)
+      )
+
+
+    const response =
+      await api.delete(
+        `/admin/users/${usuario}/courses/${curso}`
+      )
+
+
+    return response.data
+  }
+
+
+/* ==========================================================
+   ADMINISTRACION - ASIGNAR MODULO
+   ========================================================== */
+
+export const asignarModulo =
+  async (
+    userId,
+    moduleId
+  ) => {
+
+    const usuario =
+      encodeURIComponent(
+        String(userId)
+      )
+
+    const modulo =
+      encodeURIComponent(
+        String(moduleId)
+      )
+
+
+    const response =
+      await api.post(
+        `/admin/users/${usuario}/modules/${modulo}`
+      )
+
+
+    return response.data
+  }
+
+
+/* ==========================================================
+   ADMINISTRACION - QUITAR MODULO
+   ========================================================== */
+
+export const quitarModulo =
+  async (
+    userId,
+    moduleId
+  ) => {
+
+    const usuario =
+      encodeURIComponent(
+        String(userId)
+      )
+
+    const modulo =
+      encodeURIComponent(
+        String(moduleId)
+      )
+
+
+    const response =
+      await api.delete(
+        `/admin/users/${usuario}/modules/${modulo}`
+      )
+
+
+    return response.data
+  }
+
+
+/* ==========================================================
+   FORMATO DE NUMEROS
+   ========================================================== */
+
 export const soles = (valor) =>
-  `S/ ${Number(valor || 0).toLocaleString(
+  `S/ ${Number(
+    valor || 0
+  ).toLocaleString(
     "es-PE",
     {
       minimumFractionDigits: 2,
@@ -272,12 +522,13 @@ export const soles = (valor) =>
     }
   )}`
 
-/**
- * Formatea numeros grandes.
- */
+
 export const miles = (valor) =>
-  Number(valor || 0).toLocaleString(
+  Number(
+    valor || 0
+  ).toLocaleString(
     "es-PE"
   )
+
 
 export default api
