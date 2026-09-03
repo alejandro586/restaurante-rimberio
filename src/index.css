@@ -2118,3 +2118,1071 @@ tbody tr.selected .row-actions button:hover {
   border-radius: 50%;
   background: var(--green);
 }
+
+/* ============================================================
+   MODULO DE PROYECTOS
+   Sistema colaborativo tipo GitHub para RIMBERIO
+   ============================================================ */
+
+
+/* ------------------------------------------------------------
+   ROLES NUEVOS
+   ------------------------------------------------------------ */
+
+.rol-supervisor {
+  background: rgba(63, 125, 79, 0.24);
+  color: #b9ddb9;
+}
+
+.rol-invitado {
+  background: rgba(141, 118, 99, 0.25);
+  color: #d8c7b8;
+}
+
+
+/* ------------------------------------------------------------
+   BARRA DE PROYECTOS
+   ------------------------------------------------------------ */
+
+.project-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.project-toolbar .toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.project-toolbar input,
+.project-toolbar select {
+  min-height: 42px;
+  padding: 10px 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  outline: none;
+  transition:
+    border-color var(--rapido),
+    background var(--rapido),
+    box-shadow var(--rapido);
+}
+
+.project-toolbar input {
+  min-width: 260px;
+}
+
+.project-toolbar select {
+  min-width: 180px;
+}
+
+.project-toolbar input:focus,
+.project-toolbar select:focus {
+  background: var(--surface);
+  border-color: var(--primary);
+  box-shadow:
+    0 0 0 3px rgba(193, 84, 31, 0.08);
+}
+
+
+/* ------------------------------------------------------------
+   TARJETAS DE PROYECTOS
+   ------------------------------------------------------------ */
+
+.project-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(auto-fill, minmax(320px, 1fr));
+  gap: 18px;
+}
+
+.project-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  transition:
+    transform var(--medio) var(--curva),
+    box-shadow var(--medio) var(--curva),
+    border-color var(--rapido);
+}
+
+.project-card:hover {
+  transform: translateY(-3px);
+  border-color: #e1cfbd;
+  box-shadow:
+    0 10px 34px rgba(38, 23, 15, 0.1);
+}
+
+.project-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.project-title-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.project-title-wrap h2 {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.project-symbol {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.project-symbol-large {
+  width: 48px;
+  height: 48px;
+  border-radius: 13px;
+  font-size: 20px;
+}
+
+.project-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+
+/* ------------------------------------------------------------
+   ESTADOS
+   ------------------------------------------------------------ */
+
+.project-status,
+.project-visibility,
+.project-role,
+.project-member-role {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  white-space: nowrap;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 9px;
+}
+
+.project-status-active {
+  background: #e4f0e5;
+  color: #31663e;
+}
+
+.project-status-paused {
+  background: #f8edd7;
+  color: #95681c;
+}
+
+.project-status-completed {
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+}
+
+.project-status-archived {
+  background: #eee8e2;
+  color: #78685b;
+}
+
+.project-visibility {
+  background: var(--bg);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.project-role {
+  background: #f4eee8;
+  color: #765b47;
+  flex-shrink: 0;
+}
+
+
+/* ------------------------------------------------------------
+   CONTENIDO DE TARJETA
+   ------------------------------------------------------------ */
+
+.project-description {
+  color: var(--muted);
+  line-height: 1.65;
+  margin: 18px 0;
+  min-height: 46px;
+}
+
+.project-stats {
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 15px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.project-stats > div {
+  min-width: 0;
+}
+
+.project-stats strong {
+  display: block;
+  font-size: 17px;
+  margin-bottom: 3px;
+}
+
+.project-stats span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.project-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.project-card-footer > span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+
+/* ------------------------------------------------------------
+   ESTADO VACIO
+   ------------------------------------------------------------ */
+
+.project-empty {
+  text-align: center;
+  padding: 48px 20px;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.project-empty-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 16px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 18px;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.project-empty h2 {
+  font-size: 19px;
+  margin-bottom: 8px;
+}
+
+.project-empty p {
+  color: var(--muted);
+  line-height: 1.7;
+  max-width: 460px;
+  margin: 0 auto 22px;
+}
+
+.project-retry {
+  margin-left: 12px;
+  background: none;
+  border: none;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+
+/* ------------------------------------------------------------
+   AYUDA DE FORMULARIOS
+   ------------------------------------------------------------ */
+
+.field-help {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+  margin-top: 7px;
+}
+
+
+/* ============================================================
+   DETALLE DEL PROYECTO
+   ============================================================ */
+
+.project-detail-header {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.project-detail-breadcrumb {
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.project-detail-breadcrumb button {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--primary);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.project-detail-breadcrumb button:hover {
+  text-decoration: underline;
+}
+
+.project-detail-breadcrumb strong {
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-detail-main {
+  padding: 24px 22px 20px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.project-detail-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  min-width: 0;
+}
+
+.project-detail-title-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.project-detail-title-line h1 {
+  font-size: 23px;
+  line-height: 1.3;
+}
+
+.project-detail-title > div:last-child > p {
+  color: var(--muted);
+  line-height: 1.6;
+  margin-top: 7px;
+  max-width: 760px;
+}
+
+.project-detail-user {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+
+/* ------------------------------------------------------------
+   PESTAÑAS
+   ------------------------------------------------------------ */
+
+.project-tabs {
+  padding: 0 18px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.project-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 14px 13px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-weight: 600;
+  white-space: nowrap;
+  margin-bottom: -1px;
+  transition:
+    color var(--rapido),
+    border-color var(--rapido),
+    background var(--rapido);
+}
+
+.project-tab:hover {
+  color: var(--text);
+  background: rgba(193, 84, 31, 0.035);
+}
+
+.project-tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+.project-tab-count {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.project-tab.active .project-tab-count {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+
+/* ------------------------------------------------------------
+   CONTENIDO PRINCIPAL
+   ------------------------------------------------------------ */
+
+.project-detail-content {
+  width: 100%;
+}
+
+.project-detail-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr) 290px;
+  gap: 18px;
+  align-items: start;
+}
+
+.project-main-column,
+.project-side-column {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+
+/* ------------------------------------------------------------
+   ENCABEZADOS DE CARDS
+   ------------------------------------------------------------ */
+
+.card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.card-head h2 {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.card-head p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+  margin-top: 4px;
+}
+
+.project-section-head {
+  align-items: center;
+}
+
+
+/* ------------------------------------------------------------
+   ACERCA DEL PROYECTO
+   ------------------------------------------------------------ */
+
+.project-about-description {
+  color: var(--muted);
+  line-height: 1.75;
+  margin-bottom: 20px;
+}
+
+.project-about-info {
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.project-about-info > div {
+  background: var(--surface);
+  padding: 14px;
+}
+
+.project-about-info span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  margin-bottom: 5px;
+}
+
+.project-about-info strong {
+  font-size: 13px;
+}
+
+
+/* ------------------------------------------------------------
+   RESUMEN LATERAL
+   ------------------------------------------------------------ */
+
+.project-summary-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.project-summary-list > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.project-summary-list > div:first-child {
+  padding-top: 0;
+}
+
+.project-summary-list > div:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.project-summary-list span {
+  color: var(--muted);
+}
+
+.project-summary-list strong {
+  font-size: 17px;
+}
+
+
+/* ------------------------------------------------------------
+   EQUIPO
+   ------------------------------------------------------------ */
+
+.avatar-small {
+  width: 32px;
+  height: 32px;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.project-team-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.project-team-person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.project-team-person > div {
+  min-width: 0;
+}
+
+.project-team-person strong {
+  display: block;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-team-person div span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.project-see-all {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  padding: 5px 0 0;
+}
+
+
+/* ------------------------------------------------------------
+   ACTIVIDAD RECIENTE VACIA
+   ------------------------------------------------------------ */
+
+.project-empty-small {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  padding: 16px;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+
+.project-empty-small-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  flex-shrink: 0;
+  font-weight: 700;
+}
+
+.project-empty-small strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.project-empty-small p {
+  color: var(--muted);
+  line-height: 1.6;
+  font-size: 13px;
+}
+
+
+/* ------------------------------------------------------------
+   MODULOS EN PREPARACION
+   ------------------------------------------------------------ */
+
+.project-feature-placeholder {
+  padding: 48px 22px;
+  text-align: center;
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+.project-feature-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  font-size: 23px;
+  font-weight: 800;
+}
+
+.project-feature-placeholder h3 {
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+.project-feature-placeholder > p {
+  max-width: 510px;
+  margin: 0 auto;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.project-placeholder-stats {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.project-placeholder-stats > div {
+  min-width: 100px;
+  padding: 12px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+
+.project-placeholder-stats strong {
+  display: block;
+  font-size: 20px;
+}
+
+.project-placeholder-stats span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+
+/* ------------------------------------------------------------
+   TIPOS DE DOCUMENTO
+   ------------------------------------------------------------ */
+
+.project-file-types {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 22px;
+}
+
+.project-file-types span {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--muted);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+
+/* ------------------------------------------------------------
+   TABLA DE MIEMBROS
+   ------------------------------------------------------------ */
+
+.project-members-table {
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.project-members-header,
+.project-member-row {
+  display: grid;
+  grid-template-columns:
+    minmax(220px, 1fr)
+    180px
+    160px;
+  gap: 16px;
+  align-items: center;
+}
+
+.project-members-header {
+  background: var(--bg);
+  color: var(--muted);
+  padding: 11px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.project-member-row {
+  padding: 14px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.project-member-row:hover {
+  background: rgba(193, 84, 31, 0.025);
+}
+
+.project-member-user {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+
+.project-member-user > div {
+  min-width: 0;
+}
+
+.project-member-user strong {
+  display: block;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-member-user div span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-member-role {
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+}
+
+
+/* ------------------------------------------------------------
+   ERROR DE PROYECTO
+   ------------------------------------------------------------ */
+
+.project-error-state {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.project-error-state h2 {
+  margin-bottom: 8px;
+}
+
+.project-error-state p {
+  color: var(--muted);
+  line-height: 1.65;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.project-error-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+
+/* ------------------------------------------------------------
+   ANIMACIONES DE PROYECTOS
+   ------------------------------------------------------------ */
+
+.project-card {
+  animation:
+    aparecer-escala
+    var(--medio)
+    var(--curva)
+    backwards;
+}
+
+.project-card:nth-child(1) {
+  animation-delay: 40ms;
+}
+
+.project-card:nth-child(2) {
+  animation-delay: 80ms;
+}
+
+.project-card:nth-child(3) {
+  animation-delay: 120ms;
+}
+
+.project-card:nth-child(4) {
+  animation-delay: 160ms;
+}
+
+.project-card:nth-child(5) {
+  animation-delay: 200ms;
+}
+
+.project-card:nth-child(n + 6) {
+  animation-delay: 240ms;
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 1100px) {
+  .project-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .project-side-column {
+    display: grid;
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+
+@media (max-width: 800px) {
+  .project-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .project-toolbar .toolbar-left {
+    width: 100%;
+  }
+
+  .project-toolbar input,
+  .project-toolbar select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .project-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .project-detail-main {
+    flex-direction: column;
+  }
+
+  .project-detail-user {
+    display: none;
+  }
+
+  .project-detail-title-line h1 {
+    font-size: 20px;
+  }
+
+  .project-about-info {
+    grid-template-columns: 1fr;
+  }
+
+  .project-side-column {
+    display: flex;
+  }
+
+  .project-members-table {
+    overflow-x: auto;
+  }
+
+  .project-members-header,
+  .project-member-row {
+    min-width: 650px;
+  }
+}
+
+
+@media (max-width: 600px) {
+  .project-card {
+    padding: 17px;
+  }
+
+  .project-card-top {
+    flex-direction: column;
+  }
+
+  .project-role {
+    margin-left: 52px;
+  }
+
+  .project-stats {
+    gap: 4px;
+  }
+
+  .project-stats strong {
+    font-size: 15px;
+  }
+
+  .project-stats span {
+    font-size: 10px;
+  }
+
+  .project-card-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .project-card-footer .btn {
+    width: 100%;
+  }
+
+  .project-detail-breadcrumb {
+    padding:
+      12px 16px;
+  }
+
+  .project-detail-main {
+    padding:
+      18px 16px;
+  }
+
+  .project-detail-title {
+    gap: 10px;
+  }
+
+  .project-symbol-large {
+    width: 42px;
+    height: 42px;
+  }
+
+  .project-tabs {
+    padding:
+      0 6px;
+  }
+
+  .project-tab {
+    padding:
+      12px 10px;
+    font-size: 12px;
+  }
+
+  .project-section-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .project-section-head .btn {
+    width: 100%;
+  }
+
+  .project-placeholder-stats {
+    width: 100%;
+  }
+
+  .project-placeholder-stats > div {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .project-error-actions {
+    flex-direction: column;
+  }
+
+  .project-error-actions .btn {
+    width: 100%;
+  }
+}

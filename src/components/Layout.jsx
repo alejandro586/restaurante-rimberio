@@ -1,70 +1,228 @@
-import { useState } from "react"
-import { NavLink, useNavigate, useLocation } from "react-router-dom"
-import { clearSession, getUserName, getInitials, getRol, getEmpresa, esAdmin } from "../api"
+import {
+  useState
+} from "react"
+
+import {
+  NavLink,
+  useNavigate,
+  useLocation
+} from "react-router-dom"
+
+import {
+  clearSession,
+  getUserName,
+  getInitials,
+  getRol,
+  getEmpresa
+} from "../api"
+
 import Confirm from "./Confirm"
 
+/**
+ * Menu principal del sistema.
+ *
+ * Cada rol tiene acceso solamente
+ * a los modulos que le corresponden.
+ *
+ * El modulo Proyectos forma parte
+ * del nuevo sistema colaborativo.
+ */
 const MENU = {
-  trabajador: [
-    { to: "/importar", label: "Importar archivos" },
-    { to: "/datos-empresa", label: "Datos de la empresa" }
-  ],
   admin: [
-    { to: "/archivos", label: "Archivos cargados" },
-    { to: "/comparar", label: "Comparar restaurantes" }
+    {
+      to: "/proyectos",
+      label: "Proyectos"
+    },
+    {
+      to: "/archivos",
+      label: "Archivos cargados"
+    },
+    {
+      to: "/comparar",
+      label: "Comparar restaurantes"
+    }
+  ],
+
+  supervisor: [
+    {
+      to: "/proyectos",
+      label: "Proyectos"
+    }
+  ],
+
+  trabajador: [
+    {
+      to: "/proyectos",
+      label: "Proyectos"
+    },
+    {
+      to: "/importar",
+      label: "Importar archivos"
+    },
+    {
+      to: "/datos-empresa",
+      label: "Datos de la empresa"
+    }
+  ],
+
+  invitado: [
+    {
+      to: "/proyectos",
+      label: "Proyectos"
+    }
   ]
 }
 
-const Layout = ({ children }) => {
-  const navigate = useNavigate()
-  const location = useLocation()
-  const [asking, setAsking] = useState(false)
+/**
+ * Nombre visible de cada rol.
+ */
+const NOMBRES_ROL = {
+  admin: "Administrador",
+  supervisor: "Supervisor",
+  trabajador: "Trabajador",
+  invitado: "Invitado"
+}
 
-  const rol = getRol()
-  const enlaces = MENU[rol] || []
+/**
+ * Clase CSS asociada al rol.
+ *
+ * En el siguiente archivo de estilos
+ * añadiremos supervisor e invitado.
+ */
+const CLASES_ROL = {
+  admin: "rol-admin",
+  supervisor: "rol-supervisor",
+  trabajador: "rol-trabajador",
+  invitado: "rol-invitado"
+}
 
+const Layout = ({
+  children
+}) => {
+  const navigate =
+    useNavigate()
+
+  const location =
+    useLocation()
+
+  const [
+    asking,
+    setAsking
+  ] = useState(false)
+
+  const rol =
+    getRol()
+
+  const enlaces =
+    MENU[rol] || [
+      {
+        to: "/proyectos",
+        label: "Proyectos"
+      }
+    ]
+
+  const nombreRol =
+    NOMBRES_ROL[rol] ||
+    "Usuario"
+
+  const claseRol =
+    CLASES_ROL[rol] ||
+    "rol-trabajador"
+
+  /**
+   * Cierra la sesion local
+   * y vuelve al login.
+   */
   const logout = () => {
     clearSession()
-    navigate("/login")
+
+    navigate(
+      "/login"
+    )
   }
 
   return (
     <div className="layout">
       <aside className="sidebar">
         <div className="sidebar-brand">
-          <img src="/icono.png" alt="RIMBERIO" className="brand-logo" />
-          <span>RIMBERIO</span>
+          <img
+            src="/icono.png"
+            alt="RIMBERIO"
+            className="brand-logo"
+          />
+
+          <span>
+            RIMBERIO
+          </span>
         </div>
 
         <nav className="sidebar-nav">
-          {enlaces.map((enlace) => (
-            <NavLink key={enlace.to} to={enlace.to}>
-              {enlace.label}
-            </NavLink>
-          ))}
+          {enlaces.map(
+            (enlace) => (
+              <NavLink
+                key={enlace.to}
+                to={enlace.to}
+                className={({
+                  isActive
+                }) =>
+                  isActive
+                    ? "active"
+                    : undefined
+                }
+              >
+                {enlace.label}
+              </NavLink>
+            )
+          )}
         </nav>
 
         <div className="sidebar-foot">
           <div className="sidebar-user">
-            <span className="avatar avatar-light">{getInitials()}</span>
+            <span className="avatar avatar-light">
+              {getInitials()}
+            </span>
+
             <div className="sidebar-ident">
-              <span className="sidebar-name">{getUserName()}</span>
-              <span className={`rol-chip ${esAdmin() ? "rol-admin" : "rol-trabajador"}`}>
-                {esAdmin() ? "Administrador" : "Trabajador"}
+              <span className="sidebar-name">
+                {getUserName()}
+              </span>
+
+              <span
+                className={`rol-chip ${claseRol}`}
+              >
+                {nombreRol}
               </span>
             </div>
           </div>
 
-          <span className="sidebar-empresa">{getEmpresa()}</span>
+          <span className="sidebar-empresa">
+            {getEmpresa()}
+          </span>
 
-          <button type="button" className="btn btn-logout" onClick={() => setAsking(true)}>
+          <button
+            type="button"
+            className="btn btn-logout"
+            onClick={() =>
+              setAsking(true)
+            }
+          >
             Cerrar sesion
           </button>
         </div>
       </aside>
 
-      {/* La key hace que el contenido se remonte al cambiar de modulo, que
-          es lo que vuelve a disparar la animacion de entrada. */}
-      <main className="main" key={location.pathname}>
+      {/*
+        La key hace que el contenido
+        se vuelva a montar cuando cambia
+        la ruta.
+
+        Esto conserva el comportamiento
+        que ya tenia tu proyecto.
+      */}
+      <main
+        className="main"
+        key={location.pathname}
+      >
         {children}
       </main>
 
@@ -75,7 +233,9 @@ const Layout = ({ children }) => {
           detail="Tendras que ingresar tus credenciales nuevamente."
           confirmLabel="Cerrar sesion"
           danger
-          onCancel={() => setAsking(false)}
+          onCancel={() =>
+            setAsking(false)
+          }
           onConfirm={logout}
         />
       )}
