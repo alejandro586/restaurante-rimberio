@@ -13,48 +13,19 @@ import {
   getUserName,
   getInitials,
   getRol,
-  getEmpresa
+  getEmpresa,
+  esAdmin
 } from "../api"
 
 import Confirm from "./Confirm"
 
-/**
- * Menu principal del sistema.
- *
- * Cada rol tiene acceso solamente
- * a los modulos que le corresponden.
- *
- * El modulo Proyectos forma parte
- * del nuevo sistema colaborativo.
- */
+
+/* ==========================================================
+   MENU SEGUN ROL
+   ========================================================== */
+
 const MENU = {
-  admin: [
-    {
-      to: "/proyectos",
-      label: "Proyectos"
-    },
-    {
-      to: "/archivos",
-      label: "Archivos cargados"
-    },
-    {
-      to: "/comparar",
-      label: "Comparar restaurantes"
-    }
-  ],
-
-  supervisor: [
-    {
-      to: "/proyectos",
-      label: "Proyectos"
-    }
-  ],
-
   trabajador: [
-    {
-      to: "/proyectos",
-      label: "Proyectos"
-    },
     {
       to: "/importar",
       label: "Importar archivos"
@@ -65,85 +36,85 @@ const MENU = {
     }
   ],
 
-  invitado: [
+  admin: [
     {
-      to: "/proyectos",
-      label: "Proyectos"
+      to: "/archivos",
+      label: "Archivos cargados"
+    },
+    {
+      to: "/comparar",
+      label: "Comparar restaurantes"
+    },
+    {
+      to: "/administracion/usuarios",
+      label: "Administración de usuarios"
     }
   ]
 }
 
-/**
- * Nombre visible de cada rol.
- */
-const NOMBRES_ROL = {
-  admin: "Administrador",
-  supervisor: "Supervisor",
-  trabajador: "Trabajador",
-  invitado: "Invitado"
-}
 
-/**
- * Clase CSS asociada al rol.
- *
- * En el siguiente archivo de estilos
- * añadiremos supervisor e invitado.
- */
-const CLASES_ROL = {
-  admin: "rol-admin",
-  supervisor: "rol-supervisor",
-  trabajador: "rol-trabajador",
-  invitado: "rol-invitado"
-}
+/* ==========================================================
+   COMPONENTE
+   ========================================================== */
 
 const Layout = ({
   children
 }) => {
+
   const navigate =
     useNavigate()
 
   const location =
     useLocation()
 
+
   const [
     asking,
     setAsking
   ] = useState(false)
 
+
   const rol =
     getRol()
 
+
   const enlaces =
-    MENU[rol] || [
-      {
-        to: "/proyectos",
-        label: "Proyectos"
-      }
-    ]
+    MENU[rol] || []
 
-  const nombreRol =
-    NOMBRES_ROL[rol] ||
-    "Usuario"
 
-  const claseRol =
-    CLASES_ROL[rol] ||
-    "rol-trabajador"
+  /* ========================================================
+     CERRAR SESION
+     ======================================================== */
 
-  /**
-   * Cierra la sesion local
-   * y vuelve al login.
-   */
   const logout = () => {
     clearSession()
 
     navigate(
-      "/login"
+      "/login",
+      {
+        replace: true
+      }
     )
   }
 
+
+  /* ========================================================
+     INTERFAZ
+     ======================================================== */
+
   return (
     <div className="layout">
+
+      {/* ====================================================
+          SIDEBAR
+          ==================================================== */}
+
       <aside className="sidebar">
+
+        {/* ==================================================
+            MARCA
+            ================================================== */}
+
         <div className="sidebar-brand">
           <img
             src="/icono.png"
@@ -156,7 +127,15 @@ const Layout = ({
           </span>
         </div>
 
-        <nav className="sidebar-nav">
+
+        {/* ==================================================
+            NAVEGACION
+            ================================================== */}
+
+        <nav
+          className="sidebar-nav"
+          aria-label="Navegación principal"
+        >
           {enlaces.map(
             (enlace) => (
               <NavLink
@@ -176,49 +155,87 @@ const Layout = ({
           )}
         </nav>
 
+
+        {/* ==================================================
+            USUARIO
+            ================================================== */}
+
         <div className="sidebar-foot">
+
           <div className="sidebar-user">
-            <span className="avatar avatar-light">
+
+            <span
+              className="avatar avatar-light"
+            >
               {getInitials()}
             </span>
 
+
             <div className="sidebar-ident">
+
               <span className="sidebar-name">
                 {getUserName()}
               </span>
 
+
               <span
-                className={`rol-chip ${claseRol}`}
+                className={
+                  `rol-chip ${
+                    esAdmin()
+                      ? "rol-admin"
+                      : "rol-trabajador"
+                  }`
+                }
               >
-                {nombreRol}
+                {esAdmin()
+                  ? "Administrador"
+                  : "Trabajador"}
               </span>
+
             </div>
           </div>
+
+
+          {/* ================================================
+              EMPRESA
+              ================================================ */}
 
           <span className="sidebar-empresa">
             {getEmpresa()}
           </span>
 
+
+          {/* ================================================
+              CERRAR SESION
+              ================================================ */}
+
           <button
             type="button"
             className="btn btn-logout"
-            onClick={() =>
-              setAsking(true)
+            onClick={
+              () =>
+                setAsking(true)
             }
           >
-            Cerrar sesion
+            Cerrar sesión
           </button>
+
         </div>
       </aside>
 
-      {/*
-        La key hace que el contenido
-        se vuelva a montar cuando cambia
-        la ruta.
 
-        Esto conserva el comportamiento
-        que ya tenia tu proyecto.
-      */}
+      {/* ====================================================
+          CONTENIDO
+          ==================================================== */}
+
+      {/*
+       * La key hace que el contenido
+       * vuelva a montarse cuando cambia
+       * la ruta.
+       *
+       * Esto conserva las animaciones
+       * de entrada existentes.
+       */}
       <main
         className="main"
         key={location.pathname}
@@ -226,21 +243,31 @@ const Layout = ({
         {children}
       </main>
 
+
+      {/* ====================================================
+          CONFIRMACION DE LOGOUT
+          ==================================================== */}
+
       {asking && (
         <Confirm
-          title="Cerrar sesion"
-          message="Estas seguro de que deseas cerrar la sesion?"
-          detail="Tendras que ingresar tus credenciales nuevamente."
-          confirmLabel="Cerrar sesion"
+          title="Cerrar sesión"
+          message="¿Estás seguro de que deseas cerrar la sesión?"
+          detail="Tendrás que ingresar tus credenciales nuevamente."
+          confirmLabel="Cerrar sesión"
           danger
-          onCancel={() =>
-            setAsking(false)
+          onCancel={
+            () =>
+              setAsking(false)
           }
-          onConfirm={logout}
+          onConfirm={
+            logout
+          }
         />
       )}
+
     </div>
   )
 }
+
 
 export default Layout

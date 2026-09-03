@@ -1,13 +1,14 @@
 import {
-  Navigate,
+  Routes,
   Route,
-  Routes
+  Navigate
 } from "react-router-dom"
 
 import {
-  getRol,
-  inicioSegunRol,
-  isLogged
+  isLogged,
+  esAdmin,
+  esTrabajador,
+  inicioSegunRol
 } from "./api"
 
 import Layout from "./components/Layout"
@@ -17,23 +18,38 @@ import Register from "./pages/Register"
 
 import Importar from "./pages/Importar"
 import DatosEmpresa from "./pages/DatosEmpresa"
+
 import Archivos from "./pages/Archivos"
 import Comparar from "./pages/Comparar"
 
-import Proyectos from "./pages/Proyectos"
-import ProyectoDetalle from "./pages/ProyectoDetalle"
-
-import AceptarInvitacion from "./pages/AceptarInvitacion"
+/*
+ * NUEVO:
+ * Panel de administracion de usuarios,
+ * cursos y permisos.
+ */
+import AdminUsuarios from "./pages/AdminUsuarios"
 
 
 /* ==========================================================
    RUTA PRIVADA
    ========================================================== */
 
+/**
+ * Cada ruta puede indicar que rol
+ * puede entrar.
+ *
+ * El frontend evita mostrar paginas
+ * que no correspondan al usuario.
+ *
+ * IMPORTANTE:
+ * La seguridad real tambien se
+ * comprueba en el backend.
+ */
 const Privada = ({
-  roles = null,
+  rol,
   children
 }) => {
+
   if (!isLogged()) {
     return (
       <Navigate
@@ -43,28 +59,24 @@ const Privada = ({
     )
   }
 
-  if (
-    Array.isArray(roles) &&
-    roles.length > 0
-  ) {
-    const rolActual =
-      getRol()
 
-    if (
-      !roles.includes(
-        rolActual
-      )
-    ) {
-      return (
-        <Navigate
-          to={
-            inicioSegunRol()
-          }
-          replace
-        />
-      )
-    }
+  const permitido =
+    rol === "admin"
+      ? esAdmin()
+      : rol === "trabajador"
+        ? esTrabajador()
+        : true
+
+
+  if (!permitido) {
+    return (
+      <Navigate
+        to={inicioSegunRol()}
+        replace
+      />
+    )
   }
+
 
   return (
     <Layout>
@@ -75,218 +87,145 @@ const Privada = ({
 
 
 /* ==========================================================
-   RUTA PUBLICA DE AUTENTICACION
+   RUTA PUBLICA
    ========================================================== */
 
+/**
+ * Si el usuario ya inicio sesion
+ * no necesita regresar a Login
+ * o Registro.
+ */
 const Publica = ({
   children
 }) => {
+
   if (isLogged()) {
     return (
       <Navigate
-        to={
-          inicioSegunRol()
-        }
+        to={inicioSegunRol()}
         replace
       />
     )
   }
+
 
   return children
 }
 
 
 /* ==========================================================
-   INICIO
+   APLICACION
    ========================================================== */
 
-const Inicio = () => {
-  if (!isLogged()) {
-    return (
-      <Navigate
-        to="/login"
-        replace
-      />
-    )
-  }
+const App = () => (
+  <Routes>
 
-  return (
-    <Navigate
-      to={
-        inicioSegunRol()
+    {/* ======================================================
+        PUBLICAS
+        ====================================================== */}
+
+    <Route
+      path="/login"
+      element={
+        <Publica>
+          <Login />
+        </Publica>
       }
-      replace
     />
-  )
-}
 
 
-/* ==========================================================
-   APP
-   ========================================================== */
-
-const App = () => {
-  return (
-    <Routes>
-
-      {/* ====================================================
-          INICIO
-          ==================================================== */}
-
-      <Route
-        path="/"
-        element={
-          <Inicio />
-        }
-      />
+    <Route
+      path="/registro"
+      element={
+        <Publica>
+          <Register />
+        </Publica>
+      }
+    />
 
 
-      {/* ====================================================
-          AUTENTICACION
-          ==================================================== */}
+    {/* ======================================================
+        TRABAJADOR
+        ====================================================== */}
 
-      <Route
-        path="/login"
-        element={
-          <Publica>
-            <Login />
-          </Publica>
-        }
-      />
-
-      <Route
-        path="/registro"
-        element={
-          <Publica>
-            <Register />
-          </Publica>
-        }
-      />
+    <Route
+      path="/importar"
+      element={
+        <Privada rol="trabajador">
+          <Importar />
+        </Privada>
+      }
+    />
 
 
-      {/* ====================================================
-          INVITACION PUBLICA
-          ====================================================
-
-          NO usamos Publica aquí.
-
-          Esto permite abrir una invitación
-          tanto con sesión iniciada como
-          sin sesión.
-      */}
-
-      <Route
-        path="/invitaciones/aceptar"
-        element={
-          <AceptarInvitacion />
-        }
-      />
+    <Route
+      path="/datos-empresa"
+      element={
+        <Privada rol="trabajador">
+          <DatosEmpresa />
+        </Privada>
+      }
+    />
 
 
-      {/* ====================================================
-          PROYECTOS
-          ==================================================== */}
+    {/* ======================================================
+        ADMINISTRADOR
+        ====================================================== */}
 
-      <Route
-        path="/proyectos"
-        element={
-          <Privada>
-            <Proyectos />
-          </Privada>
-        }
-      />
-
-      <Route
-        path="/proyectos/:id"
-        element={
-          <Privada>
-            <ProyectoDetalle />
-          </Privada>
-        }
-      />
+    <Route
+      path="/archivos"
+      element={
+        <Privada rol="admin">
+          <Archivos />
+        </Privada>
+      }
+    />
 
 
-      {/* ====================================================
-          TRABAJADOR
-          ==================================================== */}
-
-      <Route
-        path="/importar"
-        element={
-          <Privada
-            roles={[
-              "admin",
-              "trabajador"
-            ]}
-          >
-            <Importar />
-          </Privada>
-        }
-      />
-
-      <Route
-        path="/datos-empresa"
-        element={
-          <Privada
-            roles={[
-              "admin",
-              "trabajador"
-            ]}
-          >
-            <DatosEmpresa />
-          </Privada>
-        }
-      />
+    <Route
+      path="/comparar"
+      element={
+        <Privada rol="admin">
+          <Comparar />
+        </Privada>
+      }
+    />
 
 
-      {/* ====================================================
-          ADMINISTRADOR
-          ==================================================== */}
+    {/* ======================================================
+        NUEVO - ADMINISTRACION DE USUARIOS
+        ====================================================== */}
 
-      <Route
-        path="/archivos"
-        element={
-          <Privada
-            roles={[
-              "admin"
-            ]}
-          >
-            <Archivos />
-          </Privada>
-        }
-      />
-
-      <Route
-        path="/comparar"
-        element={
-          <Privada
-            roles={[
-              "admin"
-            ]}
-          >
-            <Comparar />
-          </Privada>
-        }
-      />
+    <Route
+      path="/administracion/usuarios"
+      element={
+        <Privada rol="admin">
+          <AdminUsuarios />
+        </Privada>
+      }
+    />
 
 
-      {/* ====================================================
-          404
-          ==================================================== */}
+    {/* ======================================================
+        RUTA DESCONOCIDA
+        ====================================================== */}
 
-      <Route
-        path="*"
-        element={
-          <Navigate
-            to="/"
-            replace
-          />
-        }
-      />
+    <Route
+      path="*"
+      element={
+        <Navigate
+          to={
+            isLogged()
+              ? inicioSegunRol()
+              : "/login"
+          }
+          replace
+        />
+      }
+    />
 
-    </Routes>
-  )
-}
+  </Routes>
+)
 
 
 export default App
