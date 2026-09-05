@@ -7,6 +7,7 @@ import {
 import {
   crearUsuario,
   listarUsuarios,
+  actualizarUsuario,
   cambiarEstadoUsuario,
   obtenerCatalogoCursos,
   obtenerPermisosUsuario,
@@ -14,6 +15,9 @@ import {
   quitarCurso,
   asignarModulo,
   quitarModulo,
+  listarRecuperacionesPassword,
+  aprobarRecuperacionPassword,
+  rechazarRecuperacionPassword,
   getEmpresa,
   getMessage,
   getInitials,
@@ -61,28 +65,24 @@ const obtenerListaCursos = (respuesta) => {
 }
 
 
-/* ==========================================================
-   NORMALIZAR PERMISOS
-   ========================================================== */
+const obtenerListaRecuperaciones = (respuesta) => {
+  if (Array.isArray(respuesta)) {
+    return respuesta
+  }
+
+  if (Array.isArray(respuesta?.solicitudes)) {
+    return respuesta.solicitudes
+  }
+
+  if (Array.isArray(respuesta?.data)) {
+    return respuesta.data
+  }
+
+  return []
+}
+
 
 const normalizarPermisos = (respuesta) => {
-  /*
-   * El backend puede devolver:
-   *
-   * {
-   *   user_id,
-   *   permisos: { ... }
-   * }
-   *
-   * o api.js puede devolver directamente:
-   *
-   * {
-   *   cursos: [...],
-   *   modulos: [...]
-   * }
-   *
-   * Soportamos ambas formas.
-   */
   const origen =
     respuesta?.permisos ??
     respuesta ??
@@ -95,41 +95,33 @@ const normalizarPermisos = (respuesta) => {
     new Set()
 
 
-  const agregarCurso =
-    (valor) => {
-
-      if (
-        valor === null ||
-        valor === undefined
-      ) {
-        return
-      }
-
-      cursos.add(
-        String(valor)
-      )
+  const agregarCurso = (valor) => {
+    if (
+      valor === null ||
+      valor === undefined
+    ) {
+      return
     }
 
+    cursos.add(
+      String(valor)
+    )
+  }
 
-  const agregarModulo =
-    (valor) => {
 
-      if (
-        valor === null ||
-        valor === undefined
-      ) {
-        return
-      }
-
-      modulos.add(
-        String(valor)
-      )
+  const agregarModulo = (valor) => {
+    if (
+      valor === null ||
+      valor === undefined
+    ) {
+      return
     }
 
+    modulos.add(
+      String(valor)
+    )
+  }
 
-  /* ========================================================
-     CURSOS ANIDADOS
-     ======================================================== */
 
   const listaCursos =
     Array.isArray(
@@ -141,11 +133,9 @@ const normalizarPermisos = (respuesta) => {
 
   listaCursos.forEach(
     (curso) => {
-
       const cursoId =
         curso?.curso_id ??
         curso?.id
-
 
       if (
         curso?.activo !==
@@ -155,7 +145,6 @@ const normalizarPermisos = (respuesta) => {
           cursoId
         )
       }
-
 
       const listaModulos =
         Array.isArray(
@@ -168,17 +157,14 @@ const normalizarPermisos = (respuesta) => {
             ? curso.modules
             : []
 
-
       listaModulos.forEach(
         (modulo) => {
-
           if (
             modulo?.activo ===
             false
           ) {
             return
           }
-
 
           agregarModulo(
             modulo?.modulo_id ??
@@ -190,10 +176,6 @@ const normalizarPermisos = (respuesta) => {
   )
 
 
-  /* ========================================================
-     MODULOS SEPARADOS
-     ======================================================== */
-
   const listaModulos =
     Array.isArray(
       origen?.modulos
@@ -204,7 +186,6 @@ const normalizarPermisos = (respuesta) => {
 
   listaModulos.forEach(
     (modulo) => {
-
       if (
         modulo?.activo ===
         false
@@ -212,12 +193,10 @@ const normalizarPermisos = (respuesta) => {
         return
       }
 
-
       agregarModulo(
         modulo?.modulo_id ??
         modulo?.id
       )
-
 
       if (
         modulo?.curso_id
@@ -229,10 +208,6 @@ const normalizarPermisos = (respuesta) => {
     }
   )
 
-
-  /* ========================================================
-     ARRAYS DE IDS
-     ======================================================== */
 
   if (
     Array.isArray(
@@ -261,6 +236,160 @@ const normalizarPermisos = (respuesta) => {
     modulos
   }
 }
+
+
+const formatoFecha = (valor) => {
+  if (!valor) {
+    return "—"
+  }
+
+  const fecha =
+    new Date(valor)
+
+  if (
+    Number.isNaN(
+      fecha.getTime()
+    )
+  ) {
+    return "—"
+  }
+
+  return new Intl.DateTimeFormat(
+    "es-PE",
+    {
+      dateStyle:
+        "short",
+
+      timeStyle:
+        "short"
+    }
+  ).format(fecha)
+}
+
+
+const etiquetaEstadoRecuperacion = (estado) => {
+  switch (
+    String(
+      estado || ""
+    ).toLowerCase()
+  ) {
+
+    case "pendiente":
+      return "Pendiente"
+
+    case "aprobado":
+      return "Aprobada"
+
+    case "rechazado":
+      return "Rechazada"
+
+    case "completado":
+      return "Completada"
+
+    case "vencido":
+      return "Vencida"
+
+    default:
+      return estado || "—"
+  }
+}
+
+
+const estiloEstadoRecuperacion = (estado) => {
+  switch (
+    String(
+      estado || ""
+    ).toLowerCase()
+  ) {
+
+    case "pendiente":
+      return {
+        border:
+          "1px solid #fde68a",
+
+        background:
+          "#fffbeb",
+
+        color:
+          "#92400e"
+      }
+
+
+    case "aprobado":
+      return {
+        border:
+          "1px solid #bfdbfe",
+
+        background:
+          "#eff6ff",
+
+        color:
+          "#1d4ed8"
+      }
+
+
+    case "completado":
+      return {
+        border:
+          "1px solid #bbf7d0",
+
+        background:
+          "#f0fdf4",
+
+        color:
+          "#166534"
+      }
+
+
+    case "rechazado":
+      return {
+        border:
+          "1px solid #fecaca",
+
+        background:
+          "#fef2f2",
+
+        color:
+          "#991b1b"
+      }
+
+
+    case "vencido":
+      return {
+        border:
+          "1px solid #e2e8f0",
+
+        background:
+          "#f8fafc",
+
+        color:
+          "#475569"
+      }
+
+
+    default:
+      return {
+        border:
+          "1px solid #e2e8f0",
+
+        background:
+          "#f8fafc",
+
+        color:
+          "#475569"
+      }
+  }
+}
+
+
+const obtenerNombreSolicitud = (solicitud) =>
+  solicitud?.full_name ||
+  solicitud?.nombre ||
+  solicitud?.perfil?.full_name ||
+  solicitud?.usuario?.full_name ||
+  solicitud?.profile?.full_name ||
+  solicitud?.email ||
+  "Usuario"
 
 
 /* ==========================================================
@@ -380,6 +509,44 @@ const AdminUsuarios = () => {
 
 
   /* ========================================================
+     EDICION
+     ======================================================== */
+
+  const [
+    mostrarEdicion,
+    setMostrarEdicion
+  ] =
+    useState(false)
+
+
+  const [
+    guardandoEdicion,
+    setGuardandoEdicion
+  ] =
+    useState(false)
+
+
+  const [
+    errorEdicion,
+    setErrorEdicion
+  ] =
+    useState("")
+
+
+  const [
+    usuarioEdicion,
+    setUsuarioEdicion
+  ] =
+    useState({
+      full_name:
+        "",
+
+      empresa:
+        ""
+    })
+
+
+  /* ========================================================
      REGISTRO
      ======================================================== */
 
@@ -424,6 +591,61 @@ const AdminUsuarios = () => {
 
 
   /* ========================================================
+     RECUPERACIONES
+     ======================================================== */
+
+  const [
+    recuperaciones,
+    setRecuperaciones
+  ] =
+    useState([])
+
+
+  const [
+    filtroRecuperacion,
+    setFiltroRecuperacion
+  ] =
+    useState(
+      "pendiente"
+    )
+
+
+  const [
+    cargandoRecuperaciones,
+    setCargandoRecuperaciones
+  ] =
+    useState(false)
+
+
+  const [
+    errorRecuperaciones,
+    setErrorRecuperaciones
+  ] =
+    useState("")
+
+
+  const [
+    accionRecuperacion,
+    setAccionRecuperacion
+  ] =
+    useState("")
+
+
+  const [
+    codigoGenerado,
+    setCodigoGenerado
+  ] =
+    useState(null)
+
+
+  const [
+    solicitudRechazo,
+    setSolicitudRechazo
+  ] =
+    useState(null)
+
+
+  /* ========================================================
      USUARIO SELECCIONADO
      ======================================================== */
 
@@ -438,7 +660,9 @@ const AdminUsuarios = () => {
             String(
               usuarioSeleccionadoId
             )
-        ) || null,
+        ) ||
+        null,
+
       [
         usuarios,
         usuarioSeleccionadoId
@@ -457,7 +681,7 @@ const AdminUsuarios = () => {
 
 
   /* ========================================================
-     FILTRO DE USUARIOS
+     FILTRO
      ======================================================== */
 
   const usuariosFiltrados =
@@ -484,12 +708,18 @@ const AdminUsuarios = () => {
                 usuario.email,
                 usuario.empresa,
                 usuario.role,
-                usuario.activo === false
+
+                usuario.activo ===
+                  false
                   ? "desactivado inactivo bloqueado"
                   : "activo habilitado"
               ]
-                .filter(Boolean)
-                .join(" ")
+                .filter(
+                  Boolean
+                )
+                .join(
+                  " "
+                )
                 .toLowerCase()
 
 
@@ -499,6 +729,7 @@ const AdminUsuarios = () => {
           }
         )
       },
+
       [
         usuarios,
         buscar
@@ -511,7 +742,9 @@ const AdminUsuarios = () => {
      ======================================================== */
 
   const mostrarAviso =
-    (texto) => {
+    (
+      texto
+    ) => {
 
       setAviso(
         texto
@@ -521,9 +754,12 @@ const AdminUsuarios = () => {
       window.setTimeout(
         () => {
 
-          setAviso("")
+          setAviso(
+            ""
+          )
 
         },
+
         5000
       )
     }
@@ -535,7 +771,8 @@ const AdminUsuarios = () => {
 
   const cargarUsuarios =
     async (
-      seleccionarId = null
+      seleccionarId =
+        null
     ) => {
 
       const respuesta =
@@ -553,10 +790,6 @@ const AdminUsuarios = () => {
       )
 
 
-      /* ====================================================
-         SELECCIONAR USUARIO RECIEN CREADO
-         ==================================================== */
-
       if (
         seleccionarId
       ) {
@@ -573,7 +806,9 @@ const AdminUsuarios = () => {
           )
 
 
-        if (existe) {
+        if (
+          existe
+        ) {
 
           setUsuarioSeleccionadoId(
             String(
@@ -586,10 +821,6 @@ const AdminUsuarios = () => {
         }
       }
 
-
-      /* ====================================================
-         CONSERVAR USUARIO ACTUAL
-         ==================================================== */
 
       if (
         usuarioSeleccionadoId
@@ -615,10 +846,6 @@ const AdminUsuarios = () => {
       }
 
 
-      /* ====================================================
-         SELECCION INICIAL
-         ==================================================== */
-
       const primerUsuarioNormal =
         lista.find(
           (usuario) =>
@@ -632,7 +859,9 @@ const AdminUsuarios = () => {
         lista[0]
 
 
-      if (inicial) {
+      if (
+        inicial
+      ) {
 
         setUsuarioSeleccionadoId(
           String(
@@ -645,6 +874,7 @@ const AdminUsuarios = () => {
         setUsuarioSeleccionadoId(
           ""
         )
+
       }
 
 
@@ -685,10 +915,13 @@ const AdminUsuarios = () => {
   const cargarPermisos =
     async (
       userId,
-      mostrarCarga = true
+      mostrarCarga =
+        true
     ) => {
 
-      if (!userId) {
+      if (
+        !userId
+      ) {
 
         setPermisos({
           cursos:
@@ -706,13 +939,16 @@ const AdminUsuarios = () => {
       if (
         mostrarCarga
       ) {
+
         setCargandoPermisos(
           true
         )
       }
 
 
-      setError("")
+      setError(
+        ""
+      )
 
 
       try {
@@ -729,7 +965,9 @@ const AdminUsuarios = () => {
           )
         )
 
-      } catch (problema) {
+      } catch (
+        problema
+      ) {
 
         setError(
           getMessage(
@@ -742,10 +980,69 @@ const AdminUsuarios = () => {
         if (
           mostrarCarga
         ) {
+
           setCargandoPermisos(
             false
           )
         }
+      }
+    }
+
+
+  /* ========================================================
+     CARGAR RECUPERACIONES
+     ======================================================== */
+
+  const cargarRecuperaciones =
+    async (
+      estado =
+        filtroRecuperacion
+    ) => {
+
+      setCargandoRecuperaciones(
+        true
+      )
+
+
+      setErrorRecuperaciones(
+        ""
+      )
+
+
+      try {
+
+        const respuesta =
+          await listarRecuperacionesPassword(
+            estado
+          )
+
+
+        setRecuperaciones(
+          obtenerListaRecuperaciones(
+            respuesta
+          )
+        )
+
+      } catch (
+        problema
+      ) {
+
+        setRecuperaciones(
+          []
+        )
+
+
+        setErrorRecuperaciones(
+          getMessage(
+            problema
+          )
+        )
+
+      } finally {
+
+        setCargandoRecuperaciones(
+          false
+        )
       }
     }
 
@@ -765,7 +1062,9 @@ const AdminUsuarios = () => {
           )
 
 
-          setError("")
+          setError(
+            ""
+          )
 
 
           try {
@@ -775,7 +1074,9 @@ const AdminUsuarios = () => {
               cargarCatalogo()
             ])
 
-          } catch (problema) {
+          } catch (
+            problema
+          ) {
 
             setError(
               getMessage(
@@ -795,7 +1096,27 @@ const AdminUsuarios = () => {
       cargar()
 
     },
+
     []
+  )
+
+
+  /* ========================================================
+     RECUPERACIONES SEGUN FILTRO
+     ======================================================== */
+
+  useEffect(
+    () => {
+
+      cargarRecuperaciones(
+        filtroRecuperacion
+      )
+
+    },
+
+    [
+      filtroRecuperacion
+    ]
   )
 
 
@@ -829,6 +1150,7 @@ const AdminUsuarios = () => {
       )
 
     },
+
     [
       usuarioSeleccionadoId
     ]
@@ -836,7 +1158,7 @@ const AdminUsuarios = () => {
 
 
   /* ========================================================
-     ABRIR REGISTRO
+     REGISTRO
      ======================================================== */
 
   const abrirRegistro =
@@ -875,10 +1197,6 @@ const AdminUsuarios = () => {
     }
 
 
-  /* ========================================================
-     REGISTRAR USUARIO
-     ======================================================== */
-
   const registrarNuevoUsuario =
     async () => {
 
@@ -889,16 +1207,14 @@ const AdminUsuarios = () => {
 
       const nombre =
         String(
-          nuevoUsuario
-            .full_name ||
+          nuevoUsuario.full_name ||
           ""
         ).trim()
 
 
       const correo =
         String(
-          nuevoUsuario
-            .email ||
+          nuevoUsuario.email ||
           ""
         )
           .trim()
@@ -907,25 +1223,21 @@ const AdminUsuarios = () => {
 
       const password =
         String(
-          nuevoUsuario
-            .password ||
+          nuevoUsuario.password ||
           ""
         )
 
 
       const empresa =
         String(
-          nuevoUsuario
-            .empresa ||
+          nuevoUsuario.empresa ||
           ""
         ).trim()
 
 
-      /* ====================================================
-         VALIDACIONES
-         ==================================================== */
-
-      if (!nombre) {
+      if (
+        !nombre
+      ) {
 
         return setErrorRegistro(
           "Ingresa el nombre completo."
@@ -933,7 +1245,9 @@ const AdminUsuarios = () => {
       }
 
 
-      if (!correo) {
+      if (
+        !correo
+      ) {
 
         return setErrorRegistro(
           "Ingresa el correo electrónico."
@@ -969,17 +1283,15 @@ const AdminUsuarios = () => {
       }
 
 
-      if (!empresa) {
+      if (
+        !empresa
+      ) {
 
         return setErrorRegistro(
           "Ingresa la empresa."
         )
       }
 
-
-      /* ====================================================
-         CREAR
-         ==================================================== */
 
       setRegistrando(
         true
@@ -1037,7 +1349,9 @@ const AdminUsuarios = () => {
           "Usuario registrado correctamente."
         )
 
-      } catch (problema) {
+      } catch (
+        problema
+      ) {
 
         setErrorRegistro(
           getMessage(
@@ -1055,11 +1369,199 @@ const AdminUsuarios = () => {
 
 
   /* ========================================================
-     ACTIVAR / DESACTIVAR USUARIO
+     EDITAR USUARIO
+     ======================================================== */
+
+  const abrirEdicion =
+    () => {
+
+      if (
+        !usuarioSeleccionado
+      ) {
+        return
+      }
+
+
+      setErrorEdicion(
+        ""
+      )
+
+
+      setUsuarioEdicion({
+        full_name:
+          usuarioSeleccionado.full_name ||
+          "",
+
+        empresa:
+          usuarioSeleccionado.empresa ||
+          ""
+      })
+
+
+      setMostrarEdicion(
+        true
+      )
+    }
+
+
+  const cerrarEdicion =
+    () => {
+
+      if (
+        guardandoEdicion
+      ) {
+        return
+      }
+
+
+      setMostrarEdicion(
+        false
+      )
+
+
+      setErrorEdicion(
+        ""
+      )
+    }
+
+
+  const guardarEdicion =
+    async () => {
+
+      if (
+        !usuarioSeleccionado
+      ) {
+        return
+      }
+
+
+      setErrorEdicion(
+        ""
+      )
+
+
+      const nombre =
+        String(
+          usuarioEdicion.full_name ||
+          ""
+        ).trim()
+
+
+      const empresa =
+        String(
+          usuarioEdicion.empresa ||
+          ""
+        ).trim()
+
+
+      if (
+        !nombre
+      ) {
+
+        return setErrorEdicion(
+          "Ingresa el nombre completo."
+        )
+      }
+
+
+      if (
+        nombre.length >
+        150
+      ) {
+
+        return setErrorEdicion(
+          "El nombre no puede superar los 150 caracteres."
+        )
+      }
+
+
+      if (
+        !empresa
+      ) {
+
+        return setErrorEdicion(
+          "Ingresa la empresa."
+        )
+      }
+
+
+      if (
+        empresa.length >
+        150
+      ) {
+
+        return setErrorEdicion(
+          "La empresa no puede superar los 150 caracteres."
+        )
+      }
+
+
+      setGuardandoEdicion(
+        true
+      )
+
+
+      try {
+
+        const resultado =
+          await actualizarUsuario(
+            usuarioSeleccionado.id,
+            {
+              full_name:
+                nombre,
+
+              empresa
+            }
+          )
+
+
+        await cargarUsuarios(
+          usuarioSeleccionado.id
+        )
+
+
+        setMostrarEdicion(
+          false
+        )
+
+
+        setErrorEdicion(
+          ""
+        )
+
+
+        mostrarAviso(
+          resultado?.mensaje ||
+          "Usuario actualizado correctamente."
+        )
+
+      } catch (
+        problema
+      ) {
+
+        setErrorEdicion(
+          getMessage(
+            problema
+          )
+        )
+
+      } finally {
+
+        setGuardandoEdicion(
+          false
+        )
+      }
+    }
+
+
+  /* ========================================================
+     ESTADO
      ======================================================== */
 
   const solicitarCambioEstado =
-    (usuario) => {
+    (
+      usuario
+    ) => {
 
       if (
         !usuario ||
@@ -1070,7 +1572,10 @@ const AdminUsuarios = () => {
       }
 
 
-      setError("")
+      setError(
+        ""
+      )
+
 
       setUsuarioEstadoPendiente(
         usuario
@@ -1115,7 +1620,10 @@ const AdminUsuarios = () => {
         true
       )
 
-      setError("")
+
+      setError(
+        ""
+      )
 
 
       try {
@@ -1146,7 +1654,9 @@ const AdminUsuarios = () => {
           )
         )
 
-      } catch (problema) {
+      } catch (
+        problema
+      ) {
 
         setError(
           getMessage(
@@ -1164,7 +1674,7 @@ const AdminUsuarios = () => {
 
 
   /* ========================================================
-     ASIGNAR / QUITAR CURSO
+     CURSOS
      ======================================================== */
 
   const cambiarCurso =
@@ -1190,12 +1700,16 @@ const AdminUsuarios = () => {
       )
 
 
-      setError("")
+      setError(
+        ""
+      )
 
 
       try {
 
-        if (activo) {
+        if (
+          activo
+        ) {
 
           await asignarCurso(
             usuarioSeleccionado.id,
@@ -1223,7 +1737,9 @@ const AdminUsuarios = () => {
             : `Curso "${curso.nombre}" retirado.`
         )
 
-      } catch (problema) {
+      } catch (
+        problema
+      ) {
 
         setError(
           getMessage(
@@ -1241,7 +1757,7 @@ const AdminUsuarios = () => {
 
 
   /* ========================================================
-     ASIGNAR / QUITAR MODULO
+     MODULOS
      ======================================================== */
 
   const cambiarModulo =
@@ -1268,12 +1784,16 @@ const AdminUsuarios = () => {
       )
 
 
-      setError("")
+      setError(
+        ""
+      )
 
 
       try {
 
-        if (activo) {
+        if (
+          activo
+        ) {
 
           await asignarModulo(
             usuarioSeleccionado.id,
@@ -1301,7 +1821,9 @@ const AdminUsuarios = () => {
             : `Módulo "${modulo.nombre}" deshabilitado.`
         )
 
-      } catch (problema) {
+      } catch (
+        problema
+      ) {
 
         setError(
           getMessage(
@@ -1313,6 +1835,265 @@ const AdminUsuarios = () => {
 
         setGuardandoPermiso(
           ""
+        )
+      }
+    }
+
+
+  /* ========================================================
+     APROBAR RECUPERACION
+     ======================================================== */
+
+  const aprobarSolicitudRecuperacion =
+    async (
+      solicitud
+    ) => {
+
+      if (
+        !solicitud?.id
+      ) {
+        return
+      }
+
+
+      const clave =
+        `aprobar-${solicitud.id}`
+
+
+      setAccionRecuperacion(
+        clave
+      )
+
+
+      setErrorRecuperaciones(
+        ""
+      )
+
+
+      try {
+
+        const resultado =
+          await aprobarRecuperacionPassword(
+            solicitud.id
+          )
+
+
+        const codigo =
+          String(
+            resultado?.codigo ||
+            resultado?.data?.codigo ||
+            ""
+          ).trim()
+
+
+        if (
+          !codigo
+        ) {
+
+          throw new Error(
+            "La solicitud fue aprobada, pero el servidor no devolvió el código temporal."
+          )
+        }
+
+
+        setCodigoGenerado({
+          solicitudId:
+            solicitud.id,
+
+          email:
+            solicitud.email ||
+            resultado?.solicitud?.email ||
+            "",
+
+          nombre:
+            obtenerNombreSolicitud(
+              solicitud
+            ),
+
+          codigo,
+
+          venceEnMinutos:
+            Number(
+              resultado?.vence_en_minutos ||
+              15
+            ),
+
+          expiresAt:
+            resultado?.expires_at ||
+            resultado?.solicitud?.expires_at ||
+            null,
+
+          advertencia:
+            resultado?.advertencia ||
+            resultado?.warning ||
+            "Guarda o entrega este código ahora. Por seguridad, RIMBERIO no almacena el código en texto visible."
+        })
+
+
+        await cargarRecuperaciones(
+          filtroRecuperacion
+        )
+
+
+        mostrarAviso(
+          resultado?.mensaje ||
+          "Solicitud de recuperación aprobada."
+        )
+
+      } catch (
+        problema
+      ) {
+
+        setErrorRecuperaciones(
+          getMessage(
+            problema
+          )
+        )
+
+      } finally {
+
+        setAccionRecuperacion(
+          ""
+        )
+      }
+    }
+
+
+  /* ========================================================
+     RECHAZAR RECUPERACION
+     ======================================================== */
+
+  const abrirRechazoRecuperacion =
+    (
+      solicitud
+    ) => {
+
+      if (
+        !solicitud?.id
+      ) {
+        return
+      }
+
+
+      setSolicitudRechazo(
+        solicitud
+      )
+    }
+
+
+  const cerrarRechazoRecuperacion =
+    () => {
+
+      if (
+        accionRecuperacion.startsWith(
+          "rechazar-"
+        )
+      ) {
+        return
+      }
+
+
+      setSolicitudRechazo(
+        null
+      )
+    }
+
+
+  const confirmarRechazoRecuperacion =
+    async () => {
+
+      if (
+        !solicitudRechazo?.id
+      ) {
+        return
+      }
+
+
+      const clave =
+        `rechazar-${solicitudRechazo.id}`
+
+
+      setAccionRecuperacion(
+        clave
+      )
+
+
+      setErrorRecuperaciones(
+        ""
+      )
+
+
+      try {
+
+        const resultado =
+          await rechazarRecuperacionPassword(
+            solicitudRechazo.id
+          )
+
+
+        setSolicitudRechazo(
+          null
+        )
+
+
+        await cargarRecuperaciones(
+          filtroRecuperacion
+        )
+
+
+        mostrarAviso(
+          resultado?.mensaje ||
+          "Solicitud de recuperación rechazada."
+        )
+
+      } catch (
+        problema
+      ) {
+
+        setErrorRecuperaciones(
+          getMessage(
+            problema
+          )
+        )
+
+      } finally {
+
+        setAccionRecuperacion(
+          ""
+        )
+      }
+    }
+
+
+  /* ========================================================
+     COPIAR CODIGO
+     ======================================================== */
+
+  const copiarCodigo =
+    async () => {
+
+      if (
+        !codigoGenerado?.codigo
+      ) {
+        return
+      }
+
+
+      try {
+
+        await navigator.clipboard.writeText(
+          codigoGenerado.codigo
+        )
+
+
+        mostrarAviso(
+          "Código copiado al portapapeles."
+        )
+
+      } catch {
+
+        mostrarAviso(
+          `Código: ${codigoGenerado.codigo}`
         )
       }
     }
@@ -1339,7 +2120,10 @@ const AdminUsuarios = () => {
 
 
           <p>
-            Registra usuarios, activa o desactiva cuentas y controla el acceso a cursos y módulos de RIMBERIO.
+            Registra usuarios, edita su información,
+            activa o desactiva cuentas, administra
+            recuperaciones de contraseña y controla
+            el acceso a cursos y módulos de RIMBERIO.
           </p>
 
         </div>
@@ -1396,6 +2180,538 @@ const AdminUsuarios = () => {
         </div>
 
       )}
+
+
+      {/* ====================================================
+          RECUPERACION DE CONTRASEÑAS
+          ==================================================== */}
+
+      <div
+        className="card"
+        style={{
+          marginBottom:
+            "20px"
+        }}
+      >
+
+        <div
+          style={{
+            display:
+              "flex",
+
+            justifyContent:
+              "space-between",
+
+            alignItems:
+              "flex-start",
+
+            gap:
+              "16px",
+
+            flexWrap:
+              "wrap",
+
+            marginBottom:
+              "16px"
+          }}
+        >
+
+          <div>
+
+            <div className="chart-title">
+              Recuperación de contraseñas
+            </div>
+
+
+            <div
+              className="muted"
+              style={{
+                marginTop:
+                  "4px"
+              }}
+            >
+              Revisa las solicitudes enviadas
+              por usuarios que olvidaron su contraseña.
+            </div>
+
+          </div>
+
+
+          <div
+            style={{
+              display:
+                "flex",
+
+              alignItems:
+                "center",
+
+              gap:
+                "8px",
+
+              flexWrap:
+                "wrap"
+            }}
+          >
+
+            <select
+              value={
+                filtroRecuperacion
+              }
+              onChange={
+                (event) =>
+                  setFiltroRecuperacion(
+                    event.target.value
+                  )
+              }
+              disabled={
+                cargandoRecuperaciones ||
+                Boolean(
+                  accionRecuperacion
+                )
+              }
+              style={{
+                minHeight:
+                  "38px",
+
+                padding:
+                  "0 10px",
+
+                border:
+                  "1px solid #cbd5e1",
+
+                borderRadius:
+                  "8px",
+
+                background:
+                  "#ffffff"
+              }}
+            >
+
+              <option value="pendiente">
+                Pendientes
+              </option>
+
+              <option value="aprobado">
+                Aprobadas
+              </option>
+
+              <option value="completado">
+                Completadas
+              </option>
+
+              <option value="rechazado">
+                Rechazadas
+              </option>
+
+              <option value="vencido">
+                Vencidas
+              </option>
+
+              <option value="">
+                Todas
+              </option>
+
+            </select>
+
+
+            <button
+              type="button"
+              className="btn btn-light btn-sm"
+              onClick={
+                () =>
+                  cargarRecuperaciones(
+                    filtroRecuperacion
+                  )
+              }
+              disabled={
+                cargandoRecuperaciones ||
+                Boolean(
+                  accionRecuperacion
+                )
+              }
+            >
+
+              {cargandoRecuperaciones
+                ? "Actualizando..."
+                : "Actualizar"}
+
+            </button>
+
+          </div>
+
+        </div>
+
+
+        {errorRecuperaciones && (
+
+          <div
+            className="alert alert-error"
+            style={{
+              marginBottom:
+                "16px"
+            }}
+          >
+            {errorRecuperaciones}
+          </div>
+
+        )}
+
+
+        {cargandoRecuperaciones ? (
+
+          <div className="loading">
+            Cargando solicitudes de recuperación...
+          </div>
+
+        ) : recuperaciones.length ===
+          0 ? (
+
+          <div className="empty">
+            No hay solicitudes en este estado.
+          </div>
+
+        ) : (
+
+          <div
+            style={{
+              display:
+                "grid",
+
+              gridTemplateColumns:
+                "repeat(auto-fit, minmax(280px, 1fr))",
+
+              gap:
+                "12px"
+            }}
+          >
+
+            {recuperaciones.map(
+              (solicitud) => {
+
+                const estado =
+                  String(
+                    solicitud?.estado ||
+                    ""
+                  ).toLowerCase()
+
+
+                const pendiente =
+                  estado ===
+                  "pendiente"
+
+
+                const aprobada =
+                  estado ===
+                  "aprobado"
+
+
+                const procesandoAprobacion =
+                  accionRecuperacion ===
+                  `aprobar-${solicitud.id}`
+
+
+                const procesandoRechazo =
+                  accionRecuperacion ===
+                  `rechazar-${solicitud.id}`
+
+
+                return (
+                  <div
+                    key={
+                      solicitud.id
+                    }
+                    style={{
+                      border:
+                        "1px solid #e2e8f0",
+
+                      borderRadius:
+                        "12px",
+
+                      padding:
+                        "14px",
+
+                      background:
+                        "#ffffff"
+                    }}
+                  >
+
+                    <div
+                      style={{
+                        display:
+                          "flex",
+
+                        justifyContent:
+                          "space-between",
+
+                        alignItems:
+                          "flex-start",
+
+                        gap:
+                          "12px"
+                      }}
+                    >
+
+                      <div
+                        style={{
+                          minWidth:
+                            0
+                        }}
+                      >
+
+                        <div
+                          style={{
+                            fontWeight:
+                              700,
+
+                            overflow:
+                              "hidden",
+
+                            textOverflow:
+                              "ellipsis",
+
+                            whiteSpace:
+                              "nowrap"
+                          }}
+                        >
+
+                          {obtenerNombreSolicitud(
+                            solicitud
+                          )}
+
+                        </div>
+
+
+                        <div
+                          className="muted"
+                          style={{
+                            marginTop:
+                              "4px",
+
+                            overflow:
+                              "hidden",
+
+                            textOverflow:
+                              "ellipsis",
+
+                            whiteSpace:
+                              "nowrap"
+                          }}
+                        >
+
+                          {solicitud.email}
+
+                        </div>
+
+                      </div>
+
+
+                      <span
+                        className="chip"
+                        style={{
+                          ...estiloEstadoRecuperacion(
+                            estado
+                          ),
+
+                          fontWeight:
+                            700,
+
+                          flexShrink:
+                            0
+                        }}
+                      >
+
+                        {etiquetaEstadoRecuperacion(
+                          estado
+                        )}
+
+                      </span>
+
+                    </div>
+
+
+                    <div
+                      className="muted"
+                      style={{
+                        marginTop:
+                          "12px",
+
+                        fontSize:
+                          "12px",
+
+                        display:
+                          "grid",
+
+                        gap:
+                          "4px"
+                      }}
+                    >
+
+                      <div>
+                        Solicitud:{" "}
+                        {formatoFecha(
+                          solicitud.created_at
+                        )}
+                      </div>
+
+
+                      {solicitud.approved_at && (
+
+                        <div>
+                          Aprobada:{" "}
+                          {formatoFecha(
+                            solicitud.approved_at
+                          )}
+                        </div>
+
+                      )}
+
+
+                      {solicitud.expires_at && (
+
+                        <div>
+                          Vence:{" "}
+                          {formatoFecha(
+                            solicitud.expires_at
+                          )}
+                        </div>
+
+                      )}
+
+
+                      {Number.isFinite(
+                        Number(
+                          solicitud.intentos
+                        )
+                      ) && (
+
+                        <div>
+                          Intentos:{" "}
+                          {Number(
+                            solicitud.intentos
+                          )}
+                        </div>
+
+                      )}
+
+                    </div>
+
+
+                    {(pendiente ||
+                      aprobada) && (
+
+                      <div
+                        style={{
+                          display:
+                            "flex",
+
+                          gap:
+                            "8px",
+
+                          flexWrap:
+                            "wrap",
+
+                          marginTop:
+                            "14px"
+                        }}
+                      >
+
+                        {pendiente && (
+
+                          <button
+                            type="button"
+                            className="btn btn-sm"
+                            onClick={
+                              () =>
+                                aprobarSolicitudRecuperacion(
+                                  solicitud
+                                )
+                            }
+                            disabled={
+                              Boolean(
+                                accionRecuperacion
+                              )
+                            }
+                          >
+
+                            {procesandoAprobacion
+                              ? "Aprobando..."
+                              : "Aprobar"}
+
+                          </button>
+
+                        )}
+
+
+                        <button
+                          type="button"
+                          className="btn btn-light btn-sm"
+                          onClick={
+                            () =>
+                              abrirRechazoRecuperacion(
+                                solicitud
+                              )
+                          }
+                          disabled={
+                            Boolean(
+                              accionRecuperacion
+                            )
+                          }
+                          style={{
+                            border:
+                              "1px solid #fecaca",
+
+                            color:
+                              "#b91c1c",
+
+                            background:
+                              "#ffffff"
+                          }}
+                        >
+
+                          {procesandoRechazo
+                            ? "Rechazando..."
+                            : aprobada
+                              ? "Rechazar e invalidar"
+                              : "Rechazar"}
+
+                        </button>
+
+                      </div>
+
+                    )}
+
+
+                    {aprobada && (
+
+                      <div
+                        className="muted"
+                        style={{
+                          marginTop:
+                            "10px",
+
+                          fontSize:
+                            "12px"
+                        }}
+                      >
+
+                        El código ya fue emitido.
+                        Si lo rechazas ahora,
+                        el código quedará invalidado.
+
+                      </div>
+
+                    )}
+
+                  </div>
+                )
+              }
+            )}
+
+          </div>
+
+        )}
+
+      </div>
 
 
       {/* ====================================================
@@ -1463,19 +2779,25 @@ const AdminUsuarios = () => {
 
 
                 <div className="muted">
+
                   {usuarios.length} registrados ·{" "}
+
                   {
                     usuarios.filter(
                       (usuario) =>
-                        usuario.activo !== false
+                        usuario.activo !==
+                        false
                     ).length
                   } activos ·{" "}
+
                   {
                     usuarios.filter(
                       (usuario) =>
-                        usuario.activo === false
+                        usuario.activo ===
+                        false
                     ).length
                   } desactivados
+
                 </div>
 
               </div>
@@ -1682,7 +3004,9 @@ const AdminUsuarios = () => {
                                   "3px"
                               }}
                             >
+
                               {usuario.empresa}
+
                             </div>
 
                           )}
@@ -1782,10 +3106,6 @@ const AdminUsuarios = () => {
             ) : (
 
               <>
-
-                {/* =============================================
-                    USUARIO
-                    ============================================= */}
 
                 <div
                   style={{
@@ -1909,6 +3229,56 @@ const AdminUsuarios = () => {
                     </span>
 
 
+                    <button
+                      type="button"
+                      onClick={
+                        abrirEdicion
+                      }
+                      disabled={
+                        guardandoEdicion ||
+                        cambiandoEstado
+                      }
+                      style={{
+                        minWidth:
+                          "122px",
+
+                        padding:
+                          "9px 12px",
+
+                        borderRadius:
+                          "8px",
+
+                        border:
+                          "1px solid #cbd5e1",
+
+                        background:
+                          "#ffffff",
+
+                        color:
+                          "#334155",
+
+                        fontWeight:
+                          700,
+
+                        cursor:
+                          guardandoEdicion ||
+                          cambiandoEstado
+                            ? "not-allowed"
+                            : "pointer",
+
+                        opacity:
+                          guardandoEdicion ||
+                          cambiandoEstado
+                            ? 0.65
+                            : 1
+                      }}
+                    >
+
+                      Editar usuario
+
+                    </button>
+
+
                     {!usuarioEsAdmin && (
 
                       <button
@@ -1979,8 +3349,9 @@ const AdminUsuarios = () => {
 
                   <div className="alert alert-success">
 
-                    El administrador tiene acceso completo al sistema.
-                    No necesita asignaciones individuales de cursos o módulos.
+                    El administrador tiene acceso completo
+                    al sistema. No necesita asignaciones
+                    individuales de cursos o módulos.
 
                   </div>
 
@@ -2000,7 +3371,8 @@ const AdminUsuarios = () => {
 
                     Esta cuenta está desactivada.
                     El usuario no puede utilizar RIMBERIO,
-                    pero sus cursos, módulos, datos e historial se conservan.
+                    pero sus cursos, módulos, datos e historial
+                    se conservan.
 
                   </div>
 
@@ -2085,10 +3457,6 @@ const AdminUsuarios = () => {
                             }}
                           >
 
-                            {/* =================================
-                                CURSO
-                                ================================= */}
-
                             <div
                               style={{
                                 display:
@@ -2124,7 +3492,9 @@ const AdminUsuarios = () => {
                                       700
                                   }}
                                 >
+
                                   {curso.nombre}
+
                                 </div>
 
 
@@ -2137,17 +3507,15 @@ const AdminUsuarios = () => {
                                         "3px"
                                     }}
                                   >
+
                                     {curso.descripcion}
+
                                   </div>
 
                                 )}
 
                               </div>
 
-
-                              {/* ===============================
-                                  BOTON DE ACCESO AL CURSO
-                                  =============================== */}
 
                               <button
                                 type="button"
@@ -2162,7 +3530,7 @@ const AdminUsuarios = () => {
                                 disabled={
                                   usuarioEsAdmin ||
                                   guardandoPermiso !==
-                                    ""
+                                  ""
                                 }
                                 onClick={
                                   () =>
@@ -2205,10 +3573,6 @@ const AdminUsuarios = () => {
 
                             </div>
 
-
-                            {/* =================================
-                                MODULOS
-                                ================================= */}
 
                             <div
                               style={{
@@ -2289,7 +3653,9 @@ const AdminUsuarios = () => {
                                                 600
                                             }}
                                           >
+
                                             {modulo.nombre}
+
                                           </div>
 
 
@@ -2302,7 +3668,9 @@ const AdminUsuarios = () => {
                                                   "2px"
                                               }}
                                             >
+
                                               {modulo.descripcion}
+
                                             </div>
 
                                           )}
@@ -2322,17 +3690,15 @@ const AdminUsuarios = () => {
                                                   "11px"
                                               }}
                                             >
+
                                               {modulo.clave}
+
                                             </code>
 
                                           )}
 
                                         </div>
 
-
-                                        {/* ===========================
-                                            BOTON DEL MODULO
-                                            =========================== */}
 
                                         <button
                                           type="button"
@@ -2347,7 +3713,7 @@ const AdminUsuarios = () => {
                                           disabled={
                                             usuarioEsAdmin ||
                                             guardandoPermiso !==
-                                              ""
+                                            ""
                                           }
                                           onClick={
                                             () =>
@@ -2404,6 +3770,7 @@ const AdminUsuarios = () => {
                     )}
 
                   </div>
+
                 )}
 
               </>
@@ -2412,11 +3779,592 @@ const AdminUsuarios = () => {
           </div>
 
         </div>
+
       )}
 
 
       {/* ====================================================
-          MODAL ACTIVAR / DESACTIVAR USUARIO
+          MODAL CODIGO
+          ==================================================== */}
+
+      {codigoGenerado && (
+
+        <Modal
+          title="Recuperación autorizada"
+          onClose={
+            () =>
+              setCodigoGenerado(
+                null
+              )
+          }
+          footer={
+            (cerrar) => (
+              <>
+
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={
+                    copiarCodigo
+                  }
+                >
+                  Copiar código
+                </button>
+
+
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={
+                    cerrar
+                  }
+                >
+                  Listo
+                </button>
+
+              </>
+            )
+          }
+        >
+
+          <p
+            className="muted"
+            style={{
+              marginTop:
+                0,
+
+              marginBottom:
+                "16px"
+            }}
+          >
+
+            Entrega este código únicamente
+            al usuario que solicitó la recuperación.
+
+          </p>
+
+
+          <div
+            style={{
+              padding:
+                "12px",
+
+              borderRadius:
+                "8px",
+
+              background:
+                "#f8fafc"
+            }}
+          >
+
+            <strong>
+              {codigoGenerado.nombre}
+            </strong>
+
+
+            <div
+              className="muted"
+              style={{
+                marginTop:
+                  "4px"
+              }}
+            >
+
+              {codigoGenerado.email}
+
+            </div>
+
+          </div>
+
+
+          <div
+            style={{
+              marginTop:
+                "18px",
+
+              textAlign:
+                "center"
+            }}
+          >
+
+            <div className="muted">
+              Código temporal
+            </div>
+
+
+            <div
+              style={{
+                marginTop:
+                  "8px",
+
+                fontSize:
+                  "34px",
+
+                lineHeight:
+                  1,
+
+                fontWeight:
+                  800,
+
+                letterSpacing:
+                  "8px",
+
+                fontFamily:
+                  "monospace"
+              }}
+            >
+
+              {codigoGenerado.codigo}
+
+            </div>
+
+
+            <div
+              className="muted"
+              style={{
+                marginTop:
+                  "12px"
+              }}
+            >
+
+              Válido aproximadamente{" "}
+              {codigoGenerado.venceEnMinutos} minutos.
+
+            </div>
+
+
+            {codigoGenerado.expiresAt && (
+
+              <div
+                className="muted"
+                style={{
+                  marginTop:
+                    "4px"
+                }}
+              >
+
+                Vence:{" "}
+                {formatoFecha(
+                  codigoGenerado.expiresAt
+                )}
+
+              </div>
+
+            )}
+
+          </div>
+
+
+          <div
+            className="alert alert-success"
+            style={{
+              marginTop:
+                "18px"
+            }}
+          >
+
+            {codigoGenerado.advertencia}
+
+          </div>
+
+
+          <div
+            className="muted"
+            style={{
+              marginTop:
+                "12px",
+
+              fontSize:
+                "12px"
+            }}
+          >
+
+            El administrador no conoce ni define
+            la nueva contraseña. El usuario la crea
+            personalmente usando este código.
+
+          </div>
+
+        </Modal>
+
+      )}
+
+
+      {/* ====================================================
+          MODAL RECHAZAR RECUPERACION
+          ==================================================== */}
+
+      {solicitudRechazo && (
+
+        <Modal
+          title="Rechazar recuperación"
+          onClose={
+            cerrarRechazoRecuperacion
+          }
+          footer={
+            (cerrar) => (
+              <>
+
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  disabled={
+                    accionRecuperacion.startsWith(
+                      "rechazar-"
+                    )
+                  }
+                  onClick={
+                    cerrar
+                  }
+                >
+                  Cancelar
+                </button>
+
+
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={
+                    accionRecuperacion.startsWith(
+                      "rechazar-"
+                    )
+                  }
+                  onClick={
+                    confirmarRechazoRecuperacion
+                  }
+                  style={{
+                    border:
+                      "1px solid #b91c1c",
+
+                    background:
+                      "#b91c1c",
+
+                    color:
+                      "#ffffff"
+                  }}
+                >
+
+                  {accionRecuperacion.startsWith(
+                    "rechazar-"
+                  )
+                    ? "Rechazando..."
+                    : "Rechazar solicitud"}
+
+                </button>
+
+              </>
+            )
+          }
+        >
+
+          <p
+            style={{
+              marginTop:
+                0
+            }}
+          >
+
+            ¿Confirmas que deseas rechazar
+            esta solicitud de recuperación
+            de contraseña?
+
+          </p>
+
+
+          <div
+            style={{
+              padding:
+                "12px",
+
+              borderRadius:
+                "8px",
+
+              background:
+                "#f8fafc"
+            }}
+          >
+
+            <strong>
+
+              {obtenerNombreSolicitud(
+                solicitudRechazo
+              )}
+
+            </strong>
+
+
+            <div
+              className="muted"
+              style={{
+                marginTop:
+                  "4px"
+              }}
+            >
+
+              {solicitudRechazo.email}
+
+            </div>
+
+          </div>
+
+
+          {String(
+            solicitudRechazo.estado ||
+            ""
+          ).toLowerCase() ===
+            "aprobado" && (
+
+            <div
+              className="alert alert-error"
+              style={{
+                marginTop:
+                  "16px"
+              }}
+            >
+
+              Esta solicitud ya estaba aprobada.
+              Al rechazarla, el código temporal
+              quedará invalidado.
+
+            </div>
+
+          )}
+
+        </Modal>
+
+      )}
+
+
+      {/* ====================================================
+          MODAL EDITAR
+          ==================================================== */}
+
+      {mostrarEdicion &&
+        usuarioSeleccionado && (
+
+        <Modal
+          title="Editar usuario"
+          onClose={
+            cerrarEdicion
+          }
+          footer={
+            (cerrar) => (
+              <>
+
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  disabled={
+                    guardandoEdicion
+                  }
+                  onClick={
+                    cerrar
+                  }
+                >
+                  Cancelar
+                </button>
+
+
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={
+                    guardandoEdicion
+                  }
+                  onClick={
+                    guardarEdicion
+                  }
+                >
+
+                  {guardandoEdicion
+                    ? "Guardando..."
+                    : "Guardar cambios"}
+
+                </button>
+
+              </>
+            )
+          }
+        >
+
+          <p
+            className="muted"
+            style={{
+              marginBottom:
+                "18px"
+            }}
+          >
+
+            Modifica el nombre y la empresa
+            del usuario. El correo, contraseña,
+            estado y permisos no se cambiarán.
+
+          </p>
+
+
+          <div className="field">
+
+            <label>
+              Nombre completo
+            </label>
+
+
+            <input
+              type="text"
+              value={
+                usuarioEdicion.full_name
+              }
+              maxLength={
+                150
+              }
+              autoFocus
+              disabled={
+                guardandoEdicion
+              }
+              onChange={
+                (event) =>
+                  setUsuarioEdicion({
+                    ...usuarioEdicion,
+
+                    full_name:
+                      event.target.value
+                  })
+              }
+            />
+
+          </div>
+
+
+          <div className="field">
+
+            <label>
+              Correo electrónico
+            </label>
+
+
+            <input
+              type="email"
+              value={
+                usuarioSeleccionado.email ||
+                ""
+              }
+              disabled
+              readOnly
+            />
+
+
+            <span className="muted">
+              El correo no se modifica desde esta opción.
+            </span>
+
+          </div>
+
+
+          <div className="field">
+
+            <label>
+              Empresa
+            </label>
+
+
+            <input
+              type="text"
+              value={
+                usuarioEdicion.empresa
+              }
+              maxLength={
+                150
+              }
+              disabled={
+                guardandoEdicion
+              }
+              onChange={
+                (event) =>
+                  setUsuarioEdicion({
+                    ...usuarioEdicion,
+
+                    empresa:
+                      event.target.value
+                  })
+              }
+            />
+
+
+            <span className="muted">
+
+              Cambiar la empresa puede modificar
+              qué CSV internos compartidos puede ver
+              este usuario.
+
+            </span>
+
+          </div>
+
+
+          <div
+            style={{
+              padding:
+                "12px",
+
+              marginTop:
+                "10px",
+
+              borderRadius:
+                "8px",
+
+              background:
+                "#f8fafc",
+
+              fontSize:
+                "13px"
+            }}
+          >
+
+            <strong>
+              Se conservará sin cambios
+            </strong>
+
+
+            <div
+              className="muted"
+              style={{
+                marginTop:
+                  "4px"
+              }}
+            >
+
+              Correo, contraseña, rol, estado
+              de la cuenta, cursos, módulos,
+              permisos, CSV, proyectos e historial.
+
+            </div>
+
+          </div>
+
+
+          {errorEdicion && (
+
+            <div
+              className="alert alert-error"
+              style={{
+                marginTop:
+                  "16px"
+              }}
+            >
+
+              {errorEdicion}
+
+            </div>
+
+          )}
+
+        </Modal>
+
+      )}
+
+
+      {/* ====================================================
+          MODAL ESTADO
           ==================================================== */}
 
       {usuarioEstadoPendiente && (
@@ -2519,8 +4467,10 @@ const AdminUsuarios = () => {
           >
 
             <strong>
+
               {usuarioEstadoPendiente.full_name ||
                 usuarioEstadoPendiente.email}
+
             </strong>
 
 
@@ -2531,7 +4481,9 @@ const AdminUsuarios = () => {
                   "4px"
               }}
             >
+
               {usuarioEstadoPendiente.email}
+
             </div>
 
           </div>
@@ -2542,7 +4494,7 @@ const AdminUsuarios = () => {
 
 
       {/* ====================================================
-          MODAL REGISTRAR USUARIO
+          MODAL REGISTRAR
           ==================================================== */}
 
       {mostrarRegistro && (
@@ -2597,9 +4549,11 @@ const AdminUsuarios = () => {
                     registrarNuevoUsuario
                   }
                 >
+
                   {registrando
                     ? "Registrando..."
                     : "Registrar usuario"}
+
                 </button>
 
               </>
@@ -2616,14 +4570,12 @@ const AdminUsuarios = () => {
           >
 
             Crea una nueva cuenta de RIMBERIO.
-            Después podrás seleccionar al usuario y asignarle los cursos y módulos que necesite.
+            Después podrás seleccionar al usuario
+            y asignarle los cursos y módulos
+            que necesite.
 
           </p>
 
-
-          {/* ==================================================
-              NOMBRE
-              ================================================== */}
 
           <div className="field">
 
@@ -2656,10 +4608,6 @@ const AdminUsuarios = () => {
           </div>
 
 
-          {/* ==================================================
-              CORREO
-              ================================================== */}
-
           <div className="field">
 
             <label>
@@ -2690,10 +4638,6 @@ const AdminUsuarios = () => {
           </div>
 
 
-          {/* ==================================================
-              CONTRASEÑA
-              ================================================== */}
-
           <div className="field">
 
             <label>
@@ -2723,17 +4667,12 @@ const AdminUsuarios = () => {
 
 
             <span className="muted">
-
-              El usuario utilizará esta contraseña para iniciar sesión.
-
+              El usuario utilizará esta contraseña
+              para iniciar sesión.
             </span>
 
           </div>
 
-
-          {/* ==================================================
-              EMPRESA
-              ================================================== */}
 
           <div className="field">
 
@@ -2765,16 +4704,14 @@ const AdminUsuarios = () => {
 
             <span className="muted">
 
-              Los CSV propios se compartirán con los usuarios que pertenezcan a esta misma empresa.
+              Los CSV propios se compartirán
+              con los usuarios que pertenezcan
+              a esta misma empresa.
 
             </span>
 
           </div>
 
-
-          {/* ==================================================
-              INFORMACION
-              ================================================== */}
 
           <div
             style={{
@@ -2808,17 +4745,15 @@ const AdminUsuarios = () => {
               }}
             >
 
-              La cuenta se crea activa y sin permisos de cursos.
-              Selecciona al nuevo usuario en esta misma pantalla y habilita solamente los módulos que necesite.
+              La cuenta se crea activa y sin permisos
+              de cursos. Selecciona al nuevo usuario
+              en esta misma pantalla y habilita solamente
+              los módulos que necesite.
 
             </div>
 
           </div>
 
-
-          {/* ==================================================
-              ERROR
-              ================================================== */}
 
           {errorRegistro && (
 
@@ -2829,7 +4764,9 @@ const AdminUsuarios = () => {
                   "16px"
               }}
             >
+
               {errorRegistro}
+
             </div>
 
           )}
