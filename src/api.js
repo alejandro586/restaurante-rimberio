@@ -1173,12 +1173,16 @@ export const solicitarRecuperacionPassword =
 /**
  * PUBLICO.
  *
- * Usuario todavía NO ha iniciado sesión.
+ * El usuario todavía NO ha iniciado sesión.
  *
- * Necesita:
+ * Después de que un administrador aprueba
+ * la solicitud, RIMBERIO envía automáticamente
+ * el código al correo del usuario.
+ *
+ * Para completar la recuperación necesita:
  *
  * - correo
- * - código autorizado
+ * - código recibido por correo
  * - contraseña nueva
  * - confirmación
  */
@@ -1353,13 +1357,13 @@ export const completarRecuperacionPassword =
    ========================================================== */
 
 const ESTADOS_RECUPERACION_VALIDOS =
-  [
+  new Set([
     "pendiente",
     "aprobado",
     "rechazado",
     "completado",
     "vencido"
-  ]
+  ])
 
 
 /* ==========================================================
@@ -1396,7 +1400,7 @@ export const listarRecuperacionesPassword =
     if (
       estadoFinal &&
       !ESTADOS_RECUPERACION_VALIDOS
-        .includes(
+        .has(
           estadoFinal
         )
     ) {
@@ -1432,11 +1436,22 @@ export const listarRecuperacionesPassword =
 /**
  * ADMIN.
  *
- * El administrador NO escribe una contraseña.
+ * El administrador solamente autoriza
+ * la recuperación.
  *
- * Solamente autoriza la recuperación.
+ * El administrador NO:
  *
- * El backend genera y devuelve el código.
+ * - genera el código
+ * - escribe el código
+ * - ve el código
+ * - envía el código manualmente
+ *
+ * El backend:
+ *
+ * 1. genera un código temporal;
+ * 2. guarda únicamente su hash;
+ * 3. envía automáticamente el código
+ *    al correo del usuario.
  */
 export const aprobarRecuperacionPassword =
   async (
@@ -1473,6 +1488,47 @@ export const aprobarRecuperacionPassword =
       await api.post(
         `/password-reset/admin/${id}/approve`
       )
+
+
+    /*
+     * Protección adicional del frontend.
+     *
+     * El backend actual ya NO devuelve
+     * el código de recuperación.
+     *
+     * Aun así, eliminamos cualquier campo
+     * sensible que pudiera devolver una
+     * versión antigua del backend.
+     */
+    if (
+      response?.data &&
+      typeof response.data ===
+        "object"
+    ) {
+      const resultado = {
+        ...response.data
+      }
+
+      delete resultado.codigo
+      delete resultado.codigo_hash
+      delete resultado.code
+
+      if (
+        resultado.solicitud &&
+        typeof resultado.solicitud ===
+          "object"
+      ) {
+        resultado.solicitud = {
+          ...resultado.solicitud
+        }
+
+        delete resultado.solicitud.codigo
+        delete resultado.solicitud.codigo_hash
+        delete resultado.solicitud.code
+      }
+
+      return resultado
+    }
 
 
     return response.data
