@@ -20,6 +20,8 @@ import Layout from "./components/Layout"
 
 import Login from "./pages/Login"
 import Register from "./pages/Register"
+import RecuperarPassword from "./pages/RecuperarPassword"
+import RestablecerPassword from "./pages/RestablecerPassword"
 
 import Importar from "./pages/Importar"
 import DatosEmpresa from "./pages/DatosEmpresa"
@@ -126,7 +128,9 @@ const obtenerClavesPermisos = (
       of curso.modulos || []
     ) {
 
-      if (modulo.clave) {
+      if (
+        modulo.clave
+      ) {
         claves.add(
           modulo.clave
         )
@@ -193,6 +197,7 @@ const Privada = ({
       administrador ||
       !permiso
     ) {
+
       setPermisos(
         new Set()
       )
@@ -201,53 +206,67 @@ const Privada = ({
     }
 
 
-    let activo = true
+    let activo =
+      true
 
 
-    const cargar = async () => {
+    const cargar =
+      async () => {
 
-      try {
+        try {
 
-        setErrorPermisos(false)
-
-
-        const respuesta =
-          await obtenerMisPermisos()
-
-
-        if (!activo) {
-          return
-        }
-
-
-        setPermisos(
-          obtenerClavesPermisos(
-            respuesta
+          setErrorPermisos(
+            false
           )
-        )
 
-      } catch (error) {
 
-        if (!activo) {
-          return
+          const respuesta =
+            await obtenerMisPermisos()
+
+
+          if (
+            !activo
+          ) {
+            return
+          }
+
+
+          setPermisos(
+            obtenerClavesPermisos(
+              respuesta
+            )
+          )
+
+        } catch (
+          error
+        ) {
+
+          if (
+            !activo
+          ) {
+            return
+          }
+
+
+          setPermisos(
+            new Set()
+          )
+
+
+          setErrorPermisos(
+            true
+          )
         }
 
-
-        setPermisos(
-          new Set()
-        )
-
-        setErrorPermisos(true)
       }
-
-    }
 
 
     cargar()
 
 
     return () => {
-      activo = false
+      activo =
+        false
     }
 
   }, [
@@ -261,7 +280,9 @@ const Privada = ({
      SIN SESION
      ======================================================== */
 
-  if (!conectado) {
+  if (
+    !conectado
+  ) {
 
     return (
       <Navigate
@@ -278,7 +299,8 @@ const Privada = ({
      ======================================================== */
 
   if (
-    rol === "admin" &&
+    rol ===
+      "admin" &&
     !administrador
   ) {
 
@@ -297,7 +319,8 @@ const Privada = ({
      ======================================================== */
 
   if (
-    rol === "trabajador" &&
+    rol ===
+      "trabajador" &&
     !trabajador
   ) {
 
@@ -321,14 +344,17 @@ const Privada = ({
   ) {
 
     if (
-      permisos === null
+      permisos ===
+      null
     ) {
 
       return (
         <Layout>
+
           <div className="loading">
             Comprobando permiso...
           </div>
+
         </Layout>
       )
 
@@ -374,7 +400,14 @@ const Publica = ({
   children
 }) => {
 
-  if (isLogged()) {
+  /*
+   * Si ya existe sesión activa,
+   * no necesitamos mostrar Login,
+   * Registro o Recuperación.
+   */
+  if (
+    isLogged()
+  ) {
 
     return (
       <Navigate
@@ -394,474 +427,592 @@ const Publica = ({
    PAGINA INICIAL SEGUN PERMISOS
    ========================================================== */
 
-const InicioPrivado = () => {
+const InicioPrivado =
+  () => {
 
-  const [
-    cargando,
-    setCargando
-  ] = useState(true)
-
-
-  const [
-    ruta,
-    setRuta
-  ] = useState("")
+    const [
+      cargando,
+      setCargando
+    ] = useState(true)
 
 
-  /* ========================================================
-     BUSCAR PRIMER MODULO DISPONIBLE
-     ======================================================== */
-
-  useEffect(() => {
-
-    if (!isLogged()) {
-      setCargando(false)
-      return
-    }
+    const [
+      ruta,
+      setRuta
+    ] = useState("")
 
 
-    /*
-     * El administrador mantiene
-     * su pagina principal actual.
-     */
-    if (esAdmin()) {
+    /* ========================================================
+       BUSCAR PRIMER MODULO DISPONIBLE
+       ======================================================== */
 
-      setRuta(
-        "/archivos"
-      )
+    useEffect(() => {
 
-      setCargando(false)
+      if (
+        !isLogged()
+      ) {
 
-      return
-    }
+        setCargando(
+          false
+        )
 
-
-    let activo = true
-
-
-    const cargar = async () => {
-
-      try {
-
-        const respuesta =
-          await obtenerMisPermisos()
+        return
+      }
 
 
-        if (!activo) {
-          return
-        }
+      /*
+       * El administrador mantiene
+       * su pagina principal actual.
+       */
+      if (
+        esAdmin()
+      ) {
+
+        setRuta(
+          "/archivos"
+        )
 
 
-        const claves =
-          obtenerClavesPermisos(
-            respuesta
-          )
+        setCargando(
+          false
+        )
 
 
-        const primero =
-          ORDEN_PERMISOS.find(
-            (clave) =>
-              claves.has(
-                clave
+        return
+      }
+
+
+      let activo =
+        true
+
+
+      const cargar =
+        async () => {
+
+          try {
+
+            const respuesta =
+              await obtenerMisPermisos()
+
+
+            if (
+              !activo
+            ) {
+              return
+            }
+
+
+            const claves =
+              obtenerClavesPermisos(
+                respuesta
               )
-          )
 
 
-        if (primero) {
+            const primero =
+              ORDEN_PERMISOS.find(
+                (
+                  clave
+                ) =>
+                  claves.has(
+                    clave
+                  )
+              )
 
-          setRuta(
-            RUTA_POR_PERMISO[
+
+            if (
               primero
-            ]
-          )
+            ) {
 
-        } else {
+              setRuta(
+                RUTA_POR_PERMISO[
+                  primero
+                ]
+              )
 
-          setRuta(
-            ""
-          )
+            } else {
+
+              setRuta(
+                ""
+              )
+
+            }
+
+          } catch (
+            error
+          ) {
+
+            if (
+              activo
+            ) {
+
+              setRuta(
+                ""
+              )
+
+            }
+
+          } finally {
+
+            if (
+              activo
+            ) {
+
+              setCargando(
+                false
+              )
+
+            }
+
+          }
 
         }
 
-      } catch (error) {
 
-        if (activo) {
-          setRuta("")
-        }
+      cargar()
 
-      } finally {
 
-        if (activo) {
-          setCargando(false)
-        }
+      return () => {
+
+        activo =
+          false
 
       }
 
+    }, [])
+
+
+    /* ========================================================
+       SIN SESION
+       ======================================================== */
+
+    if (
+      !isLogged()
+    ) {
+
+      return (
+        <Navigate
+          to="/login"
+          replace
+        />
+      )
+
     }
 
 
-    cargar()
+    /* ========================================================
+       CARGANDO
+       ======================================================== */
 
+    if (
+      cargando
+    ) {
 
-    return () => {
-      activo = false
+      return (
+        <Layout>
+
+          <div className="loading">
+            Cargando tus módulos...
+          </div>
+
+        </Layout>
+      )
+
     }
 
-  }, [])
+
+    /* ========================================================
+       TIENE MODULOS
+       ======================================================== */
+
+    if (
+      ruta
+    ) {
+
+      return (
+        <Navigate
+          to={
+            ruta
+          }
+          replace
+        />
+      )
+
+    }
 
 
-  /* ========================================================
-     SIN SESION
-     ======================================================== */
-
-  if (!isLogged()) {
-
-    return (
-      <Navigate
-        to="/login"
-        replace
-      />
-    )
-
-  }
-
-
-  /* ========================================================
-     CARGANDO
-     ======================================================== */
-
-  if (cargando) {
+    /* ========================================================
+       SIN MODULOS
+       ======================================================== */
 
     return (
       <Layout>
-        <div className="loading">
-          Cargando tus módulos...
+
+        <div className="topbar">
+
+          <div>
+
+            <h1>
+              RIMBERIO
+            </h1>
+
+            <p>
+              Sistema de gestión
+              por cursos.
+            </p>
+
+          </div>
+
         </div>
+
+
+        <div className="card">
+
+          <div className="empty">
+
+            <strong
+              style={{
+                display:
+                  "block",
+
+                marginBottom:
+                  8
+              }}
+            >
+              No tienes módulos
+              habilitados
+            </strong>
+
+
+            <span>
+              Un administrador debe
+              asignarte al menos un
+              módulo para comenzar.
+            </span>
+
+          </div>
+
+        </div>
+
       </Layout>
     )
-
   }
-
-
-  /* ========================================================
-     TIENE MODULOS
-     ======================================================== */
-
-  if (ruta) {
-
-    return (
-      <Navigate
-        to={ruta}
-        replace
-      />
-    )
-
-  }
-
-
-  /* ========================================================
-     SIN MODULOS
-     ======================================================== */
-
-  return (
-    <Layout>
-
-      <div className="topbar">
-        <div>
-          <h1>
-            RIMBERIO
-          </h1>
-
-          <p>
-            Sistema de gestión
-            por cursos.
-          </p>
-        </div>
-      </div>
-
-
-      <div className="card">
-
-        <div className="empty">
-
-          <strong
-            style={{
-              display: "block",
-              marginBottom: 8
-            }}
-          >
-            No tienes módulos
-            habilitados
-          </strong>
-
-
-          <span>
-            Un administrador debe
-            asignarte al menos un
-            módulo para comenzar.
-          </span>
-
-        </div>
-
-      </div>
-
-    </Layout>
-  )
-}
 
 
 /* ==========================================================
    APLICACION
    ========================================================== */
 
-const App = () => (
-  <Routes>
+const App =
+  () => (
 
-    {/* ======================================================
-        PUBLICO
-        ====================================================== */}
+    <Routes>
 
-    <Route
-      path="/login"
-      element={
-        <Publica>
-          <Login />
-        </Publica>
-      }
-    />
+      {/* ======================================================
+          PUBLICO
+          ====================================================== */}
 
-
-    <Route
-      path="/registro"
-      element={
-        <Publica>
-          <Register />
-        </Publica>
-      }
-    />
+      <Route
+        path="/login"
+        element={
+          <Publica>
+            <Login />
+          </Publica>
+        }
+      />
 
 
-    {/* ======================================================
-        INICIO INTELIGENTE
-        ====================================================== */}
-
-    <Route
-      path="/"
-      element={
-        <InicioPrivado />
-      }
-    />
+      <Route
+        path="/registro"
+        element={
+          <Publica>
+            <Register />
+          </Publica>
+        }
+      />
 
 
-    {/* ======================================================
-        BIG DATA - IMPORTAR
+      {/* ======================================================
+          RECUPERAR CONTRASEÑA
 
-        Reutiliza:
-        Importar.jsx
-        ====================================================== */}
+          NO requiere iniciar sesión.
+          ====================================================== */}
 
-    <Route
-      path="/big-data/importar"
-      element={
-        <Privada
-          rol="trabajador"
-          permiso="big_data.importar"
-        >
-          <Importar />
-        </Privada>
-      }
-    />
+      <Route
+        path="/recuperar-password"
+        element={
+          <Publica>
+            <RecuperarPassword />
+          </Publica>
+        }
+      />
 
 
-    {/* ======================================================
-        BIG DATA - DATASETS
+      {/* ======================================================
+          RESTABLECER CONTRASEÑA
 
-        Reutiliza:
-        Archivos.jsx
-        ====================================================== */}
+          Usuario utiliza:
+          - correo
+          - código
+          - contraseña nueva
 
-    <Route
-      path="/big-data/datasets"
-      element={
-        <Privada
-          rol="trabajador"
-          permiso="big_data.datasets"
-        >
-          <Archivos />
-        </Privada>
-      }
-    />
+          NO requiere iniciar sesión.
+          ====================================================== */}
+
+      <Route
+        path="/restablecer-password"
+        element={
+          <Publica>
+            <RestablecerPassword />
+          </Publica>
+        }
+      />
 
 
-    {/* ======================================================
-        BIG DATA - ANALISIS
+      {/* ======================================================
+          INICIO INTELIGENTE
+          ====================================================== */}
 
-        Reutiliza:
-        Comparar.jsx
-        ====================================================== */}
+      <Route
+        path="/"
+        element={
+          <InicioPrivado />
+        }
+      />
 
-    <Route
-      path="/big-data/analisis"
-      element={
-        <Privada
-          rol="trabajador"
-          permiso="big_data.analisis"
-        >
-          <Comparar
-            modo="analisis"
+
+      {/* ======================================================
+          BIG DATA - IMPORTAR
+
+          Reutiliza:
+          Importar.jsx
+          ====================================================== */}
+
+      <Route
+        path="/big-data/importar"
+        element={
+          <Privada
+            rol="trabajador"
+            permiso="big_data.importar"
+          >
+
+            <Importar />
+
+          </Privada>
+        }
+      />
+
+
+      {/* ======================================================
+          BIG DATA - DATASETS
+
+          Reutiliza:
+          Archivos.jsx
+          ====================================================== */}
+
+      <Route
+        path="/big-data/datasets"
+        element={
+          <Privada
+            rol="trabajador"
+            permiso="big_data.datasets"
+          >
+
+            <Archivos />
+
+          </Privada>
+        }
+      />
+
+
+      {/* ======================================================
+          BIG DATA - ANALISIS
+
+          Reutiliza:
+          Comparar.jsx
+          ====================================================== */}
+
+      <Route
+        path="/big-data/analisis"
+        element={
+          <Privada
+            rol="trabajador"
+            permiso="big_data.analisis"
+          >
+
+            <Comparar
+              modo="analisis"
+            />
+
+          </Privada>
+        }
+      />
+
+
+      {/* ======================================================
+          BIG DATA - COMPARACION
+
+          Reutiliza:
+          Comparar.jsx
+          ====================================================== */}
+
+      <Route
+        path="/big-data/comparar"
+        element={
+          <Privada
+            rol="trabajador"
+            permiso="big_data.comparar"
+          >
+
+            <Comparar
+              modo="comparacion"
+            />
+
+          </Privada>
+        }
+      />
+
+
+      {/* ======================================================
+          BIG DATA - ESTRUCTURA
+
+          Reutiliza:
+          DatosEmpresa.jsx
+          ====================================================== */}
+
+      <Route
+        path="/big-data/estructura"
+        element={
+          <Privada
+            rol="trabajador"
+            permiso="big_data.estructura"
+          >
+
+            <DatosEmpresa />
+
+          </Privada>
+        }
+      />
+
+
+      {/* ======================================================
+          BIG DATA - GRAFICOS
+
+          Reutiliza:
+          Comparar.jsx
+          ====================================================== */}
+
+      <Route
+        path="/big-data/graficos"
+        element={
+          <Privada
+            rol="trabajador"
+            permiso="big_data.graficos"
+          >
+
+            <Comparar
+              modo="graficos"
+            />
+
+          </Privada>
+        }
+      />
+
+
+      {/* ======================================================
+          ADMINISTRADOR
+          ====================================================== */}
+
+      <Route
+        path="/archivos"
+        element={
+          <Privada
+            rol="admin"
+          >
+
+            <Archivos />
+
+          </Privada>
+        }
+      />
+
+
+      <Route
+        path="/comparar"
+        element={
+          <Privada
+            rol="admin"
+          >
+
+            <Comparar />
+
+          </Privada>
+        }
+      />
+
+
+      <Route
+        path="/administracion/usuarios"
+        element={
+          <Privada
+            rol="admin"
+          >
+
+            <AdminUsuarios />
+
+          </Privada>
+        }
+      />
+
+
+      {/* ======================================================
+          RUTAS ANTIGUAS
+
+          Las conservamos como redireccion
+          para no romper enlaces anteriores.
+          ====================================================== */}
+
+      <Route
+        path="/importar"
+        element={
+          <Navigate
+            to="/big-data/importar"
+            replace
           />
-        </Privada>
-      }
-    />
+        }
+      />
 
 
-    {/* ======================================================
-        BIG DATA - COMPARACION
-
-        Reutiliza:
-        Comparar.jsx
-        ====================================================== */}
-
-    <Route
-      path="/big-data/comparar"
-      element={
-        <Privada
-          rol="trabajador"
-          permiso="big_data.comparar"
-        >
-          <Comparar
-            modo="comparacion"
+      <Route
+        path="/datos-empresa"
+        element={
+          <Navigate
+            to="/big-data/estructura"
+            replace
           />
-        </Privada>
-      }
-    />
+        }
+      />
 
 
-    {/* ======================================================
-        BIG DATA - ESTRUCTURA
+      {/* ======================================================
+          DESCONOCIDA
+          ====================================================== */}
 
-        Reutiliza:
-        DatosEmpresa.jsx
-        ====================================================== */}
-
-    <Route
-      path="/big-data/estructura"
-      element={
-        <Privada
-          rol="trabajador"
-          permiso="big_data.estructura"
-        >
-          <DatosEmpresa />
-        </Privada>
-      }
-    />
-
-
-    {/* ======================================================
-        BIG DATA - GRAFICOS
-
-        Reutiliza:
-        Comparar.jsx
-        ====================================================== */}
-
-    <Route
-      path="/big-data/graficos"
-      element={
-        <Privada
-          rol="trabajador"
-          permiso="big_data.graficos"
-        >
-          <Comparar
-            modo="graficos"
+      <Route
+        path="*"
+        element={
+          <Navigate
+            to={
+              isLogged()
+                ? "/"
+                : "/login"
+            }
+            replace
           />
-        </Privada>
-      }
-    />
+        }
+      />
 
-
-    {/* ======================================================
-        ADMINISTRADOR
-        ====================================================== */}
-
-    <Route
-      path="/archivos"
-      element={
-        <Privada rol="admin">
-          <Archivos />
-        </Privada>
-      }
-    />
-
-
-    <Route
-      path="/comparar"
-      element={
-        <Privada rol="admin">
-          <Comparar />
-        </Privada>
-      }
-    />
-
-
-    <Route
-      path="/administracion/usuarios"
-      element={
-        <Privada rol="admin">
-          <AdminUsuarios />
-        </Privada>
-      }
-    />
-
-
-    {/* ======================================================
-        RUTAS ANTIGUAS
-
-        Las conservamos como redireccion
-        para no romper enlaces anteriores.
-        ====================================================== */}
-
-    <Route
-      path="/importar"
-      element={
-        <Navigate
-          to="/big-data/importar"
-          replace
-        />
-      }
-    />
-
-
-    <Route
-      path="/datos-empresa"
-      element={
-        <Navigate
-          to="/big-data/estructura"
-          replace
-        />
-      }
-    />
-
-
-    {/* ======================================================
-        DESCONOCIDA
-        ====================================================== */}
-
-    <Route
-      path="*"
-      element={
-        <Navigate
-          to={
-            isLogged()
-              ? "/"
-              : "/login"
-          }
-          replace
-        />
-      }
-    />
-
-  </Routes>
-)
+    </Routes>
+  )
 
 
 export default App

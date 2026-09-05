@@ -70,20 +70,57 @@ const Login = () => {
   const location =
     useLocation()
 
+
+  /* ========================================================
+     EMAIL
+     ======================================================== */
+
   const [
     email,
     setEmail
-  ] = useState("")
+  ] = useState(
+    () => {
+      /*
+       * Si el usuario acaba de cambiar
+       * su contraseña podemos devolver
+       * su correo al Login.
+       */
+      const emailInicial =
+        location.state?.email
+
+      return typeof emailInicial ===
+        "string"
+        ? emailInicial
+            .trim()
+            .toLowerCase()
+        : ""
+    }
+  )
+
+
+  /* ========================================================
+     PASSWORD
+     ======================================================== */
 
   const [
     password,
     setPassword
   ] = useState("")
 
+
+  /* ========================================================
+     ERROR
+     ======================================================== */
+
   const [
     error,
     setError
   ] = useState("")
+
+
+  /* ========================================================
+     LOADING
+     ======================================================== */
 
   const [
     loading,
@@ -107,6 +144,7 @@ const Login = () => {
           location.search
         )
 
+
       const desdeUrl =
         redireccionSegura(
           params.get(
@@ -114,9 +152,13 @@ const Login = () => {
           )
         )
 
-      if (desdeUrl) {
+
+      if (
+        desdeUrl
+      ) {
         return desdeUrl
       }
+
 
       /**
        * Segunda posibilidad:
@@ -131,9 +173,13 @@ const Login = () => {
           )
         )
 
-      if (guardado) {
+
+      if (
+        guardado
+      ) {
         return guardado
       }
+
 
       /**
        * Login normal.
@@ -151,14 +197,89 @@ const Login = () => {
       const destino =
         obtenerDestino()
 
-      if (!destino) {
+
+      if (
+        !destino
+      ) {
         return "/registro"
       }
+
 
       return (
         `/registro?redirect=${encodeURIComponent(
           destino
         )}`
+      )
+    }
+
+
+  /* ========================================================
+     RECUPERACION DE CONTRASEÑA
+     ======================================================== */
+
+  /**
+   * Esta página NO necesita sesión.
+   *
+   * También conservamos una invitación
+   * pendiente si el usuario llegó al login
+   * desde una invitación.
+   */
+  const obtenerUrlRecuperacion =
+    () => {
+      const destino =
+        obtenerDestino()
+
+
+      if (
+        !destino
+      ) {
+        return "/recuperar-password"
+      }
+
+
+      return (
+        `/recuperar-password?redirect=${encodeURIComponent(
+          destino
+        )}`
+      )
+    }
+
+
+  /* ========================================================
+     ABRIR RECUPERACION
+     ======================================================== */
+
+  const abrirRecuperacionPassword =
+    () => {
+      const destino =
+        obtenerDestino()
+
+
+      navigate(
+        obtenerUrlRecuperacion(),
+        {
+          state: {
+            /*
+             * Si el usuario ya escribió
+             * su correo en el Login,
+             * se lo enviamos a la pantalla
+             * de recuperación para no obligarlo
+             * a escribirlo otra vez.
+             */
+            email:
+              email
+                .trim()
+                .toLowerCase(),
+
+            /*
+             * Conservamos una invitación
+             * pendiente si existe.
+             */
+            redirect:
+              destino ||
+              null
+          }
+        }
       )
     }
 
@@ -173,8 +294,10 @@ const Login = () => {
     ) => {
       event.preventDefault()
 
+
       setError("")
       setLoading(true)
+
 
       try {
         const {
@@ -211,6 +334,7 @@ const Login = () => {
         const destino =
           obtenerDestino()
 
+
         /**
          * Si el usuario llegó desde
          * una invitación:
@@ -219,7 +343,9 @@ const Login = () => {
          *   ↓
          * Invitación
          */
-        if (destino) {
+        if (
+          destino
+        ) {
           /**
            * Conservamos rimberio_after_auth
            * hasta que la invitación se acepte
@@ -235,6 +361,7 @@ const Login = () => {
             }
           )
 
+
           return
         }
 
@@ -249,7 +376,9 @@ const Login = () => {
           }
         )
 
-      } catch (problem) {
+      } catch (
+        problem
+      ) {
 
         /* ================================================
            CUENTA PENDIENTE DE VERIFICACION
@@ -260,20 +389,27 @@ const Login = () => {
           problem.response.data &&
           problem.response.data.pending
 
-        if (pending) {
+
+        if (
+          pending
+        ) {
           const destino =
             obtenerDestino()
+
 
           /**
            * Si venía desde una invitación,
            * conservamos el destino.
            */
-          if (destino) {
+          if (
+            destino
+          ) {
             sessionStorage.setItem(
               "rimberio_after_auth",
               destino
             )
           }
+
 
           navigate(
             "/registro",
@@ -294,6 +430,7 @@ const Login = () => {
             }
           )
 
+
           return
         }
 
@@ -309,7 +446,9 @@ const Login = () => {
         )
 
       } finally {
-        setLoading(false)
+        setLoading(
+          false
+        )
       }
     }
 
@@ -362,6 +501,7 @@ const Login = () => {
         <div className="auth-stats">
 
           <div>
+
             <strong>
               ERP
             </strong>
@@ -369,9 +509,12 @@ const Login = () => {
             <span>
               Gestión
             </span>
+
           </div>
 
+
           <div>
+
             <strong>
               +
             </strong>
@@ -379,9 +522,12 @@ const Login = () => {
             <span>
               Proyectos
             </span>
+
           </div>
 
+
           <div>
+
             <strong>
               ✓
             </strong>
@@ -389,6 +535,7 @@ const Login = () => {
             <span>
               Equipo
             </span>
+
           </div>
 
         </div>
@@ -413,6 +560,7 @@ const Login = () => {
             Bienvenido
           </h1>
 
+
           <p>
             Ingresa tus credenciales para continuar
           </p>
@@ -429,7 +577,9 @@ const Login = () => {
                 @
               </div>
 
+
               <div>
+
                 <strong>
                   Tienes una invitación pendiente
                 </strong>
@@ -439,8 +589,23 @@ const Login = () => {
                   automáticamente a la invitación
                   y poder aceptarla.
                 </p>
+
               </div>
 
+            </div>
+          )}
+
+
+          {/* ================================================
+              CONTRASEÑA RESTABLECIDA
+              ================================================ */}
+
+          {location.state?.passwordResetSuccess ===
+            true && (
+            <div className="alert alert-success">
+              Contraseña actualizada correctamente.
+              Ya puedes iniciar sesión con tu nueva
+              contraseña.
             </div>
           )}
 
@@ -465,6 +630,7 @@ const Login = () => {
             <label htmlFor="email">
               Correo electrónico
             </label>
+
 
             <input
               id="email"
@@ -497,6 +663,7 @@ const Login = () => {
               Contraseña
             </label>
 
+
             <input
               id="password"
               type="password"
@@ -519,6 +686,33 @@ const Login = () => {
 
 
           {/* ================================================
+              OLVIDE MI CONTRASEÑA
+              ================================================ */}
+
+          <div
+            className="auth-footer"
+            style={{
+              justifyContent:
+                "flex-end"
+            }}
+          >
+
+            <button
+              type="button"
+              onClick={
+                abrirRecuperacionPassword
+              }
+              disabled={
+                loading
+              }
+            >
+              ¿Olvidaste tu contraseña?
+            </button>
+
+          </div>
+
+
+          {/* ================================================
               INGRESAR
               ================================================ */}
 
@@ -529,9 +723,11 @@ const Login = () => {
               loading
             }
           >
+
             {loading
               ? "Ingresando..."
               : "Ingresar"}
+
           </button>
 
 
@@ -543,16 +739,19 @@ const Login = () => {
 
             ¿No tienes cuenta?
 
+
             <Link
               to={
                 obtenerUrlRegistro()
               }
             >
+
               <button
                 type="button"
               >
                 Regístrate
               </button>
+
             </Link>
 
           </div>

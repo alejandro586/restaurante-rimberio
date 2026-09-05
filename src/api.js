@@ -6,39 +6,18 @@ import axios from "axios"
    ========================================================== */
 
 const api = axios.create({
-  baseURL:
-    import.meta.env.VITE_API_URL
+  baseURL: import.meta.env.VITE_API_URL
 })
 
 
 /* ==========================================================
-   LIMPIAR SESION LOCAL
+   SESION LOCAL
    ========================================================== */
 
-/**
- * Función interna.
- *
- * Elimina únicamente los datos locales de sesión.
- *
- * Se utiliza cuando:
- *
- * - el token expiró
- * - el backend devuelve 401
- * - la cuenta fue desactivada
- */
 const limpiarSesionLocal = () => {
-
-  localStorage.removeItem(
-    "token"
-  )
-
-  localStorage.removeItem(
-    "user"
-  )
-
-  localStorage.removeItem(
-    "perfil"
-  )
+  localStorage.removeItem("token")
+  localStorage.removeItem("user")
+  localStorage.removeItem("perfil")
 }
 
 
@@ -48,15 +27,11 @@ const limpiarSesionLocal = () => {
 
 api.interceptors.request.use(
   (config) => {
-
     const token =
-      localStorage.getItem(
-        "token"
-      )
+      localStorage.getItem("token")
 
 
     if (token) {
-
       config.headers.Authorization =
         `Bearer ${token}`
     }
@@ -72,12 +47,10 @@ api.interceptors.request.use(
    ========================================================== */
 
 api.interceptors.response.use(
-
   (response) =>
     response,
 
   (error) => {
-
     const status =
       error?.response?.status
 
@@ -99,7 +72,6 @@ api.interceptors.response.use(
       status ===
       401
     ) {
-
       limpiarSesionLocal()
 
 
@@ -107,7 +79,6 @@ api.interceptors.response.use(
         window.location.pathname !==
         "/login"
       ) {
-
         window.location.href =
           "/login"
       }
@@ -124,18 +95,16 @@ api.interceptors.response.use(
        ====================================================== */
 
     /*
-     * IMPORTANTE:
+     * No cerramos sesión ante cualquier 403.
      *
-     * No cerramos sesión ante cualquier error 403.
+     * Un 403 puede significar también:
      *
-     * Un 403 también puede significar:
-     *
-     * - no tiene permiso para un módulo
+     * - sin permiso para un módulo
      * - no es administrador
      *
-     * Solamente cerramos la sesión cuando
-     * el backend indica específicamente que
-     * la cuenta está desactivada.
+     * Solo cerramos la sesión cuando
+     * el backend indica específicamente
+     * que la cuenta está desactivada.
      */
     const cuentaDesactivada =
       status ===
@@ -153,7 +122,6 @@ api.interceptors.response.use(
     if (
       cuentaDesactivada
     ) {
-
       limpiarSesionLocal()
 
 
@@ -161,7 +129,6 @@ api.interceptors.response.use(
         window.location.pathname !==
         "/login"
       ) {
-
         window.location.href =
           "/login"
       }
@@ -181,7 +148,6 @@ api.interceptors.response.use(
 
 export const getMessage =
   (error) => {
-
     const mensajeBackend =
       error?.response?.data?.error
 
@@ -189,7 +155,6 @@ export const getMessage =
     if (
       mensajeBackend
     ) {
-
       return String(
         mensajeBackend
       )
@@ -199,7 +164,6 @@ export const getMessage =
     if (
       error?.message
     ) {
-
       return String(
         error.message
       )
@@ -221,7 +185,6 @@ export const saveSession = (
   user,
   perfil
 ) => {
-
   localStorage.setItem(
     "token",
     token
@@ -231,7 +194,8 @@ export const saveSession = (
   localStorage.setItem(
     "user",
     JSON.stringify(
-      user || {}
+      user ||
+      {}
     )
   )
 
@@ -239,7 +203,8 @@ export const saveSession = (
   localStorage.setItem(
     "perfil",
     JSON.stringify(
-      perfil || {}
+      perfil ||
+      {}
     )
   )
 }
@@ -249,37 +214,21 @@ export const saveSession = (
    OBTENER PERFIL
    ========================================================== */
 
-/**
- * El perfil guardado en el navegador
- * solamente se utiliza para la interfaz.
- *
- * El backend vuelve a validar:
- *
- * - usuario
- * - rol
- * - activo
- * - permisos
- */
-export const getPerfil = () => {
-
-  try {
-
-    return (
-      JSON.parse(
-        localStorage.getItem(
-          "perfil"
-        )
-      ) ||
-      {}
-    )
-
-  } catch (
-    error
-  ) {
-
-    return {}
+export const getPerfil =
+  () => {
+    try {
+      return (
+        JSON.parse(
+          localStorage.getItem(
+            "perfil"
+          )
+        ) ||
+        {}
+      )
+    } catch {
+      return {}
+    }
   }
-}
 
 
 /* ==========================================================
@@ -299,9 +248,8 @@ export const esAdmin =
 
 
 /*
- * Se mantiene trabajador
- * temporalmente por compatibilidad
- * con el backend antiguo.
+ * Se mantiene trabajador temporalmente
+ * por compatibilidad con el backend actual.
  */
 export const esTrabajador =
   () =>
@@ -315,15 +263,14 @@ export const esTrabajador =
 
 export const esUsuarioActivo =
   () => {
-
     const perfil =
       getPerfil()
 
 
     /*
-     * Si activo todavía no existiera
-     * en una sesión antigua lo tratamos
-     * como activo.
+     * Si activo todavía no existe
+     * en una sesión antigua,
+     * se considera activo.
      */
     return (
       perfil.activo !==
@@ -357,26 +304,21 @@ export const inicioSegunRol =
    USUARIO DE SUPABASE
    ========================================================== */
 
-export const getUser = () => {
-
-  try {
-
-    return (
-      JSON.parse(
-        localStorage.getItem(
-          "user"
-        )
-      ) ||
-      {}
-    )
-
-  } catch (
-    error
-  ) {
-
-    return {}
+export const getUser =
+  () => {
+    try {
+      return (
+        JSON.parse(
+          localStorage.getItem(
+            "user"
+          )
+        ) ||
+        {}
+      )
+    } catch {
+      return {}
+    }
   }
-}
 
 
 /* ==========================================================
@@ -385,7 +327,6 @@ export const getUser = () => {
 
 export const getUserName =
   () => {
-
     const perfil =
       getPerfil()
 
@@ -393,7 +334,6 @@ export const getUserName =
     if (
       perfil.full_name
     ) {
-
       return perfil.full_name
     }
 
@@ -410,7 +350,6 @@ export const getUserName =
     if (
       meta.full_name
     ) {
-
       return meta.full_name
     }
 
@@ -418,11 +357,8 @@ export const getUserName =
     if (
       user.email
     ) {
-
       return user.email
-        .split(
-          "@"
-        )[0]
+        .split("@")[0]
     }
 
 
@@ -436,23 +372,17 @@ export const getUserName =
 
 export const getInitials =
   () => {
-
     const parts =
       getUserName()
         .trim()
-        .split(
-          " "
-        )
-        .filter(
-          Boolean
-        )
+        .split(" ")
+        .filter(Boolean)
 
 
     if (
       parts.length ===
       0
     ) {
-
       return "U"
     }
 
@@ -461,24 +391,17 @@ export const getInitials =
       parts.length ===
       1
     ) {
-
       return parts[0]
-        .charAt(
-          0
-        )
+        .charAt(0)
         .toUpperCase()
     }
 
 
     return (
       parts[0]
-        .charAt(
-          0
-        ) +
+        .charAt(0) +
       parts[1]
-        .charAt(
-          0
-        )
+        .charAt(0)
     )
       .toUpperCase()
   }
@@ -503,7 +426,6 @@ export const isLogged =
 
 export const clearSession =
   () => {
-
     limpiarSesionLocal()
   }
 
@@ -514,7 +436,6 @@ export const clearSession =
 
 export const listarCursos =
   async () => {
-
     const response =
       await api.get(
         "/courses"
@@ -531,7 +452,6 @@ export const listarCursos =
 
 export const obtenerMisPermisos =
   async () => {
-
     const response =
       await api.get(
         "/courses/me"
@@ -550,7 +470,6 @@ export const obtenerCurso =
   async (
     curso
   ) => {
-
     const valor =
       encodeURIComponent(
         String(
@@ -577,7 +496,6 @@ export const obtenerModulosCurso =
   async (
     curso
   ) => {
-
     const valor =
       encodeURIComponent(
         String(
@@ -600,13 +518,8 @@ export const obtenerModulosCurso =
    ADMINISTRACION - LISTAR USUARIOS
    ========================================================== */
 
-/**
- * GET
- * /api/admin/users
- */
 export const listarUsuarios =
   async () => {
-
     const response =
       await api.get(
         "/admin/users"
@@ -621,19 +534,13 @@ export const listarUsuarios =
    ADMINISTRACION - OBTENER USUARIO
    ========================================================== */
 
-/**
- * GET
- * /api/admin/users/:userId
- */
 export const obtenerUsuario =
   async (
     userId
   ) => {
-
     if (
       !userId
     ) {
-
       throw new Error(
         "Usuario no válido"
       )
@@ -662,23 +569,6 @@ export const obtenerUsuario =
    ADMINISTRACION - ACTUALIZAR USUARIO
    ========================================================== */
 
-/**
- * PATCH
- * /api/admin/users/:userId
- *
- * Permite modificar:
- *
- * - full_name
- * - empresa
- *
- * No modifica:
- *
- * - correo
- * - contraseña
- * - rol
- * - activo
- * - permisos
- */
 export const actualizarUsuario =
   async (
     userId,
@@ -688,11 +578,9 @@ export const actualizarUsuario =
       empresa
     }
   ) => {
-
     if (
       !userId
     ) {
-
       throw new Error(
         "Usuario no válido"
       )
@@ -717,7 +605,6 @@ export const actualizarUsuario =
     if (
       !nombre
     ) {
-
       throw new Error(
         "El nombre completo es obligatorio"
       )
@@ -728,7 +615,6 @@ export const actualizarUsuario =
       nombre.length >
       150
     ) {
-
       throw new Error(
         "El nombre no puede superar los 150 caracteres"
       )
@@ -738,7 +624,6 @@ export const actualizarUsuario =
     if (
       !empresaFinal
     ) {
-
       throw new Error(
         "La empresa es obligatoria"
       )
@@ -749,7 +634,6 @@ export const actualizarUsuario =
       empresaFinal.length >
       150
     ) {
-
       throw new Error(
         "La empresa no puede superar los 150 caracteres"
       )
@@ -785,26 +669,14 @@ export const actualizarUsuario =
    ADMINISTRACION - CAMBIAR ESTADO
    ========================================================== */
 
-/**
- * PATCH
- * /api/admin/users/:userId/status
- *
- * activo = false
- *   → desactivar
- *
- * activo = true
- *   → reactivar
- */
 export const cambiarEstadoUsuario =
   async (
     userId,
     activo
   ) => {
-
     if (
       !userId
     ) {
-
       throw new Error(
         "Usuario no válido"
       )
@@ -815,7 +687,6 @@ export const cambiarEstadoUsuario =
       typeof activo !==
       "boolean"
     ) {
-
       throw new Error(
         "El estado del usuario debe ser true o false"
       )
@@ -847,13 +718,8 @@ export const cambiarEstadoUsuario =
    ADMINISTRACION - CATALOGO
    ========================================================== */
 
-/**
- * GET
- * /api/admin/users/catalog
- */
 export const obtenerCatalogoCursos =
   async () => {
-
     const response =
       await api.get(
         "/admin/users/catalog"
@@ -868,19 +734,13 @@ export const obtenerCatalogoCursos =
    ADMINISTRACION - PERMISOS
    ========================================================== */
 
-/**
- * GET
- * /api/admin/users/:userId/permissions
- */
 export const obtenerPermisosUsuario =
   async (
     userId
   ) => {
-
     if (
       !userId
     ) {
-
       throw new Error(
         "Usuario no válido"
       )
@@ -914,11 +774,9 @@ export const asignarCurso =
     userId,
     courseId
   ) => {
-
     if (
       !userId
     ) {
-
       throw new Error(
         "Usuario no válido"
       )
@@ -933,7 +791,6 @@ export const asignarCurso =
       courseId ===
         ""
     ) {
-
       throw new Error(
         "Curso no válido"
       )
@@ -975,11 +832,9 @@ export const quitarCurso =
     userId,
     courseId
   ) => {
-
     if (
       !userId
     ) {
-
       throw new Error(
         "Usuario no válido"
       )
@@ -994,7 +849,6 @@ export const quitarCurso =
       courseId ===
         ""
     ) {
-
       throw new Error(
         "Curso no válido"
       )
@@ -1036,11 +890,9 @@ export const asignarModulo =
     userId,
     moduleId
   ) => {
-
     if (
       !userId
     ) {
-
       throw new Error(
         "Usuario no válido"
       )
@@ -1055,7 +907,6 @@ export const asignarModulo =
       moduleId ===
         ""
     ) {
-
       throw new Error(
         "Módulo no válido"
       )
@@ -1097,11 +948,9 @@ export const quitarModulo =
     userId,
     moduleId
   ) => {
-
     if (
       !userId
     ) {
-
       throw new Error(
         "Usuario no válido"
       )
@@ -1116,7 +965,6 @@ export const quitarModulo =
       moduleId ===
         ""
     ) {
-
       throw new Error(
         "Módulo no válido"
       )
@@ -1153,10 +1001,6 @@ export const quitarModulo =
    ADMINISTRACION - REGISTRAR USUARIO
    ========================================================== */
 
-/**
- * POST
- * /api/admin/users
- */
 export const crearUsuario =
   async ({
     full_name,
@@ -1164,7 +1008,6 @@ export const crearUsuario =
     password,
     empresa
   }) => {
-
     const nombre =
       String(
         full_name ||
@@ -1191,7 +1034,6 @@ export const crearUsuario =
     if (
       !nombre
     ) {
-
       throw new Error(
         "El nombre completo es obligatorio"
       )
@@ -1201,7 +1043,6 @@ export const crearUsuario =
     if (
       !correo
     ) {
-
       throw new Error(
         "El correo es obligatorio"
       )
@@ -1211,7 +1052,6 @@ export const crearUsuario =
     if (
       !password
     ) {
-
       throw new Error(
         "La contraseña es obligatoria"
       )
@@ -1224,7 +1064,6 @@ export const crearUsuario =
       ).length <
       8
     ) {
-
       throw new Error(
         "La contraseña debe tener al menos 8 caracteres"
       )
@@ -1234,7 +1073,6 @@ export const crearUsuario =
     if (
       !empresaFinal
     ) {
-
       throw new Error(
         "La empresa es obligatoria"
       )
@@ -1265,6 +1103,430 @@ export const crearUsuario =
 
 
     return data
+  }
+
+
+/* ==========================================================
+   RECUPERACION DE CONTRASEÑA - SOLICITAR
+   ========================================================== */
+
+/**
+ * PUBLICO.
+ *
+ * El usuario NO necesita iniciar sesión.
+ *
+ * El backend devuelve una respuesta neutra
+ * aunque el correo no exista.
+ */
+export const solicitarRecuperacionPassword =
+  async (
+    email
+  ) => {
+    const correo =
+      String(
+        email ||
+        ""
+      )
+        .trim()
+        .toLowerCase()
+
+
+    if (
+      !correo
+    ) {
+      throw new Error(
+        "El correo es obligatorio"
+      )
+    }
+
+
+    if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        .test(
+          correo
+        )
+    ) {
+      throw new Error(
+        "Ingresa un correo electrónico válido"
+      )
+    }
+
+
+    const response =
+      await api.post(
+        "/password-reset/request",
+        {
+          email:
+            correo
+        }
+      )
+
+
+    return response.data
+  }
+
+
+/* ==========================================================
+   RECUPERACION DE CONTRASEÑA - COMPLETAR
+   ========================================================== */
+
+/**
+ * PUBLICO.
+ *
+ * Usuario todavía NO ha iniciado sesión.
+ *
+ * Necesita:
+ *
+ * - correo
+ * - código autorizado
+ * - contraseña nueva
+ * - confirmación
+ */
+export const completarRecuperacionPassword =
+  async ({
+    email,
+    codigo,
+    password,
+    password_confirm,
+    passwordConfirm
+  }) => {
+    const correo =
+      String(
+        email ||
+        ""
+      )
+        .trim()
+        .toLowerCase()
+
+
+    /*
+     * El código se mantiene como STRING.
+     *
+     * Así un código como:
+     *
+     * 012345
+     *
+     * no pierde el cero inicial.
+     */
+    const codigoFinal =
+      String(
+        codigo ||
+        ""
+      ).trim()
+
+
+    /*
+     * IMPORTANTE:
+     *
+     * NO hacemos trim() a las contraseñas.
+     */
+    const nuevaPassword =
+      String(
+        password ??
+        ""
+      )
+
+
+    const confirmacion =
+      String(
+        password_confirm ??
+        passwordConfirm ??
+        ""
+      )
+
+
+    if (
+      !correo
+    ) {
+      throw new Error(
+        "El correo es obligatorio"
+      )
+    }
+
+
+    if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        .test(
+          correo
+        )
+    ) {
+      throw new Error(
+        "Ingresa un correo electrónico válido"
+      )
+    }
+
+
+    if (
+      !codigoFinal
+    ) {
+      throw new Error(
+        "El código de recuperación es obligatorio"
+      )
+    }
+
+
+    if (
+      !/^\d{6}$/
+        .test(
+          codigoFinal
+        )
+    ) {
+      throw new Error(
+        "El código debe contener exactamente 6 números"
+      )
+    }
+
+
+    if (
+      !nuevaPassword
+    ) {
+      throw new Error(
+        "La nueva contraseña es obligatoria"
+      )
+    }
+
+
+    if (
+      nuevaPassword.length <
+      8
+    ) {
+      throw new Error(
+        "La nueva contraseña debe tener al menos 8 caracteres"
+      )
+    }
+
+
+    if (
+      nuevaPassword.length >
+      128
+    ) {
+      throw new Error(
+        "La nueva contraseña es demasiado larga"
+      )
+    }
+
+
+    if (
+      !confirmacion
+    ) {
+      throw new Error(
+        "Debes confirmar la nueva contraseña"
+      )
+    }
+
+
+    if (
+      nuevaPassword !==
+      confirmacion
+    ) {
+      throw new Error(
+        "Las contraseñas no coinciden"
+      )
+    }
+
+
+    const response =
+      await api.post(
+        "/password-reset/complete",
+        {
+          email:
+            correo,
+
+          codigo:
+            codigoFinal,
+
+          password:
+            nuevaPassword,
+
+          password_confirm:
+            confirmacion
+        }
+      )
+
+
+    return response.data
+  }
+
+
+/* ==========================================================
+   RECUPERACION DE CONTRASEÑA - ESTADOS
+   ========================================================== */
+
+const ESTADOS_RECUPERACION_VALIDOS =
+  [
+    "pendiente",
+    "aprobado",
+    "rechazado",
+    "completado",
+    "vencido"
+  ]
+
+
+/* ==========================================================
+   RECUPERACION DE CONTRASEÑA - ADMIN LISTAR
+   ========================================================== */
+
+/**
+ * ADMIN.
+ *
+ * estado es opcional.
+ *
+ * Ejemplos:
+ *
+ * listarRecuperacionesPassword()
+ *
+ * listarRecuperacionesPassword(
+ *   "pendiente"
+ * )
+ */
+export const listarRecuperacionesPassword =
+  async (
+    estado =
+      ""
+  ) => {
+    const estadoFinal =
+      String(
+        estado ||
+        ""
+      )
+        .trim()
+        .toLowerCase()
+
+
+    if (
+      estadoFinal &&
+      !ESTADOS_RECUPERACION_VALIDOS
+        .includes(
+          estadoFinal
+        )
+    ) {
+      throw new Error(
+        "Estado de recuperación no válido"
+      )
+    }
+
+
+    const response =
+      await api.get(
+        "/password-reset/admin",
+        {
+          params:
+            estadoFinal
+              ? {
+                  estado:
+                    estadoFinal
+                }
+              : undefined
+        }
+      )
+
+
+    return response.data
+  }
+
+
+/* ==========================================================
+   RECUPERACION DE CONTRASEÑA - ADMIN APROBAR
+   ========================================================== */
+
+/**
+ * ADMIN.
+ *
+ * El administrador NO escribe una contraseña.
+ *
+ * Solamente autoriza la recuperación.
+ *
+ * El backend genera y devuelve el código.
+ */
+export const aprobarRecuperacionPassword =
+  async (
+    solicitudId
+  ) => {
+    const idNumero =
+      Number(
+        solicitudId
+      )
+
+
+    if (
+      !Number.isInteger(
+        idNumero
+      ) ||
+      idNumero <=
+        0
+    ) {
+      throw new Error(
+        "Solicitud de recuperación no válida"
+      )
+    }
+
+
+    const id =
+      encodeURIComponent(
+        String(
+          idNumero
+        )
+      )
+
+
+    const response =
+      await api.post(
+        `/password-reset/admin/${id}/approve`
+      )
+
+
+    return response.data
+  }
+
+
+/* ==========================================================
+   RECUPERACION DE CONTRASEÑA - ADMIN RECHAZAR
+   ========================================================== */
+
+/**
+ * ADMIN.
+ *
+ * Si estaba aprobada, rechazarla
+ * invalida también el código.
+ */
+export const rechazarRecuperacionPassword =
+  async (
+    solicitudId
+  ) => {
+    const idNumero =
+      Number(
+        solicitudId
+      )
+
+
+    if (
+      !Number.isInteger(
+        idNumero
+      ) ||
+      idNumero <=
+        0
+    ) {
+      throw new Error(
+        "Solicitud de recuperación no válida"
+      )
+    }
+
+
+    const id =
+      encodeURIComponent(
+        String(
+          idNumero
+        )
+      )
+
+
+    const response =
+      await api.post(
+        `/password-reset/admin/${id}/reject`
+      )
+
+
+    return response.data
   }
 
 
