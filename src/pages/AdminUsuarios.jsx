@@ -7,6 +7,7 @@ import {
 import {
   crearUsuario,
   listarUsuarios,
+  cambiarEstadoUsuario,
   obtenerCatalogoCursos,
   obtenerPermisosUsuario,
   asignarCurso,
@@ -361,6 +362,24 @@ const AdminUsuarios = () => {
 
 
   /* ========================================================
+     ESTADO DE CUENTA
+     ======================================================== */
+
+  const [
+    cambiandoEstado,
+    setCambiandoEstado
+  ] =
+    useState(false)
+
+
+  const [
+    usuarioEstadoPendiente,
+    setUsuarioEstadoPendiente
+  ] =
+    useState(null)
+
+
+  /* ========================================================
      REGISTRO
      ======================================================== */
 
@@ -432,6 +451,11 @@ const AdminUsuarios = () => {
     "admin"
 
 
+  const usuarioEstaActivo =
+    usuarioSeleccionado?.activo !==
+    false
+
+
   /* ========================================================
      FILTRO DE USUARIOS
      ======================================================== */
@@ -459,7 +483,10 @@ const AdminUsuarios = () => {
                 usuario.full_name,
                 usuario.email,
                 usuario.empresa,
-                usuario.role
+                usuario.role,
+                usuario.activo === false
+                  ? "desactivado inactivo bloqueado"
+                  : "activo habilitado"
               ]
                 .filter(Boolean)
                 .join(" ")
@@ -1028,6 +1055,115 @@ const AdminUsuarios = () => {
 
 
   /* ========================================================
+     ACTIVAR / DESACTIVAR USUARIO
+     ======================================================== */
+
+  const solicitarCambioEstado =
+    (usuario) => {
+
+      if (
+        !usuario ||
+        usuario.role ===
+        "admin"
+      ) {
+        return
+      }
+
+
+      setError("")
+
+      setUsuarioEstadoPendiente(
+        usuario
+      )
+    }
+
+
+  const cerrarCambioEstado =
+    () => {
+
+      if (
+        cambiandoEstado
+      ) {
+        return
+      }
+
+
+      setUsuarioEstadoPendiente(
+        null
+      )
+    }
+
+
+  const confirmarCambioEstado =
+    async () => {
+
+      if (
+        !usuarioEstadoPendiente ||
+        usuarioEstadoPendiente.role ===
+        "admin"
+      ) {
+        return
+      }
+
+
+      const nuevoEstado =
+        usuarioEstadoPendiente.activo ===
+        false
+
+
+      setCambiandoEstado(
+        true
+      )
+
+      setError("")
+
+
+      try {
+
+        const resultado =
+          await cambiarEstadoUsuario(
+            usuarioEstadoPendiente.id,
+            nuevoEstado
+          )
+
+
+        await cargarUsuarios(
+          usuarioEstadoPendiente.id
+        )
+
+
+        setUsuarioEstadoPendiente(
+          null
+        )
+
+
+        mostrarAviso(
+          resultado?.mensaje ||
+          (
+            nuevoEstado
+              ? "Usuario reactivado correctamente."
+              : "Usuario desactivado correctamente."
+          )
+        )
+
+      } catch (problema) {
+
+        setError(
+          getMessage(
+            problema
+          )
+        )
+
+      } finally {
+
+        setCambiandoEstado(
+          false
+        )
+      }
+    }
+
+
+  /* ========================================================
      ASIGNAR / QUITAR CURSO
      ======================================================== */
 
@@ -1203,7 +1339,7 @@ const AdminUsuarios = () => {
 
 
           <p>
-            Registra usuarios y controla el acceso a cursos y módulos de RIMBERIO.
+            Registra usuarios, activa o desactiva cuentas y controla el acceso a cursos y módulos de RIMBERIO.
           </p>
 
         </div>
@@ -1327,7 +1463,19 @@ const AdminUsuarios = () => {
 
 
                 <div className="muted">
-                  {usuarios.length} registrados
+                  {usuarios.length} registrados ·{" "}
+                  {
+                    usuarios.filter(
+                      (usuario) =>
+                        usuario.activo !== false
+                    ).length
+                  } activos ·{" "}
+                  {
+                    usuarios.filter(
+                      (usuario) =>
+                        usuario.activo === false
+                    ).length
+                  } desactivados
                 </div>
 
               </div>
@@ -1403,6 +1551,11 @@ const AdminUsuarios = () => {
                     "admin"
 
 
+                  const esActivo =
+                    usuario.activo !==
+                    false
+
+
                   return (
                     <button
                       type="button"
@@ -1438,7 +1591,14 @@ const AdminUsuarios = () => {
                         background:
                           seleccionado
                             ? "rgba(37, 99, 235, 0.06)"
-                            : "transparent",
+                            : esActivo
+                              ? "transparent"
+                              : "#f8fafc",
+
+                        opacity:
+                          esActivo
+                            ? 1
+                            : 0.72,
 
                         cursor:
                           "pointer"
@@ -1530,19 +1690,70 @@ const AdminUsuarios = () => {
                         </div>
 
 
-                        <span
-                          className={
-                            esAdministrador
-                              ? "chip rol-admin"
-                              : "chip"
-                          }
+                        <div
+                          style={{
+                            display:
+                              "flex",
+
+                            flexDirection:
+                              "column",
+
+                            alignItems:
+                              "flex-end",
+
+                            gap:
+                              "6px",
+
+                            flexShrink:
+                              0
+                          }}
                         >
 
-                          {esAdministrador
-                            ? "Admin"
-                            : "Usuario"}
+                          <span
+                            className={
+                              esAdministrador
+                                ? "chip rol-admin"
+                                : "chip"
+                            }
+                          >
 
-                        </span>
+                            {esAdministrador
+                              ? "Admin"
+                              : "Usuario"}
+
+                          </span>
+
+
+                          <span
+                            className="chip"
+                            style={{
+                              border:
+                                esActivo
+                                  ? "1px solid #bbf7d0"
+                                  : "1px solid #fecaca",
+
+                              background:
+                                esActivo
+                                  ? "#f0fdf4"
+                                  : "#fef2f2",
+
+                              color:
+                                esActivo
+                                  ? "#166534"
+                                  : "#991b1b",
+
+                              fontWeight:
+                                700
+                            }}
+                          >
+
+                            {esActivo
+                              ? "● Activo"
+                              : "○ Desactivado"}
+
+                          </span>
+
+                        </div>
 
                       </div>
 
@@ -1634,19 +1845,132 @@ const AdminUsuarios = () => {
                   </div>
 
 
-                  <span
-                    className={
-                      usuarioEsAdmin
-                        ? "chip rol-admin"
-                        : "chip"
-                    }
+                  <div
+                    style={{
+                      display:
+                        "flex",
+
+                      flexDirection:
+                        "column",
+
+                      alignItems:
+                        "flex-end",
+
+                      gap:
+                        "8px",
+
+                      flexShrink:
+                        0
+                    }}
                   >
 
-                    {usuarioEsAdmin
-                      ? "Administrador"
-                      : "Usuario"}
+                    <span
+                      className={
+                        usuarioEsAdmin
+                          ? "chip rol-admin"
+                          : "chip"
+                      }
+                    >
 
-                  </span>
+                      {usuarioEsAdmin
+                        ? "Administrador"
+                        : "Usuario"}
+
+                    </span>
+
+
+                    <span
+                      className="chip"
+                      style={{
+                        border:
+                          usuarioEstaActivo
+                            ? "1px solid #bbf7d0"
+                            : "1px solid #fecaca",
+
+                        background:
+                          usuarioEstaActivo
+                            ? "#f0fdf4"
+                            : "#fef2f2",
+
+                        color:
+                          usuarioEstaActivo
+                            ? "#166534"
+                            : "#991b1b",
+
+                        fontWeight:
+                          700
+                      }}
+                    >
+
+                      {usuarioEstaActivo
+                        ? "● Activo"
+                        : "○ Desactivado"}
+
+                    </span>
+
+
+                    {!usuarioEsAdmin && (
+
+                      <button
+                        type="button"
+                        onClick={
+                          () =>
+                            solicitarCambioEstado(
+                              usuarioSeleccionado
+                            )
+                        }
+                        disabled={
+                          cambiandoEstado
+                        }
+                        style={{
+                          minWidth:
+                            "122px",
+
+                          padding:
+                            "9px 12px",
+
+                          borderRadius:
+                            "8px",
+
+                          border:
+                            usuarioEstaActivo
+                              ? "1px solid #fecaca"
+                              : "1px solid #bbf7d0",
+
+                          background:
+                            usuarioEstaActivo
+                              ? "#fff"
+                              : "#f0fdf4",
+
+                          color:
+                            usuarioEstaActivo
+                              ? "#b91c1c"
+                              : "#166534",
+
+                          fontWeight:
+                            700,
+
+                          cursor:
+                            cambiandoEstado
+                              ? "not-allowed"
+                              : "pointer",
+
+                          opacity:
+                            cambiandoEstado
+                              ? 0.65
+                              : 1
+                        }}
+                      >
+
+                        {usuarioEstaActivo
+                          ? "Desactivar"
+                          : "Reactivar"}
+
+                      </button>
+
+                    )}
+
+                  </div>
 
                 </div>
 
@@ -1657,6 +1981,26 @@ const AdminUsuarios = () => {
 
                     El administrador tiene acceso completo al sistema.
                     No necesita asignaciones individuales de cursos o módulos.
+
+                  </div>
+
+                )}
+
+
+                {!usuarioEsAdmin &&
+                  !usuarioEstaActivo && (
+
+                  <div
+                    className="alert alert-error"
+                    style={{
+                      marginBottom:
+                        "16px"
+                    }}
+                  >
+
+                    Esta cuenta está desactivada.
+                    El usuario no puede utilizar RIMBERIO,
+                    pero sus cursos, módulos, datos e historial se conservan.
 
                   </div>
 
@@ -2072,6 +2416,132 @@ const AdminUsuarios = () => {
 
 
       {/* ====================================================
+          MODAL ACTIVAR / DESACTIVAR USUARIO
+          ==================================================== */}
+
+      {usuarioEstadoPendiente && (
+
+        <Modal
+          title={
+            usuarioEstadoPendiente.activo ===
+            false
+              ? "Reactivar usuario"
+              : "Desactivar usuario"
+          }
+          onClose={
+            cerrarCambioEstado
+          }
+          footer={
+            (cerrar) => (
+              <>
+
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  disabled={
+                    cambiandoEstado
+                  }
+                  onClick={
+                    cerrar
+                  }
+                >
+                  Cancelar
+                </button>
+
+
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={
+                    cambiandoEstado
+                  }
+                  onClick={
+                    confirmarCambioEstado
+                  }
+                  style={{
+                    border:
+                      usuarioEstadoPendiente.activo ===
+                      false
+                        ? undefined
+                        : "1px solid #b91c1c",
+
+                    background:
+                      usuarioEstadoPendiente.activo ===
+                      false
+                        ? undefined
+                        : "#b91c1c",
+
+                    color:
+                      "#ffffff"
+                  }}
+                >
+
+                  {cambiandoEstado
+                    ? "Guardando..."
+                    : usuarioEstadoPendiente.activo ===
+                      false
+                      ? "Reactivar usuario"
+                      : "Desactivar usuario"}
+
+                </button>
+
+              </>
+            )
+          }
+        >
+
+          <p
+            style={{
+              marginTop:
+                0
+            }}
+          >
+
+            {usuarioEstadoPendiente.activo ===
+            false
+              ? "El usuario podrá volver a iniciar sesión y conservará los mismos permisos que tenía antes."
+              : "El usuario dejará de poder utilizar RIMBERIO. No se eliminarán sus datos, cursos, módulos, CSV, proyectos ni historial."}
+
+          </p>
+
+
+          <div
+            style={{
+              padding:
+                "12px",
+
+              borderRadius:
+                "8px",
+
+              background:
+                "#f8fafc"
+            }}
+          >
+
+            <strong>
+              {usuarioEstadoPendiente.full_name ||
+                usuarioEstadoPendiente.email}
+            </strong>
+
+
+            <div
+              className="muted"
+              style={{
+                marginTop:
+                  "4px"
+              }}
+            >
+              {usuarioEstadoPendiente.email}
+            </div>
+
+          </div>
+
+        </Modal>
+
+      )}
+
+
+      {/* ====================================================
           MODAL REGISTRAR USUARIO
           ==================================================== */}
 
@@ -2338,7 +2808,7 @@ const AdminUsuarios = () => {
               }}
             >
 
-              La cuenta se crea sin permisos de cursos.
+              La cuenta se crea activa y sin permisos de cursos.
               Selecciona al nuevo usuario en esta misma pantalla y habilita solamente los módulos que necesite.
 
             </div>
