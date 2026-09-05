@@ -16,13 +16,14 @@ const api = axios.create({
    ========================================================== */
 
 /**
- * Elimina toda la información local
- * relacionada con la sesión actual.
+ * Función interna.
+ *
+ * Elimina únicamente los datos locales de sesión.
  *
  * Se utiliza cuando:
  *
- * - el usuario cierra sesión
  * - el token expiró
+ * - el backend devuelve 401
  * - la cuenta fue desactivada
  */
 const limpiarSesionLocal = () => {
@@ -67,25 +68,13 @@ api.interceptors.request.use(
 
 
 /* ==========================================================
-   RESPUESTAS / SESION
+   RESPUESTAS
    ========================================================== */
 
-/**
- * Manejo centralizado de:
- *
- * 401 -> sesión inválida o expirada
- *
- * 403 + cuenta desactivada
- * -> el administrador bloqueó la cuenta
- *
- * En ambos casos se elimina la sesión
- * almacenada localmente.
- */
 api.interceptors.response.use(
 
   (response) =>
     response,
-
 
   (error) => {
 
@@ -103,7 +92,7 @@ api.interceptors.response.use(
 
 
     /* ======================================================
-       SESION EXPIRADA
+       TOKEN INVALIDO / SESION EXPIRADA
        ====================================================== */
 
     if (
@@ -122,6 +111,11 @@ api.interceptors.response.use(
         window.location.href =
           "/login"
       }
+
+
+      return Promise.reject(
+        error
+      )
     }
 
 
@@ -129,8 +123,23 @@ api.interceptors.response.use(
        CUENTA DESACTIVADA
        ====================================================== */
 
+    /*
+     * IMPORTANTE:
+     *
+     * No cerramos sesión ante cualquier error 403.
+     *
+     * Un 403 también puede significar:
+     *
+     * - no tiene permiso para un módulo
+     * - no es administrador
+     *
+     * Solamente cerramos la sesión cuando
+     * el backend indica específicamente que
+     * la cuenta está desactivada.
+     */
     const cuentaDesactivada =
-      status === 403 &&
+      status ===
+        403 &&
       (
         mensaje.includes(
           "cuenta está desactivada"
@@ -173,14 +182,17 @@ api.interceptors.response.use(
 export const getMessage =
   (error) => {
 
-    if (
+    const mensajeBackend =
       error?.response?.data?.error
+
+
+    if (
+      mensajeBackend
     ) {
 
-      return error
-        .response
-        .data
-        .error
+      return String(
+        mensajeBackend
+      )
     }
 
 
@@ -188,11 +200,15 @@ export const getMessage =
       error?.message
     ) {
 
-      return error.message
+      return String(
+        error.message
+      )
     }
 
 
-    return "No se pudo conectar con el servidor"
+    return (
+      "No se pudo conectar con el servidor"
+    )
   }
 
 
@@ -229,19 +245,20 @@ export const saveSession = (
 }
 
 
+/* ==========================================================
+   OBTENER PERFIL
+   ========================================================== */
+
 /**
- * El perfil guardado solo decide
- * qué se dibuja en el frontend.
+ * El perfil guardado en el navegador
+ * solamente se utiliza para la interfaz.
  *
- * El backend vuelve a verificar:
+ * El backend vuelve a validar:
  *
  * - usuario
  * - rol
- * - empresa
- * - estado activo
+ * - activo
  * - permisos
- *
- * contra la base de datos.
  */
 export const getPerfil = () => {
 
@@ -252,10 +269,13 @@ export const getPerfil = () => {
         localStorage.getItem(
           "perfil"
         )
-      ) || {}
+      ) ||
+      {}
     )
 
-  } catch (error) {
+  } catch (
+    error
+  ) {
 
     return {}
   }
@@ -266,65 +286,75 @@ export const getPerfil = () => {
    ROL
    ========================================================== */
 
-export const getRol = () =>
-  getPerfil().role || ""
+export const getRol =
+  () =>
+    getPerfil().role ||
+    ""
 
 
-export const esAdmin = () =>
-  getRol() ===
-  "admin"
+export const esAdmin =
+  () =>
+    getRol() ===
+    "admin"
 
 
-export const esTrabajador = () =>
-  getRol() ===
-  "trabajador"
+/*
+ * Se mantiene trabajador
+ * temporalmente por compatibilidad
+ * con el backend antiguo.
+ */
+export const esTrabajador =
+  () =>
+    getRol() ===
+    "trabajador"
 
 
 /* ==========================================================
-   ESTADO LOCAL DEL PERFIL
+   ESTADO DEL USUARIO
    ========================================================== */
 
-/**
- * Este valor es solamente informativo
- * para la interfaz.
- *
- * La seguridad real continúa dependiendo
- * del backend.
- */
-export const esUsuarioActivo = () => {
+export const esUsuarioActivo =
+  () => {
 
-  const perfil =
-    getPerfil()
+    const perfil =
+      getPerfil()
 
 
-  return (
-    perfil.activo !==
-    false
-  )
-}
+    /*
+     * Si activo todavía no existiera
+     * en una sesión antigua lo tratamos
+     * como activo.
+     */
+    return (
+      perfil.activo !==
+      false
+    )
+  }
 
 
 /* ==========================================================
    EMPRESA
    ========================================================== */
 
-export const getEmpresa = () =>
-  getPerfil().empresa ||
-  "Mi empresa"
+export const getEmpresa =
+  () =>
+    getPerfil().empresa ||
+    "Mi empresa"
 
 
 /* ==========================================================
-   PAGINA INICIAL SEGUN ROL
+   INICIO SEGUN ROL
    ========================================================== */
 
-export const inicioSegunRol = () =>
-  esAdmin()
-    ? "/archivos"
-    : "/importar"
+export const inicioSegunRol =
+  () =>
+    esAdmin()
+      ? "/archivos"
+      : "/importar"
 
 
 /* ==========================================================
-   USUARIO AUTH
+   USUARIO DE SUPABASE
    ========================================================== */
 
 export const getUser = () => {
@@ -336,10 +366,13 @@ export const getUser = () => {
         localStorage.getItem(
           "user"
         )
-      ) || {}
+      ) ||
+      {}
     )
 
-  } catch (error) {
+  } catch (
+    error
+  ) {
 
     return {}
   }
@@ -350,114 +383,129 @@ export const getUser = () => {
    NOMBRE DEL USUARIO
    ========================================================== */
 
-export const getUserName = () => {
+export const getUserName =
+  () => {
 
-  const perfil =
-    getPerfil()
+    const perfil =
+      getPerfil()
 
 
-  if (
-    perfil.full_name
-  ) {
+    if (
+      perfil.full_name
+    ) {
 
-    return perfil.full_name
+      return perfil.full_name
+    }
+
+
+    const user =
+      getUser()
+
+
+    const meta =
+      user.user_metadata ||
+      {}
+
+
+    if (
+      meta.full_name
+    ) {
+
+      return meta.full_name
+    }
+
+
+    if (
+      user.email
+    ) {
+
+      return user.email
+        .split(
+          "@"
+        )[0]
+    }
+
+
+    return "Usuario"
   }
-
-
-  const user =
-    getUser()
-
-
-  const meta =
-    user.user_metadata || {}
-
-
-  if (
-    meta.full_name
-  ) {
-
-    return meta.full_name
-  }
-
-
-  if (
-    user.email
-  ) {
-
-    return user.email
-      .split("@")[0]
-  }
-
-
-  return "Usuario"
-}
 
 
 /* ==========================================================
    INICIALES
    ========================================================== */
 
-export const getInitials = () => {
+export const getInitials =
+  () => {
 
-  const parts =
-    getUserName()
-      .trim()
-      .split(" ")
-      .filter(Boolean)
-
-
-  if (
-    parts.length ===
-    0
-  ) {
-
-    return "U"
-  }
+    const parts =
+      getUserName()
+        .trim()
+        .split(
+          " "
+        )
+        .filter(
+          Boolean
+        )
 
 
-  if (
-    parts.length ===
-    1
-  ) {
+    if (
+      parts.length ===
+      0
+    ) {
 
-    return parts[0]
-      .charAt(0)
+      return "U"
+    }
+
+
+    if (
+      parts.length ===
+      1
+    ) {
+
+      return parts[0]
+        .charAt(
+          0
+        )
+        .toUpperCase()
+    }
+
+
+    return (
+      parts[0]
+        .charAt(
+          0
+        ) +
+      parts[1]
+        .charAt(
+          0
+        )
+    )
       .toUpperCase()
   }
-
-
-  return (
-    parts[0]
-      .charAt(0)
-      .toUpperCase() +
-
-    parts[1]
-      .charAt(0)
-      .toUpperCase()
-  )
-}
 
 
 /* ==========================================================
-   COMPROBAR SESION
+   SESION ACTIVA
    ========================================================== */
 
-export const isLogged = () =>
-  Boolean(
-    localStorage.getItem(
-      "token"
+export const isLogged =
+  () =>
+    Boolean(
+      localStorage.getItem(
+        "token"
+      )
     )
-  )
 
 
 /* ==========================================================
    CERRAR SESION
    ========================================================== */
 
-export const clearSession = () => {
+export const clearSession =
+  () => {
 
-  limpiarSesionLocal()
-}
+    limpiarSesionLocal()
+  }
 
 
 /* ==========================================================
@@ -477,6 +525,10 @@ export const listarCursos =
   }
 
 
+/* ==========================================================
+   MIS PERMISOS
+   ========================================================== */
+
 export const obtenerMisPermisos =
   async () => {
 
@@ -489,6 +541,10 @@ export const obtenerMisPermisos =
     return response.data
   }
 
+
+/* ==========================================================
+   OBTENER CURSO
+   ========================================================== */
 
 export const obtenerCurso =
   async (
@@ -512,6 +568,10 @@ export const obtenerCurso =
     return response.data
   }
 
+
+/* ==========================================================
+   MODULOS DEL CURSO
+   ========================================================== */
 
 export const obtenerModulosCurso =
   async (
@@ -537,18 +597,12 @@ export const obtenerModulosCurso =
 
 
 /* ==========================================================
-   ADMINISTRACION - USUARIOS
+   ADMINISTRACION - LISTAR USUARIOS
    ========================================================== */
 
 /**
  * GET
  * /api/admin/users
- *
- * Lista todos los usuarios.
- *
- * Cada perfil puede incluir ahora:
- *
- * activo: true / false
  */
 export const listarUsuarios =
   async () => {
@@ -563,6 +617,10 @@ export const listarUsuarios =
   }
 
 
+/* ==========================================================
+   ADMINISTRACION - OBTENER USUARIO
+   ========================================================== */
+
 /**
  * GET
  * /api/admin/users/:userId
@@ -571,6 +629,16 @@ export const obtenerUsuario =
   async (
     userId
   ) => {
+
+    if (
+      !userId
+    ) {
+
+      throw new Error(
+        "Usuario no válido"
+      )
+    }
+
 
     const id =
       encodeURIComponent(
@@ -591,6 +659,129 @@ export const obtenerUsuario =
 
 
 /* ==========================================================
+   ADMINISTRACION - ACTUALIZAR USUARIO
+   ========================================================== */
+
+/**
+ * PATCH
+ * /api/admin/users/:userId
+ *
+ * Permite modificar:
+ *
+ * - full_name
+ * - empresa
+ *
+ * No modifica:
+ *
+ * - correo
+ * - contraseña
+ * - rol
+ * - activo
+ * - permisos
+ */
+export const actualizarUsuario =
+  async (
+    userId,
+    {
+      full_name,
+      fullName,
+      empresa
+    }
+  ) => {
+
+    if (
+      !userId
+    ) {
+
+      throw new Error(
+        "Usuario no válido"
+      )
+    }
+
+
+    const nombre =
+      String(
+        full_name ||
+        fullName ||
+        ""
+      ).trim()
+
+
+    const empresaFinal =
+      String(
+        empresa ||
+        ""
+      ).trim()
+
+
+    if (
+      !nombre
+    ) {
+
+      throw new Error(
+        "El nombre completo es obligatorio"
+      )
+    }
+
+
+    if (
+      nombre.length >
+      150
+    ) {
+
+      throw new Error(
+        "El nombre no puede superar los 150 caracteres"
+      )
+    }
+
+
+    if (
+      !empresaFinal
+    ) {
+
+      throw new Error(
+        "La empresa es obligatoria"
+      )
+    }
+
+
+    if (
+      empresaFinal.length >
+      150
+    ) {
+
+      throw new Error(
+        "La empresa no puede superar los 150 caracteres"
+      )
+    }
+
+
+    const id =
+      encodeURIComponent(
+        String(
+          userId
+        )
+      )
+
+
+    const response =
+      await api.patch(
+        `/admin/users/${id}`,
+        {
+          full_name:
+            nombre,
+
+          empresa:
+            empresaFinal
+        }
+      )
+
+
+    return response.data
+  }
+
+
+/* ==========================================================
    ADMINISTRACION - CAMBIAR ESTADO
    ========================================================== */
 
@@ -599,20 +790,10 @@ export const obtenerUsuario =
  * /api/admin/users/:userId/status
  *
  * activo = false
- * -> desactiva la cuenta
+ *   → desactivar
  *
  * activo = true
- * -> reactiva la cuenta
- *
- * No elimina:
- *
- * - usuario
- * - permisos
- * - cursos
- * - módulos
- * - CSV
- * - proyectos
- * - historial
+ *   → reactivar
  */
 export const cambiarEstadoUsuario =
   async (
@@ -696,6 +877,16 @@ export const obtenerPermisosUsuario =
     userId
   ) => {
 
+    if (
+      !userId
+    ) {
+
+      throw new Error(
+        "Usuario no válido"
+      )
+    }
+
+
     const id =
       encodeURIComponent(
         String(
@@ -723,6 +914,31 @@ export const asignarCurso =
     userId,
     courseId
   ) => {
+
+    if (
+      !userId
+    ) {
+
+      throw new Error(
+        "Usuario no válido"
+      )
+    }
+
+
+    if (
+      courseId ===
+        null ||
+      courseId ===
+        undefined ||
+      courseId ===
+        ""
+    ) {
+
+      throw new Error(
+        "Curso no válido"
+      )
+    }
+
 
     const usuario =
       encodeURIComponent(
@@ -760,6 +976,31 @@ export const quitarCurso =
     courseId
   ) => {
 
+    if (
+      !userId
+    ) {
+
+      throw new Error(
+        "Usuario no válido"
+      )
+    }
+
+
+    if (
+      courseId ===
+        null ||
+      courseId ===
+        undefined ||
+      courseId ===
+        ""
+    ) {
+
+      throw new Error(
+        "Curso no válido"
+      )
+    }
+
+
     const usuario =
       encodeURIComponent(
         String(
@@ -795,6 +1036,31 @@ export const asignarModulo =
     userId,
     moduleId
   ) => {
+
+    if (
+      !userId
+    ) {
+
+      throw new Error(
+        "Usuario no válido"
+      )
+    }
+
+
+    if (
+      moduleId ===
+        null ||
+      moduleId ===
+        undefined ||
+      moduleId ===
+        ""
+    ) {
+
+      throw new Error(
+        "Módulo no válido"
+      )
+    }
+
 
     const usuario =
       encodeURIComponent(
@@ -832,6 +1098,31 @@ export const quitarModulo =
     moduleId
   ) => {
 
+    if (
+      !userId
+    ) {
+
+      throw new Error(
+        "Usuario no válido"
+      )
+    }
+
+
+    if (
+      moduleId ===
+        null ||
+      moduleId ===
+        undefined ||
+      moduleId ===
+        ""
+    ) {
+
+      throw new Error(
+        "Módulo no válido"
+      )
+    }
+
+
     const usuario =
       encodeURIComponent(
         String(
@@ -863,19 +1154,8 @@ export const quitarModulo =
    ========================================================== */
 
 /**
- * Registra un nuevo usuario desde
- * el panel administrativo.
- *
- * Backend:
- *
- * POST /api/admin/users
- *
- * Solo funciona si la sesión actual
- * pertenece a un administrador.
- *
- * El backend crea el usuario con:
- *
- * activo = true
+ * POST
+ * /api/admin/users
  */
 export const crearUsuario =
   async ({
@@ -885,16 +1165,101 @@ export const crearUsuario =
     empresa
   }) => {
 
+    const nombre =
+      String(
+        full_name ||
+        ""
+      ).trim()
+
+
+    const correo =
+      String(
+        email ||
+        ""
+      )
+        .trim()
+        .toLowerCase()
+
+
+    const empresaFinal =
+      String(
+        empresa ||
+        ""
+      ).trim()
+
+
+    if (
+      !nombre
+    ) {
+
+      throw new Error(
+        "El nombre completo es obligatorio"
+      )
+    }
+
+
+    if (
+      !correo
+    ) {
+
+      throw new Error(
+        "El correo es obligatorio"
+      )
+    }
+
+
+    if (
+      !password
+    ) {
+
+      throw new Error(
+        "La contraseña es obligatoria"
+      )
+    }
+
+
+    if (
+      String(
+        password
+      ).length <
+      8
+    ) {
+
+      throw new Error(
+        "La contraseña debe tener al menos 8 caracteres"
+      )
+    }
+
+
+    if (
+      !empresaFinal
+    ) {
+
+      throw new Error(
+        "La empresa es obligatoria"
+      )
+    }
+
+
     const {
       data
     } =
       await api.post(
         "/admin/users",
         {
-          full_name,
-          email,
-          password,
-          empresa
+          full_name:
+            nombre,
+
+          email:
+            correo,
+
+          password:
+            String(
+              password
+            ),
+
+          empresa:
+            empresaFinal
         }
       )
 
@@ -909,9 +1274,9 @@ export const crearUsuario =
 
 export const soles =
   (valor) =>
-
     `S/ ${Number(
-      valor || 0
+      valor ||
+      0
     ).toLocaleString(
       "es-PE",
       {
@@ -926,9 +1291,9 @@ export const soles =
 
 export const miles =
   (valor) =>
-
     Number(
-      valor || 0
+      valor ||
+      0
     ).toLocaleString(
       "es-PE"
     )
