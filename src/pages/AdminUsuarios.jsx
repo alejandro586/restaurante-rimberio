@@ -19,79 +19,42 @@ import {
   getUserName
 } from "../api"
 
-import Modal
-  from "../components/Modal"
+import Modal from "../components/Modal"
 
 
 /* ==========================================================
    UTILIDADES
    ========================================================== */
 
-const obtenerListaUsuarios = (
-  respuesta
-) => {
-
-  if (
-    Array.isArray(
-      respuesta
-    )
-  ) {
+const obtenerListaUsuarios = (respuesta) => {
+  if (Array.isArray(respuesta)) {
     return respuesta
   }
 
-
-  if (
-    Array.isArray(
-      respuesta?.usuarios
-    )
-  ) {
+  if (Array.isArray(respuesta?.usuarios)) {
     return respuesta.usuarios
   }
 
-
-  if (
-    Array.isArray(
-      respuesta?.data
-    )
-  ) {
+  if (Array.isArray(respuesta?.data)) {
     return respuesta.data
   }
-
 
   return []
 }
 
 
-const obtenerListaCursos = (
-  respuesta
-) => {
-
-  if (
-    Array.isArray(
-      respuesta
-    )
-  ) {
+const obtenerListaCursos = (respuesta) => {
+  if (Array.isArray(respuesta)) {
     return respuesta
   }
 
-
-  if (
-    Array.isArray(
-      respuesta?.cursos
-    )
-  ) {
+  if (Array.isArray(respuesta?.cursos)) {
     return respuesta.cursos
   }
 
-
-  if (
-    Array.isArray(
-      respuesta?.data
-    )
-  ) {
+  if (Array.isArray(respuesta?.data)) {
     return respuesta.data
   }
-
 
   return []
 }
@@ -101,56 +64,66 @@ const obtenerListaCursos = (
    NORMALIZAR PERMISOS
    ========================================================== */
 
-const normalizarPermisos = (
-  respuesta
-) => {
+const normalizarPermisos = (respuesta) => {
+  /*
+   * El backend puede devolver:
+   *
+   * {
+   *   user_id,
+   *   permisos: { ... }
+   * }
+   *
+   * o api.js puede devolver directamente:
+   *
+   * {
+   *   cursos: [...],
+   *   modulos: [...]
+   * }
+   *
+   * Soportamos ambas formas.
+   */
+  const origen =
+    respuesta?.permisos ??
+    respuesta ??
+    {}
 
   const cursos =
     new Set()
-
 
   const modulos =
     new Set()
 
 
-  const agregarCurso = (
-    valor
-  ) => {
+  const agregarCurso =
+    (valor) => {
 
-    if (
-      valor === null ||
-      valor === undefined
-    ) {
-      return
+      if (
+        valor === null ||
+        valor === undefined
+      ) {
+        return
+      }
+
+      cursos.add(
+        String(valor)
+      )
     }
 
 
-    cursos.add(
-      String(
-        valor
+  const agregarModulo =
+    (valor) => {
+
+      if (
+        valor === null ||
+        valor === undefined
+      ) {
+        return
+      }
+
+      modulos.add(
+        String(valor)
       )
-    )
-  }
-
-
-  const agregarModulo = (
-    valor
-  ) => {
-
-    if (
-      valor === null ||
-      valor === undefined
-    ) {
-      return
     }
-
-
-    modulos.add(
-      String(
-        valor
-      )
-    )
-  }
 
 
   /* ========================================================
@@ -159,9 +132,9 @@ const normalizarPermisos = (
 
   const listaCursos =
     Array.isArray(
-      respuesta?.cursos
+      origen?.cursos
     )
-      ? respuesta.cursos
+      ? origen.cursos
       : []
 
 
@@ -189,8 +162,8 @@ const normalizarPermisos = (
         )
           ? curso.modulos
           : Array.isArray(
-                curso?.modules
-              )
+              curso?.modules
+            )
             ? curso.modules
             : []
 
@@ -222,9 +195,9 @@ const normalizarPermisos = (
 
   const listaModulos =
     Array.isArray(
-      respuesta?.modulos
+      origen?.modulos
     )
-      ? respuesta.modulos
+      ? origen.modulos
       : []
 
 
@@ -262,27 +235,23 @@ const normalizarPermisos = (
 
   if (
     Array.isArray(
-      respuesta?.curso_ids
+      origen?.curso_ids
     )
   ) {
-
-    respuesta.curso_ids
-      .forEach(
-        agregarCurso
-      )
+    origen.curso_ids.forEach(
+      agregarCurso
+    )
   }
 
 
   if (
     Array.isArray(
-      respuesta?.modulo_ids
+      origen?.modulo_ids
     )
   ) {
-
-    respuesta.modulo_ids
-      .forEach(
-        agregarModulo
-      )
+    origen.modulo_ids.forEach(
+      agregarModulo
+    )
   }
 
 
@@ -392,7 +361,7 @@ const AdminUsuarios = () => {
 
 
   /* ========================================================
-     REGISTRO DE USUARIO
+     REGISTRO
      ======================================================== */
 
   const [
@@ -502,7 +471,6 @@ const AdminUsuarios = () => {
             )
           }
         )
-
       },
       [
         usuarios,
@@ -512,27 +480,26 @@ const AdminUsuarios = () => {
 
 
   /* ========================================================
-     MENSAJE TEMPORAL
+     MENSAJES
      ======================================================== */
 
-  const mostrarAviso = (
-    texto
-  ) => {
+  const mostrarAviso =
+    (texto) => {
 
-    setAviso(
-      texto
-    )
+      setAviso(
+        texto
+      )
 
 
-    window.setTimeout(
-      () => {
+      window.setTimeout(
+        () => {
 
-        setAviso("")
+          setAviso("")
 
-      },
-      5000
-    )
-  }
+        },
+        5000
+      )
+    }
 
 
   /* ========================================================
@@ -560,7 +527,7 @@ const AdminUsuarios = () => {
 
 
       /* ====================================================
-         SELECCION DESPUES DE CREAR
+         SELECCIONAR USUARIO RECIEN CREADO
          ==================================================== */
 
       if (
@@ -594,7 +561,7 @@ const AdminUsuarios = () => {
 
 
       /* ====================================================
-         CONSERVAR SELECCION ACTUAL
+         CONSERVAR USUARIO ACTUAL
          ==================================================== */
 
       if (
@@ -845,39 +812,40 @@ const AdminUsuarios = () => {
      ABRIR REGISTRO
      ======================================================== */
 
-  const abrirRegistro = () => {
+  const abrirRegistro =
+    () => {
 
-    setErrorRegistro(
-      ""
-    )
-
-
-    const empresaActual =
-      getEmpresa()
+      setErrorRegistro(
+        ""
+      )
 
 
-    setNuevoUsuario({
-      full_name:
-        "",
-
-      email:
-        "",
-
-      password:
-        "",
-
-      empresa:
-        empresaActual ===
-        "Mi empresa"
-          ? ""
-          : empresaActual
-    })
+      const empresaActual =
+        getEmpresa()
 
 
-    setMostrarRegistro(
-      true
-    )
-  }
+      setNuevoUsuario({
+        full_name:
+          "",
+
+        email:
+          "",
+
+        password:
+          "",
+
+        empresa:
+          empresaActual ===
+          "Mi empresa"
+            ? ""
+            : empresaActual
+      })
+
+
+      setMostrarRegistro(
+        true
+      )
+    }
 
 
   /* ========================================================
@@ -1107,13 +1075,6 @@ const AdminUsuarios = () => {
         }
 
 
-        /*
-         * Refresco silencioso.
-         *
-         * No mostramos la pantalla completa
-         * de carga cada vez que se cambia
-         * un checkbox.
-         */
         await cargarPermisos(
           usuarioSeleccionado.id,
           false
@@ -1178,10 +1139,6 @@ const AdminUsuarios = () => {
 
         if (activo) {
 
-          /*
-           * El backend asigna automáticamente
-           * el curso padre si fuera necesario.
-           */
           await asignarModulo(
             usuarioSeleccionado.id,
             modulo.id
@@ -1306,7 +1263,7 @@ const AdminUsuarios = () => {
 
 
       {/* ====================================================
-          CARGANDO
+          CONTENIDO
           ==================================================== */}
 
       {cargando ? (
@@ -1651,8 +1608,10 @@ const AdminUsuarios = () => {
                           "8px 0 2px"
                       }}
                     >
+
                       {usuarioSeleccionado.full_name ||
                         usuarioSeleccionado.email}
+
                     </h3>
 
 
@@ -1664,7 +1623,10 @@ const AdminUsuarios = () => {
                     {usuarioSeleccionado.empresa && (
 
                       <div className="muted">
-                        Empresa: {usuarioSeleccionado.empresa}
+
+                        Empresa:{" "}
+                        {usuarioSeleccionado.empresa}
+
                       </div>
 
                     )}
@@ -1751,10 +1713,15 @@ const AdminUsuarios = () => {
                           )
                             ? curso.modulos
                             : Array.isArray(
-                                  curso.modules
-                                )
+                                curso.modules
+                              )
                               ? curso.modules
                               : []
+
+
+                        const guardandoCurso =
+                          guardandoPermiso ===
+                          `curso-${curso.id}`
 
 
                         return (
@@ -1800,7 +1767,12 @@ const AdminUsuarios = () => {
                               }}
                             >
 
-                              <div>
+                              <div
+                                style={{
+                                  minWidth:
+                                    0
+                                }}
+                              >
 
                                 <div
                                   style={{
@@ -1829,39 +1801,63 @@ const AdminUsuarios = () => {
                               </div>
 
 
-                              <label
-                                className="checkbox"
+                              {/* ===============================
+                                  BOTON DE ACCESO AL CURSO
+                                  =============================== */}
+
+                              <button
+                                type="button"
+                                className={
+                                  cursoAsignado
+                                    ? "btn btn-sm"
+                                    : "btn btn-light btn-sm"
+                                }
+                                aria-pressed={
+                                  cursoAsignado
+                                }
+                                disabled={
+                                  usuarioEsAdmin ||
+                                  guardandoPermiso !==
+                                    ""
+                                }
+                                onClick={
+                                  () =>
+                                    cambiarCurso(
+                                      curso,
+                                      !cursoAsignado
+                                    )
+                                }
                                 style={{
-                                  margin:
-                                    0
+                                  minWidth:
+                                    "128px",
+
+                                  flexShrink:
+                                    0,
+
+                                  display:
+                                    "inline-flex",
+
+                                  alignItems:
+                                    "center",
+
+                                  justifyContent:
+                                    "center",
+
+                                  gap:
+                                    "6px",
+
+                                  fontWeight:
+                                    700
                                 }}
                               >
 
-                                <input
-                                  type="checkbox"
-                                  checked={
-                                    cursoAsignado
-                                  }
-                                  disabled={
-                                    usuarioEsAdmin ||
-                                    guardandoPermiso !==
-                                      ""
-                                  }
-                                  onChange={
-                                    (event) =>
-                                      cambiarCurso(
-                                        curso,
-                                        event.target.checked
-                                      )
-                                  }
-                                />
+                                {guardandoCurso
+                                  ? "Guardando..."
+                                  : cursoAsignado
+                                    ? "✓ Acceso activo"
+                                    : "Dar acceso"}
 
-
-                                <span>
-                                  Acceso
-                                </span>
-
-                              </label>
+                              </button>
 
                             </div>
 
@@ -1926,7 +1922,7 @@ const AdminUsuarios = () => {
                                             "16px",
 
                                           padding:
-                                            "11px 0",
+                                            "12px 0",
 
                                           borderBottom:
                                             "1px solid #f1f5f9"
@@ -1936,7 +1932,10 @@ const AdminUsuarios = () => {
                                         <div
                                           style={{
                                             minWidth:
-                                              0
+                                              0,
+
+                                            paddingRight:
+                                              "8px"
                                           }}
                                         >
 
@@ -1987,45 +1986,64 @@ const AdminUsuarios = () => {
                                         </div>
 
 
-                                        <label
-                                          className="checkbox"
+                                        {/* ===========================
+                                            BOTON DEL MODULO
+                                            =========================== */}
+
+                                        <button
+                                          type="button"
+                                          className={
+                                            moduloAsignado
+                                              ? "btn btn-sm"
+                                              : "btn btn-light btn-sm"
+                                          }
+                                          aria-pressed={
+                                            moduloAsignado
+                                          }
+                                          disabled={
+                                            usuarioEsAdmin ||
+                                            guardandoPermiso !==
+                                              ""
+                                          }
+                                          onClick={
+                                            () =>
+                                              cambiarModulo(
+                                                curso,
+                                                modulo,
+                                                !moduloAsignado
+                                              )
+                                          }
                                           style={{
-                                            margin:
-                                              0,
+                                            minWidth:
+                                              "118px",
 
                                             flexShrink:
-                                              0
+                                              0,
+
+                                            display:
+                                              "inline-flex",
+
+                                            alignItems:
+                                              "center",
+
+                                            justifyContent:
+                                              "center",
+
+                                            gap:
+                                              "6px",
+
+                                            fontWeight:
+                                              700
                                           }}
                                         >
 
-                                          <input
-                                            type="checkbox"
-                                            checked={
-                                              moduloAsignado
-                                            }
-                                            disabled={
-                                              usuarioEsAdmin ||
-                                              guardandoPermiso !==
-                                                ""
-                                            }
-                                            onChange={
-                                              (event) =>
-                                                cambiarModulo(
-                                                  curso,
-                                                  modulo,
-                                                  event.target.checked
-                                                )
-                                            }
-                                          />
-
-
-                                          <span>
-                                            {guardandoEste
-                                              ? "Guardando..."
+                                          {guardandoEste
+                                            ? "Guardando..."
+                                            : moduloAsignado
+                                              ? "✓ Permitido"
                                               : "Permitir"}
-                                          </span>
 
-                                        </label>
+                                        </button>
 
                                       </div>
                                     )
@@ -2063,6 +2081,13 @@ const AdminUsuarios = () => {
           title="Registrar usuario"
           onClose={
             () => {
+
+              if (
+                registrando
+              ) {
+                return
+              }
+
 
               setMostrarRegistro(
                 false
