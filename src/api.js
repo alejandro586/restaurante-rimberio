@@ -507,6 +507,45 @@ export const quitarModulo =
   }
 
 
+
+  /* ==========================================================
+   REGISTRAR USUARIO
+   ========================================================== */
+
+/**
+ * Registra un nuevo usuario desde el panel administrativo.
+ *
+ * Backend:
+ * POST /api/admin/users
+ *
+ * Solo funciona si la sesión actual pertenece
+ * a un administrador.
+ */
+export const crearUsuario = async ({
+  full_name,
+  email,
+  password,
+  empresa
+}) => {
+
+  const {
+    data
+  } =
+    await api.post(
+      "/admin/users",
+      {
+        full_name,
+        email,
+        password,
+        empresa
+      }
+    )
+
+
+  return data
+}
+
+
 /* ==========================================================
    FORMATO DE NUMEROS
    ========================================================== */

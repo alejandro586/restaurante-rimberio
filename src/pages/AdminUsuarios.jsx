@@ -5,151 +5,452 @@ import {
 } from "react"
 
 import {
-  asignarCurso,
-  asignarModulo,
-  getMessage,
+  crearUsuario,
   listarUsuarios,
   obtenerCatalogoCursos,
   obtenerPermisosUsuario,
+  asignarCurso,
   quitarCurso,
-  quitarModulo
+  asignarModulo,
+  quitarModulo,
+  getEmpresa,
+  getMessage,
+  getInitials,
+  getUserName
 } from "../api"
 
+import Modal
+  from "../components/Modal"
+
+
+/* ==========================================================
+   UTILIDADES
+   ========================================================== */
+
+const obtenerListaUsuarios = (
+  respuesta
+) => {
+
+  if (
+    Array.isArray(
+      respuesta
+    )
+  ) {
+    return respuesta
+  }
+
+
+  if (
+    Array.isArray(
+      respuesta?.usuarios
+    )
+  ) {
+    return respuesta.usuarios
+  }
+
+
+  if (
+    Array.isArray(
+      respuesta?.data
+    )
+  ) {
+    return respuesta.data
+  }
+
+
+  return []
+}
+
+
+const obtenerListaCursos = (
+  respuesta
+) => {
+
+  if (
+    Array.isArray(
+      respuesta
+    )
+  ) {
+    return respuesta
+  }
+
+
+  if (
+    Array.isArray(
+      respuesta?.cursos
+    )
+  ) {
+    return respuesta.cursos
+  }
+
+
+  if (
+    Array.isArray(
+      respuesta?.data
+    )
+  ) {
+    return respuesta.data
+  }
+
+
+  return []
+}
+
+
+/* ==========================================================
+   NORMALIZAR PERMISOS
+   ========================================================== */
+
+const normalizarPermisos = (
+  respuesta
+) => {
+
+  const cursos =
+    new Set()
+
+
+  const modulos =
+    new Set()
+
+
+  const agregarCurso = (
+    valor
+  ) => {
+
+    if (
+      valor === null ||
+      valor === undefined
+    ) {
+      return
+    }
+
+
+    cursos.add(
+      String(
+        valor
+      )
+    )
+  }
+
+
+  const agregarModulo = (
+    valor
+  ) => {
+
+    if (
+      valor === null ||
+      valor === undefined
+    ) {
+      return
+    }
+
+
+    modulos.add(
+      String(
+        valor
+      )
+    )
+  }
+
+
+  /* ========================================================
+     CURSOS ANIDADOS
+     ======================================================== */
+
+  const listaCursos =
+    Array.isArray(
+      respuesta?.cursos
+    )
+      ? respuesta.cursos
+      : []
+
+
+  listaCursos.forEach(
+    (curso) => {
+
+      const cursoId =
+        curso?.curso_id ??
+        curso?.id
+
+
+      if (
+        curso?.activo !==
+        false
+      ) {
+        agregarCurso(
+          cursoId
+        )
+      }
+
+
+      const listaModulos =
+        Array.isArray(
+          curso?.modulos
+        )
+          ? curso.modulos
+          : Array.isArray(
+                curso?.modules
+              )
+            ? curso.modules
+            : []
+
+
+      listaModulos.forEach(
+        (modulo) => {
+
+          if (
+            modulo?.activo ===
+            false
+          ) {
+            return
+          }
+
+
+          agregarModulo(
+            modulo?.modulo_id ??
+            modulo?.id
+          )
+        }
+      )
+    }
+  )
+
+
+  /* ========================================================
+     MODULOS SEPARADOS
+     ======================================================== */
+
+  const listaModulos =
+    Array.isArray(
+      respuesta?.modulos
+    )
+      ? respuesta.modulos
+      : []
+
+
+  listaModulos.forEach(
+    (modulo) => {
+
+      if (
+        modulo?.activo ===
+        false
+      ) {
+        return
+      }
+
+
+      agregarModulo(
+        modulo?.modulo_id ??
+        modulo?.id
+      )
+
+
+      if (
+        modulo?.curso_id
+      ) {
+        agregarCurso(
+          modulo.curso_id
+        )
+      }
+    }
+  )
+
+
+  /* ========================================================
+     ARRAYS DE IDS
+     ======================================================== */
+
+  if (
+    Array.isArray(
+      respuesta?.curso_ids
+    )
+  ) {
+
+    respuesta.curso_ids
+      .forEach(
+        agregarCurso
+      )
+  }
+
+
+  if (
+    Array.isArray(
+      respuesta?.modulo_ids
+    )
+  ) {
+
+    respuesta.modulo_ids
+      .forEach(
+        agregarModulo
+      )
+  }
+
+
+  return {
+    cursos,
+    modulos
+  }
+}
+
+
+/* ==========================================================
+   ADMINISTRACION DE USUARIOS
+   ========================================================== */
 
 const AdminUsuarios = () => {
-  const [usuarios, setUsuarios] =
+
+  /* ========================================================
+     USUARIOS
+     ======================================================== */
+
+  const [
+    usuarios,
+    setUsuarios
+  ] =
     useState([])
 
-  const [catalogo, setCatalogo] =
-    useState([])
 
   const [
     usuarioSeleccionadoId,
     setUsuarioSeleccionadoId
-  ] = useState("")
+  ] =
+    useState("")
+
+
+  const [
+    buscar,
+    setBuscar
+  ] =
+    useState("")
+
+
+  /* ========================================================
+     CURSOS
+     ======================================================== */
+
+  const [
+    cursos,
+    setCursos
+  ] =
+    useState([])
+
+
+  /* ========================================================
+     PERMISOS
+     ======================================================== */
 
   const [
     permisos,
     setPermisos
-  ] = useState([])
+  ] =
+    useState({
+      cursos:
+        new Set(),
 
-  const [
-    busqueda,
-    setBusqueda
-  ] = useState("")
+      modulos:
+        new Set()
+    })
 
-  const [
-    cargandoInicial,
-    setCargandoInicial
-  ] = useState(true)
 
   const [
     cargandoPermisos,
     setCargandoPermisos
-  ] = useState(false)
+  ] =
+    useState(false)
+
 
   const [
-    accion,
-    setAccion
-  ] = useState("")
+    guardandoPermiso,
+    setGuardandoPermiso
+  ] =
+    useState("")
+
+
+  /* ========================================================
+     ESTADO GENERAL
+     ======================================================== */
+
+  const [
+    cargando,
+    setCargando
+  ] =
+    useState(true)
+
 
   const [
     error,
     setError
-  ] = useState("")
+  ] =
+    useState("")
+
 
   const [
-    mensaje,
-    setMensaje
-  ] = useState("")
+    aviso,
+    setAviso
+  ] =
+    useState("")
 
 
-  /* ==========================================================
-     CARGA INICIAL
-     ========================================================== */
+  /* ========================================================
+     REGISTRO DE USUARIO
+     ======================================================== */
 
-  useEffect(() => {
-    const cargar = async () => {
-      setCargandoInicial(true)
-      setError("")
-
-      try {
-        const [
-          respuestaUsuarios,
-          respuestaCatalogo
-        ] = await Promise.all([
-          listarUsuarios(),
-          obtenerCatalogoCursos()
-        ])
+  const [
+    mostrarRegistro,
+    setMostrarRegistro
+  ] =
+    useState(false)
 
 
-        const listaUsuarios =
-          respuestaUsuarios.usuarios || []
-
-        const listaCursos =
-          respuestaCatalogo.cursos || []
-
-
-        setUsuarios(
-          listaUsuarios
-        )
-
-        setCatalogo(
-          listaCursos
-        )
+  const [
+    registrando,
+    setRegistrando
+  ] =
+    useState(false)
 
 
-        /*
-         * Seleccionamos primero un trabajador
-         * para que la pantalla sea util
-         * inmediatamente.
-         *
-         * El administrador tambien aparece
-         * en la lista.
-         */
-        if (
-          listaUsuarios.length > 0
-        ) {
-          const primero =
-            listaUsuarios.find(
-              (usuario) =>
-                usuario.role !== "admin"
-            ) ||
-            listaUsuarios[0]
+  const [
+    errorRegistro,
+    setErrorRegistro
+  ] =
+    useState("")
 
 
-          setUsuarioSeleccionadoId(
-            primero.id
-          )
-        }
+  const [
+    nuevoUsuario,
+    setNuevoUsuario
+  ] =
+    useState({
+      full_name:
+        "",
 
-      } catch (error) {
-        setError(
-          getMessage(error)
-        )
-      } finally {
-        setCargandoInicial(false)
-      }
-    }
+      email:
+        "",
+
+      password:
+        "",
+
+      empresa:
+        getEmpresa()
+    })
 
 
-    cargar()
-  }, [])
-
-
-  /* ==========================================================
+  /* ========================================================
      USUARIO SELECCIONADO
-     ========================================================== */
+     ======================================================== */
 
   const usuarioSeleccionado =
     useMemo(
       () =>
         usuarios.find(
           (usuario) =>
-            usuario.id ===
-            usuarioSeleccionadoId
+            String(
+              usuario.id
+            ) ===
+            String(
+              usuarioSeleccionadoId
+            )
         ) || null,
-
       [
         usuarios,
         usuarioSeleccionadoId
@@ -157,1062 +458,1891 @@ const AdminUsuarios = () => {
     )
 
 
-  /* ==========================================================
-     CARGAR PERMISOS
-     ========================================================== */
-
-    const cargarPermisos =
-    async (
-        userId,
-        mostrarCarga = true
-    ) => {
-
-        if (!userId) {
-        setPermisos([])
-        return
-        }
-
-
-        if (mostrarCarga) {
-        setCargandoPermisos(true)
-        }
-
-        setError("")
-
-
-        try {
-        const respuesta =
-            await obtenerPermisosUsuario(
-            userId
-            )
-
-
-        setPermisos(
-            respuesta.permisos
-            ?.cursos || []
-        )
-
-        } catch (error) {
-        setError(
-            getMessage(error)
-        )
-
-        } finally {
-        if (mostrarCarga) {
-            setCargandoPermisos(false)
-        }
-        }
-    }
-
-
-  useEffect(() => {
-    if (
-      usuarioSeleccionadoId
-    ) {
-      cargarPermisos(
-        usuarioSeleccionadoId
-      )
-    }
-  }, [
-    usuarioSeleccionadoId
-  ])
-
-
-  /* ==========================================================
-     FILTRO DE USUARIOS
-     ========================================================== */
-
-  const usuariosFiltrados =
-    useMemo(() => {
-      const texto =
-        busqueda
-          .trim()
-          .toLowerCase()
-
-
-      if (!texto) {
-        return usuarios
-      }
-
-
-      return usuarios.filter(
-        (usuario) => {
-
-          const nombre =
-            String(
-              usuario.full_name || ""
-            )
-              .toLowerCase()
-
-
-          const email =
-            String(
-              usuario.email || ""
-            )
-              .toLowerCase()
-
-
-          const rol =
-            String(
-              usuario.role || ""
-            )
-              .toLowerCase()
-
-
-          return (
-            nombre.includes(texto) ||
-            email.includes(texto) ||
-            rol.includes(texto)
-          )
-        }
-      )
-
-    }, [
-      usuarios,
-      busqueda
-    ])
-
-
-  /* ==========================================================
-     IDS DE CURSOS ASIGNADOS
-     ========================================================== */
-
-  const cursosAsignados =
-    useMemo(
-      () =>
-        new Set(
-          permisos.map(
-            (curso) =>
-              Number(curso.id)
-          )
-        ),
-
-      [permisos]
-    )
-
-
-  /* ==========================================================
-     IDS DE MODULOS ASIGNADOS
-     ========================================================== */
-
-  const modulosAsignados =
-    useMemo(() => {
-      const ids =
-        []
-
-
-      for (
-        const curso
-        of permisos
-      ) {
-        for (
-          const modulo
-          of curso.modulos || []
-        ) {
-          ids.push(
-            Number(modulo.id)
-          )
-        }
-      }
-
-
-      return new Set(ids)
-
-    }, [
-      permisos
-    ])
-
-
-  /* ==========================================================
-     ADMIN SELECCIONADO
-     ========================================================== */
-
-  const seleccionadoEsAdmin =
+  const usuarioEsAdmin =
     usuarioSeleccionado?.role ===
     "admin"
 
 
-  /* ==========================================================
-     SABER SI TIENE CURSO
-     ========================================================== */
+  /* ========================================================
+     FILTRO DE USUARIOS
+     ======================================================== */
 
-  const tieneCurso = (
-    courseId
-  ) => {
+  const usuariosFiltrados =
+    useMemo(
+      () => {
 
-    /*
-     * El administrador tiene acceso
-     * completo por su rol.
-     */
-    if (
-      seleccionadoEsAdmin
-    ) {
-      return true
-    }
+        const texto =
+          buscar
+            .trim()
+            .toLowerCase()
 
 
-    return cursosAsignados.has(
-      Number(courseId)
+        if (!texto) {
+          return usuarios
+        }
+
+
+        return usuarios.filter(
+          (usuario) => {
+
+            const contenido =
+              [
+                usuario.full_name,
+                usuario.email,
+                usuario.empresa,
+                usuario.role
+              ]
+                .filter(Boolean)
+                .join(" ")
+                .toLowerCase()
+
+
+            return contenido.includes(
+              texto
+            )
+          }
+        )
+
+      },
+      [
+        usuarios,
+        buscar
+      ]
     )
-  }
 
 
-  /* ==========================================================
-     SABER SI TIENE MODULO
-     ========================================================== */
-
-  const tieneModulo = (
-    moduleId
-  ) => {
-
-    if (
-      seleccionadoEsAdmin
-    ) {
-      return true
-    }
-
-
-    return modulosAsignados.has(
-      Number(moduleId)
-    )
-  }
-
-
-  /* ==========================================================
+  /* ========================================================
      MENSAJE TEMPORAL
-     ========================================================== */
+     ======================================================== */
 
-  const mostrarExito = (
+  const mostrarAviso = (
     texto
   ) => {
-    setMensaje(texto)
+
+    setAviso(
+      texto
+    )
+
 
     window.setTimeout(
       () => {
-        setMensaje("")
+
+        setAviso("")
+
       },
-      3000
+      5000
     )
   }
 
 
-  /* ==========================================================
-     CAMBIAR PERMISO DE CURSO
-     ========================================================== */
+  /* ========================================================
+     CARGAR USUARIOS
+     ======================================================== */
+
+  const cargarUsuarios =
+    async (
+      seleccionarId = null
+    ) => {
+
+      const respuesta =
+        await listarUsuarios()
+
+
+      const lista =
+        obtenerListaUsuarios(
+          respuesta
+        )
+
+
+      setUsuarios(
+        lista
+      )
+
+
+      /* ====================================================
+         SELECCION DESPUES DE CREAR
+         ==================================================== */
+
+      if (
+        seleccionarId
+      ) {
+
+        const existe =
+          lista.some(
+            (usuario) =>
+              String(
+                usuario.id
+              ) ===
+              String(
+                seleccionarId
+              )
+          )
+
+
+        if (existe) {
+
+          setUsuarioSeleccionadoId(
+            String(
+              seleccionarId
+            )
+          )
+
+
+          return lista
+        }
+      }
+
+
+      /* ====================================================
+         CONSERVAR SELECCION ACTUAL
+         ==================================================== */
+
+      if (
+        usuarioSeleccionadoId
+      ) {
+
+        const sigueExistiendo =
+          lista.some(
+            (usuario) =>
+              String(
+                usuario.id
+              ) ===
+              String(
+                usuarioSeleccionadoId
+              )
+          )
+
+
+        if (
+          sigueExistiendo
+        ) {
+          return lista
+        }
+      }
+
+
+      /* ====================================================
+         SELECCION INICIAL
+         ==================================================== */
+
+      const primerUsuarioNormal =
+        lista.find(
+          (usuario) =>
+            usuario.role !==
+            "admin"
+        )
+
+
+      const inicial =
+        primerUsuarioNormal ||
+        lista[0]
+
+
+      if (inicial) {
+
+        setUsuarioSeleccionadoId(
+          String(
+            inicial.id
+          )
+        )
+
+      } else {
+
+        setUsuarioSeleccionadoId(
+          ""
+        )
+      }
+
+
+      return lista
+    }
+
+
+  /* ========================================================
+     CARGAR CATALOGO
+     ======================================================== */
+
+  const cargarCatalogo =
+    async () => {
+
+      const respuesta =
+        await obtenerCatalogoCursos()
+
+
+      const lista =
+        obtenerListaCursos(
+          respuesta
+        )
+
+
+      setCursos(
+        lista
+      )
+
+
+      return lista
+    }
+
+
+  /* ========================================================
+     CARGAR PERMISOS
+     ======================================================== */
+
+  const cargarPermisos =
+    async (
+      userId,
+      mostrarCarga = true
+    ) => {
+
+      if (!userId) {
+
+        setPermisos({
+          cursos:
+            new Set(),
+
+          modulos:
+            new Set()
+        })
+
+
+        return
+      }
+
+
+      if (
+        mostrarCarga
+      ) {
+        setCargandoPermisos(
+          true
+        )
+      }
+
+
+      setError("")
+
+
+      try {
+
+        const respuesta =
+          await obtenerPermisosUsuario(
+            userId
+          )
+
+
+        setPermisos(
+          normalizarPermisos(
+            respuesta
+          )
+        )
+
+      } catch (problema) {
+
+        setError(
+          getMessage(
+            problema
+          )
+        )
+
+      } finally {
+
+        if (
+          mostrarCarga
+        ) {
+          setCargandoPermisos(
+            false
+          )
+        }
+      }
+    }
+
+
+  /* ========================================================
+     CARGA INICIAL
+     ======================================================== */
+
+  useEffect(
+    () => {
+
+      const cargar =
+        async () => {
+
+          setCargando(
+            true
+          )
+
+
+          setError("")
+
+
+          try {
+
+            await Promise.all([
+              cargarUsuarios(),
+              cargarCatalogo()
+            ])
+
+          } catch (problema) {
+
+            setError(
+              getMessage(
+                problema
+              )
+            )
+
+          } finally {
+
+            setCargando(
+              false
+            )
+          }
+        }
+
+
+      cargar()
+
+    },
+    []
+  )
+
+
+  /* ========================================================
+     CAMBIO DE USUARIO
+     ======================================================== */
+
+  useEffect(
+    () => {
+
+      if (
+        !usuarioSeleccionadoId
+      ) {
+
+        setPermisos({
+          cursos:
+            new Set(),
+
+          modulos:
+            new Set()
+        })
+
+
+        return
+      }
+
+
+      cargarPermisos(
+        usuarioSeleccionadoId,
+        true
+      )
+
+    },
+    [
+      usuarioSeleccionadoId
+    ]
+  )
+
+
+  /* ========================================================
+     ABRIR REGISTRO
+     ======================================================== */
+
+  const abrirRegistro = () => {
+
+    setErrorRegistro(
+      ""
+    )
+
+
+    const empresaActual =
+      getEmpresa()
+
+
+    setNuevoUsuario({
+      full_name:
+        "",
+
+      email:
+        "",
+
+      password:
+        "",
+
+      empresa:
+        empresaActual ===
+        "Mi empresa"
+          ? ""
+          : empresaActual
+    })
+
+
+    setMostrarRegistro(
+      true
+    )
+  }
+
+
+  /* ========================================================
+     REGISTRAR USUARIO
+     ======================================================== */
+
+  const registrarNuevoUsuario =
+    async () => {
+
+      setErrorRegistro(
+        ""
+      )
+
+
+      const nombre =
+        String(
+          nuevoUsuario
+            .full_name ||
+          ""
+        ).trim()
+
+
+      const correo =
+        String(
+          nuevoUsuario
+            .email ||
+          ""
+        )
+          .trim()
+          .toLowerCase()
+
+
+      const password =
+        String(
+          nuevoUsuario
+            .password ||
+          ""
+        )
+
+
+      const empresa =
+        String(
+          nuevoUsuario
+            .empresa ||
+          ""
+        ).trim()
+
+
+      /* ====================================================
+         VALIDACIONES
+         ==================================================== */
+
+      if (!nombre) {
+
+        return setErrorRegistro(
+          "Ingresa el nombre completo."
+        )
+      }
+
+
+      if (!correo) {
+
+        return setErrorRegistro(
+          "Ingresa el correo electrónico."
+        )
+      }
+
+
+      const correoValido =
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+          .test(
+            correo
+          )
+
+
+      if (
+        !correoValido
+      ) {
+
+        return setErrorRegistro(
+          "Ingresa un correo electrónico válido."
+        )
+      }
+
+
+      if (
+        password.length <
+        8
+      ) {
+
+        return setErrorRegistro(
+          "La contraseña debe tener al menos 8 caracteres."
+        )
+      }
+
+
+      if (!empresa) {
+
+        return setErrorRegistro(
+          "Ingresa la empresa."
+        )
+      }
+
+
+      /* ====================================================
+         CREAR
+         ==================================================== */
+
+      setRegistrando(
+        true
+      )
+
+
+      try {
+
+        const resultado =
+          await crearUsuario({
+            full_name:
+              nombre,
+
+            email:
+              correo,
+
+            password,
+
+            empresa
+          })
+
+
+        const usuarioCreado =
+          resultado?.usuario
+
+
+        await cargarUsuarios(
+          usuarioCreado?.id ||
+          null
+        )
+
+
+        setMostrarRegistro(
+          false
+        )
+
+
+        setNuevoUsuario({
+          full_name:
+            "",
+
+          email:
+            "",
+
+          password:
+            "",
+
+          empresa:
+            getEmpresa()
+        })
+
+
+        mostrarAviso(
+          resultado?.mensaje ||
+          "Usuario registrado correctamente."
+        )
+
+      } catch (problema) {
+
+        setErrorRegistro(
+          getMessage(
+            problema
+          )
+        )
+
+      } finally {
+
+        setRegistrando(
+          false
+        )
+      }
+    }
+
+
+  /* ========================================================
+     ASIGNAR / QUITAR CURSO
+     ======================================================== */
 
   const cambiarCurso =
     async (
       curso,
-      activado
+      activo
     ) => {
 
       if (
         !usuarioSeleccionado ||
-        seleccionadoEsAdmin
+        usuarioEsAdmin
       ) {
         return
       }
 
 
-      setAccion(
+      const clave =
         `curso-${curso.id}`
+
+
+      setGuardandoPermiso(
+        clave
       )
 
+
       setError("")
-      setMensaje("")
 
 
       try {
-        if (activado) {
+
+        if (activo) {
+
           await asignarCurso(
             usuarioSeleccionado.id,
             curso.id
           )
 
-          mostrarExito(
-            `${curso.nombre} fue asignado correctamente`
-          )
-
         } else {
+
           await quitarCurso(
             usuarioSeleccionado.id,
             curso.id
           )
-
-          mostrarExito(
-            `${curso.nombre} fue retirado correctamente`
-          )
         }
 
 
+        /*
+         * Refresco silencioso.
+         *
+         * No mostramos la pantalla completa
+         * de carga cada vez que se cambia
+         * un checkbox.
+         */
         await cargarPermisos(
-        usuarioSeleccionado.id,
-        false
+          usuarioSeleccionado.id,
+          false
         )
 
-      } catch (error) {
+
+        mostrarAviso(
+          activo
+            ? `Curso "${curso.nombre}" asignado.`
+            : `Curso "${curso.nombre}" retirado.`
+        )
+
+      } catch (problema) {
+
         setError(
-          getMessage(error)
+          getMessage(
+            problema
+          )
         )
 
       } finally {
-        setAccion("")
+
+        setGuardandoPermiso(
+          ""
+        )
       }
     }
 
 
-  /* ==========================================================
-     CAMBIAR PERMISO DE MODULO
-     ========================================================== */
+  /* ========================================================
+     ASIGNAR / QUITAR MODULO
+     ======================================================== */
 
   const cambiarModulo =
     async (
+      curso,
       modulo,
-      activado
+      activo
     ) => {
 
       if (
         !usuarioSeleccionado ||
-        seleccionadoEsAdmin
+        usuarioEsAdmin
       ) {
         return
       }
 
 
-      setAccion(
+      const clave =
         `modulo-${modulo.id}`
+
+
+      setGuardandoPermiso(
+        clave
       )
 
+
       setError("")
-      setMensaje("")
 
 
       try {
-        if (activado) {
+
+        if (activo) {
+
+          /*
+           * El backend asigna automáticamente
+           * el curso padre si fuera necesario.
+           */
           await asignarModulo(
             usuarioSeleccionado.id,
             modulo.id
           )
 
-          mostrarExito(
-            `${modulo.nombre} fue habilitado`
-          )
-
         } else {
+
           await quitarModulo(
             usuarioSeleccionado.id,
             modulo.id
-          )
-
-          mostrarExito(
-            `${modulo.nombre} fue deshabilitado`
           )
         }
 
 
         await cargarPermisos(
-        usuarioSeleccionado.id,
-        false
+          usuarioSeleccionado.id,
+          false
         )
 
-      } catch (error) {
+
+        mostrarAviso(
+          activo
+            ? `Módulo "${modulo.nombre}" habilitado.`
+            : `Módulo "${modulo.nombre}" deshabilitado.`
+        )
+
+      } catch (problema) {
+
         setError(
-          getMessage(error)
+          getMessage(
+            problema
+          )
         )
 
       } finally {
-        setAccion("")
+
+        setGuardandoPermiso(
+          ""
+        )
       }
     }
 
 
-  /* ==========================================================
-     INICIAL DEL USUARIO
-     ========================================================== */
-
-  const inicialUsuario = (
-    usuario
-  ) => {
-
-    const texto =
-      usuario.full_name ||
-      usuario.email ||
-      "U"
-
-
-    return texto
-      .trim()
-      .charAt(0)
-      .toUpperCase()
-  }
-
-
-  /* ==========================================================
-     CARGANDO
-     ========================================================== */
-
-  if (cargandoInicial) {
-    return (
-      <div className="loading">
-        Cargando administración...
-      </div>
-    )
-  }
-
-
-  /* ==========================================================
-     INTERFAZ
-     ========================================================== */
+  /* ========================================================
+     RENDER
+     ======================================================== */
 
   return (
     <>
-      {/* ======================================================
+
+      {/* ====================================================
           CABECERA
-          ====================================================== */}
+          ==================================================== */}
 
       <div className="topbar">
+
         <div>
+
           <h1>
             Administración de usuarios
           </h1>
 
+
           <p>
-            Asigna cursos y permisos
-            a los trabajadores de RIMBERIO.
+            Registra usuarios y controla el acceso a cursos y módulos de RIMBERIO.
           </p>
-        </div>
-      </div>
 
-
-      {/* ======================================================
-          MENSAJES
-          ====================================================== */}
-
-      {error && (
-        <div
-          className="alert alert-error"
-          style={{
-            marginBottom: 18
-          }}
-        >
-          {error}
-        </div>
-      )}
-
-
-      {mensaje && (
-        <div
-          className="alert alert-success"
-          style={{
-            marginBottom: 18
-          }}
-        >
-          {mensaje}
-        </div>
-      )}
-
-
-      {/* ======================================================
-          RESUMEN
-          ====================================================== */}
-
-      <div
-        className="grid-2"
-      >
-        <div className="metric">
-          <span>
-            Usuarios registrados
-          </span>
-
-          <strong>
-            {usuarios.length}
-          </strong>
         </div>
 
 
-        <div className="metric">
-          <span>
-            Cursos disponibles
-          </span>
+        <div className="topbar-actions">
 
-          <strong>
-            {catalogo.length}
-          </strong>
-        </div>
-      </div>
-
-
-      {/* ======================================================
-          PANEL PRINCIPAL
-          ====================================================== */}
-
-      <div className="grid-2">
-
-        {/* ====================================================
-            LISTA DE USUARIOS
-            ==================================================== */}
-
-        <section className="card">
-          <div
-            className="toolbar"
+          <button
+            type="button"
+            className="btn"
+            onClick={
+              abrirRegistro
+            }
           >
-            <div>
-              <strong>
-                Usuarios
-              </strong>
+            Registrar usuario
+          </button>
 
-              <div
-                className="muted"
-                style={{
-                  marginTop: 4,
-                  fontSize: 13
-                }}
-              >
-                Selecciona un usuario
-                para administrar sus permisos.
-              </div>
-            </div>
+
+          <div className="topbar-user">
+
+            <span className="avatar">
+              {getInitials()}
+            </span>
+
+
+            <span>
+              {getUserName()}
+            </span>
+
           </div>
 
+        </div>
 
-          <div
-            className="toolbar"
-          >
+      </div>
+
+
+      {/* ====================================================
+          MENSAJES
+          ==================================================== */}
+
+      {aviso && (
+
+        <div className="alert alert-success">
+          {aviso}
+        </div>
+
+      )}
+
+
+      {error && (
+
+        <div className="alert alert-error">
+          {error}
+        </div>
+
+      )}
+
+
+      {/* ====================================================
+          CARGANDO
+          ==================================================== */}
+
+      {cargando ? (
+
+        <div className="card">
+
+          <div className="loading">
+            Cargando administración...
+          </div>
+
+        </div>
+
+      ) : (
+
+        <div
+          style={{
+            display:
+              "grid",
+
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(300px, 1fr))",
+
+            gap:
+              "20px",
+
+            alignItems:
+              "start"
+          }}
+        >
+
+          {/* =================================================
+              LISTA DE USUARIOS
+              ================================================= */}
+
+          <div className="card">
+
             <div
-              className="toolbar-left"
               style={{
-                width: "100%"
+                display:
+                  "flex",
+
+                justifyContent:
+                  "space-between",
+
+                alignItems:
+                  "center",
+
+                gap:
+                  "12px",
+
+                marginBottom:
+                  "16px"
               }}
             >
+
+              <div>
+
+                <div className="chart-title">
+                  Usuarios
+                </div>
+
+
+                <div className="muted">
+                  {usuarios.length} registrados
+                </div>
+
+              </div>
+
+            </div>
+
+
+            <div className="field">
+
               <input
                 type="search"
-                placeholder="Buscar nombre o correo..."
-                value={busqueda}
+                value={
+                  buscar
+                }
+                placeholder="Buscar por nombre, correo o empresa..."
                 onChange={
                   (event) =>
-                    setBusqueda(
+                    setBuscar(
                       event.target.value
                     )
                 }
-                style={{
-                  width: "100%"
-                }}
               />
+
             </div>
-          </div>
 
 
-          {usuariosFiltrados.length ===
-          0 ? (
-            <div className="empty">
-              No se encontraron usuarios.
-            </div>
-          ) : (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>
-                      Usuario
-                    </th>
+            <div
+              style={{
+                display:
+                  "flex",
 
-                    <th>
-                      Rol
-                    </th>
-                  </tr>
-                </thead>
+                flexDirection:
+                  "column",
 
-                <tbody>
-                  {usuariosFiltrados.map(
-                    (usuario) => {
+                gap:
+                  "8px",
 
-                      const seleccionado =
-                        usuario.id ===
-                        usuarioSeleccionadoId
+                marginTop:
+                  "12px",
 
+                maxHeight:
+                  "620px",
 
-                      return (
-                        <tr
-                          key={
-                            usuario.id
-                          }
-                          className={
-                            seleccionado
-                              ? "selected"
-                              : ""
-                          }
-                          onClick={
-                            () =>
-                              setUsuarioSeleccionadoId(
-                                usuario.id
-                              )
-                          }
-                          style={{
-                            cursor:
-                              "pointer"
-                          }}
-                        >
-                          <td>
-                            <div className="cell-main">
-                              <span className="bullet">
-                                {inicialUsuario(
-                                  usuario
-                                )}
-                              </span>
+                overflowY:
+                  "auto"
+              }}
+            >
 
-                              <div>
-                                <strong>
-                                  {usuario.full_name ||
-                                    "Sin nombre"}
-                                </strong>
+              {usuariosFiltrados.length ===
+                0 && (
 
-                                <div
-                                  className="muted"
-                                  style={{
-                                    marginTop:
-                                      3,
-                                    fontSize:
-                                      12
-                                  }}
-                                >
-                                  {usuario.email}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-
-                          <td>
-                            <span
-                              className={
-                                usuario.role ===
-                                "admin"
-                                  ? "chip chip-propia"
-                                  : "chip chip-tipo"
-                              }
-                            >
-                              {usuario.role ===
-                              "admin"
-                                ? "Administrador"
-                                : "Trabajador"}
-                            </span>
-                          </td>
-                        </tr>
-                      )
-                    }
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-
-
-        {/* ====================================================
-            PERMISOS
-            ==================================================== */}
-
-        <section className="card">
-          {!usuarioSeleccionado ? (
-            <div className="empty">
-              Selecciona un usuario.
-            </div>
-          ) : (
-            <>
-              {/* =================================================
-                  CABECERA DEL USUARIO
-                  ================================================= */}
-
-              <div
-                style={{
-                  display: "flex",
-                  alignItems:
-                    "center",
-                  gap: 14,
-                  paddingBottom:
-                    18,
-                  marginBottom:
-                    18,
-                  borderBottom:
-                    "1px solid var(--border)"
-                }}
-              >
-                <span
-                  className="avatar"
-                >
-                  {inicialUsuario(
-                    usuarioSeleccionado
-                  )}
-                </span>
-
-
-                <div
-                  style={{
-                    flex: 1,
-                    minWidth: 0
-                  }}
-                >
-                  <strong
-                    style={{
-                      display:
-                        "block"
-                    }}
-                  >
-                    {usuarioSeleccionado
-                      .full_name ||
-                      "Sin nombre"}
-                  </strong>
-
-
-                  <span
-                    className="muted"
-                    style={{
-                      fontSize: 13
-                    }}
-                  >
-                    {
-                      usuarioSeleccionado
-                        .email
-                    }
-                  </span>
+                <div className="empty">
+                  No se encontraron usuarios.
                 </div>
 
-
-                <span
-                  className={
-                    seleccionadoEsAdmin
-                      ? "chip chip-propia"
-                      : "chip chip-tipo"
-                  }
-                >
-                  {seleccionadoEsAdmin
-                    ? "Administrador"
-                    : "Trabajador"}
-                </span>
-              </div>
-
-
-              {/* =================================================
-                  ADMIN
-                  ================================================= */}
-
-              {seleccionadoEsAdmin && (
-                <div
-                  className="alert alert-info"
-                  style={{
-                    marginBottom:
-                      18
-                  }}
-                >
-                  El administrador tiene
-                  acceso completo a todos
-                  los cursos y módulos.
-                  No necesita permisos
-                  individuales.
-                </div>
               )}
 
 
-              {/* =================================================
-                  CARGANDO PERMISOS
-                  ================================================= */}
+              {usuariosFiltrados.map(
+                (usuario) => {
 
-              {cargandoPermisos ? (
-                <div className="loading">
-                  Cargando permisos...
-                </div>
-              ) : catalogo.length ===
-                0 ? (
-                <div className="empty">
-                  No existen cursos
-                  configurados.
-                </div>
-              ) : (
-                <div>
-                  {catalogo.map(
-                    (curso) => {
-
-                      const cursoActivo =
-                        tieneCurso(
-                          curso.id
-                        )
-
-                      const procesandoCurso =
-                        accion ===
-                        `curso-${curso.id}`
+                  const seleccionado =
+                    String(
+                      usuario.id
+                    ) ===
+                    String(
+                      usuarioSeleccionadoId
+                    )
 
 
-                      return (
+                  const esAdministrador =
+                    usuario.role ===
+                    "admin"
+
+
+                  return (
+                    <button
+                      type="button"
+                      key={
+                        usuario.id
+                      }
+                      onClick={
+                        () =>
+                          setUsuarioSeleccionadoId(
+                            String(
+                              usuario.id
+                            )
+                          )
+                      }
+                      style={{
+                        width:
+                          "100%",
+
+                        textAlign:
+                          "left",
+
+                        padding:
+                          "14px",
+
+                        borderRadius:
+                          "10px",
+
+                        border:
+                          seleccionado
+                            ? "2px solid var(--primary, #2563eb)"
+                            : "1px solid #e5e7eb",
+
+                        background:
+                          seleccionado
+                            ? "rgba(37, 99, 235, 0.06)"
+                            : "transparent",
+
+                        cursor:
+                          "pointer"
+                      }}
+                    >
+
+                      <div
+                        style={{
+                          display:
+                            "flex",
+
+                          alignItems:
+                            "center",
+
+                          justifyContent:
+                            "space-between",
+
+                          gap:
+                            "10px"
+                        }}
+                      >
+
                         <div
-                          key={
-                            curso.id
-                          }
                           style={{
-                            padding:
-                              "18px 0",
-                            borderBottom:
-                              "1px solid var(--border)"
+                            minWidth:
+                              0
                           }}
                         >
-
-                          {/* ===============================
-                              CURSO
-                              =============================== */}
-
-                          <label
-                            style={{
-                              display:
-                                "flex",
-                              alignItems:
-                                "flex-start",
-                              gap: 12,
-                              cursor:
-                                seleccionadoEsAdmin
-                                  ? "default"
-                                  : "pointer"
-                            }}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={
-                                cursoActivo
-                              }
-                              disabled={
-                                seleccionadoEsAdmin ||
-                                Boolean(
-                                  accion
-                                )
-                              }
-                              onChange={
-                                (event) =>
-                                  cambiarCurso(
-                                    curso,
-                                    event
-                                      .target
-                                      .checked
-                                  )
-                              }
-                              style={{
-                                marginTop:
-                                  4
-                              }}
-                            />
-
-
-                            <div
-                              style={{
-                                flex: 1
-                              }}
-                            >
-                              <strong>
-                                {curso.nombre}
-                              </strong>
-
-                              {curso.descripcion && (
-                                <p
-                                  className="muted"
-                                  style={{
-                                    marginTop:
-                                      4,
-                                    fontSize:
-                                      13,
-                                    lineHeight:
-                                      1.5
-                                  }}
-                                >
-                                  {
-                                    curso.descripcion
-                                  }
-                                </p>
-                              )}
-                            </div>
-
-
-                            <span
-                              className={
-                                cursoActivo
-                                  ? "chip chip-capacidad"
-                                  : "chip chip-tipo"
-                              }
-                            >
-                              {procesandoCurso
-                                ? "Guardando..."
-                                : cursoActivo
-                                  ? "Asignado"
-                                  : "Sin acceso"}
-                            </span>
-                          </label>
-
-
-                          {/* ===============================
-                              MODULOS
-                              =============================== */}
 
                           <div
                             style={{
-                              marginTop:
-                                16,
-                              marginLeft:
-                                28,
-                              display:
-                                "grid",
-                              gap: 10
+                              fontWeight:
+                                700,
+
+                              overflow:
+                                "hidden",
+
+                              textOverflow:
+                                "ellipsis",
+
+                              whiteSpace:
+                                "nowrap"
                             }}
                           >
-                            {(curso.modulos ||
-                              []).map(
-                              (modulo) => {
 
-                                const moduloActivo =
-                                  tieneModulo(
-                                    modulo.id
-                                  )
+                            {usuario.full_name ||
+                              usuario.email ||
+                              "Usuario"}
 
-                                const procesandoModulo =
-                                  accion ===
-                                  `modulo-${modulo.id}`
+                          </div>
 
 
-                                return (
-                                  <label
-                                    key={
-                                      modulo.id
-                                    }
+                          <div
+                            className="muted"
+                            style={{
+                              marginTop:
+                                "3px",
+
+                              overflow:
+                                "hidden",
+
+                              textOverflow:
+                                "ellipsis",
+
+                              whiteSpace:
+                                "nowrap"
+                            }}
+                          >
+
+                            {usuario.email}
+
+                          </div>
+
+
+                          {usuario.empresa && (
+
+                            <div
+                              className="muted"
+                              style={{
+                                marginTop:
+                                  "3px"
+                              }}
+                            >
+                              {usuario.empresa}
+                            </div>
+
+                          )}
+
+                        </div>
+
+
+                        <span
+                          className={
+                            esAdministrador
+                              ? "chip rol-admin"
+                              : "chip"
+                          }
+                        >
+
+                          {esAdministrador
+                            ? "Admin"
+                            : "Usuario"}
+
+                        </span>
+
+                      </div>
+
+                    </button>
+                  )
+                }
+              )}
+
+            </div>
+
+          </div>
+
+
+          {/* =================================================
+              PERMISOS
+              ================================================= */}
+
+          <div className="card">
+
+            {!usuarioSeleccionado ? (
+
+              <div className="empty">
+                Selecciona un usuario para administrar sus permisos.
+              </div>
+
+            ) : (
+
+              <>
+
+                {/* =============================================
+                    USUARIO
+                    ============================================= */}
+
+                <div
+                  style={{
+                    display:
+                      "flex",
+
+                    justifyContent:
+                      "space-between",
+
+                    alignItems:
+                      "flex-start",
+
+                    gap:
+                      "16px",
+
+                    marginBottom:
+                      "20px"
+                  }}
+                >
+
+                  <div>
+
+                    <div className="chart-title">
+                      Permisos
+                    </div>
+
+
+                    <h3
+                      style={{
+                        margin:
+                          "8px 0 2px"
+                      }}
+                    >
+                      {usuarioSeleccionado.full_name ||
+                        usuarioSeleccionado.email}
+                    </h3>
+
+
+                    <div className="muted">
+                      {usuarioSeleccionado.email}
+                    </div>
+
+
+                    {usuarioSeleccionado.empresa && (
+
+                      <div className="muted">
+                        Empresa: {usuarioSeleccionado.empresa}
+                      </div>
+
+                    )}
+
+                  </div>
+
+
+                  <span
+                    className={
+                      usuarioEsAdmin
+                        ? "chip rol-admin"
+                        : "chip"
+                    }
+                  >
+
+                    {usuarioEsAdmin
+                      ? "Administrador"
+                      : "Usuario"}
+
+                  </span>
+
+                </div>
+
+
+                {usuarioEsAdmin && (
+
+                  <div className="alert alert-success">
+
+                    El administrador tiene acceso completo al sistema.
+                    No necesita asignaciones individuales de cursos o módulos.
+
+                  </div>
+
+                )}
+
+
+                {cargandoPermisos ? (
+
+                  <div className="loading">
+                    Cargando permisos...
+                  </div>
+
+                ) : cursos.length ===
+                  0 ? (
+
+                  <div className="empty">
+                    No existen cursos configurados.
+                  </div>
+
+                ) : (
+
+                  <div
+                    style={{
+                      display:
+                        "flex",
+
+                      flexDirection:
+                        "column",
+
+                      gap:
+                        "16px"
+                    }}
+                  >
+
+                    {cursos.map(
+                      (curso) => {
+
+                        const cursoId =
+                          String(
+                            curso.id
+                          )
+
+
+                        const cursoAsignado =
+                          usuarioEsAdmin ||
+                          permisos.cursos.has(
+                            cursoId
+                          )
+
+
+                        const modulosCurso =
+                          Array.isArray(
+                            curso.modulos
+                          )
+                            ? curso.modulos
+                            : Array.isArray(
+                                  curso.modules
+                                )
+                              ? curso.modules
+                              : []
+
+
+                        return (
+                          <div
+                            key={
+                              curso.id
+                            }
+                            style={{
+                              border:
+                                "1px solid #e5e7eb",
+
+                              borderRadius:
+                                "12px",
+
+                              overflow:
+                                "hidden"
+                            }}
+                          >
+
+                            {/* =================================
+                                CURSO
+                                ================================= */}
+
+                            <div
+                              style={{
+                                display:
+                                  "flex",
+
+                                justifyContent:
+                                  "space-between",
+
+                                alignItems:
+                                  "center",
+
+                                gap:
+                                  "14px",
+
+                                padding:
+                                  "14px 16px",
+
+                                background:
+                                  "#f8fafc"
+                              }}
+                            >
+
+                              <div>
+
+                                <div
+                                  style={{
+                                    fontWeight:
+                                      700
+                                  }}
+                                >
+                                  {curso.nombre}
+                                </div>
+
+
+                                {curso.descripcion && (
+
+                                  <div
+                                    className="muted"
                                     style={{
-                                      display:
-                                        "flex",
-                                      gap: 10,
-                                      alignItems:
-                                        "flex-start",
-                                      padding:
-                                        "10px 12px",
-                                      borderRadius:
-                                        10,
-                                      background:
-                                        "var(--bg)",
-                                      opacity:
-                                        cursoActivo
-                                          ? 1
-                                          : 0.55,
-                                      cursor:
-                                        cursoActivo &&
-                                        !seleccionadoEsAdmin
-                                          ? "pointer"
-                                          : "default"
+                                      marginTop:
+                                        "3px"
                                     }}
                                   >
-                                    <input
-                                      type="checkbox"
-                                      checked={
-                                        moduloActivo
-                                      }
-                                      disabled={
-                                        seleccionadoEsAdmin ||
-                                        !cursoActivo ||
-                                        Boolean(
-                                          accion
-                                        )
-                                      }
-                                      onChange={
-                                        (
-                                          event
-                                        ) =>
-                                          cambiarModulo(
-                                            modulo,
-                                            event
-                                              .target
-                                              .checked
-                                          )
-                                      }
-                                      style={{
-                                        marginTop:
-                                          3
-                                      }}
-                                    />
+                                    {curso.descripcion}
+                                  </div>
+
+                                )}
+
+                              </div>
 
 
-                                    <div
-                                      style={{
-                                        flex:
-                                          1,
-                                        minWidth:
-                                          0
-                                      }}
-                                    >
-                                      <strong
-                                        style={{
-                                          fontSize:
-                                            14
-                                        }}
-                                      >
-                                        {
-                                          modulo.nombre
+                              <label
+                                className="checkbox"
+                                style={{
+                                  margin:
+                                    0
+                                }}
+                              >
+
+                                <input
+                                  type="checkbox"
+                                  checked={
+                                    cursoAsignado
+                                  }
+                                  disabled={
+                                    usuarioEsAdmin ||
+                                    guardandoPermiso !==
+                                      ""
+                                  }
+                                  onChange={
+                                    (event) =>
+                                      cambiarCurso(
+                                        curso,
+                                        event.target.checked
+                                      )
+                                  }
+                                />
+
+
+                                <span>
+                                  Acceso
+                                </span>
+
+                              </label>
+
+                            </div>
+
+
+                            {/* =================================
+                                MODULOS
+                                ================================= */}
+
+                            <div
+                              style={{
+                                padding:
+                                  "8px 16px 14px"
+                              }}
+                            >
+
+                              {modulosCurso.length ===
+                                0 ? (
+
+                                <div className="muted">
+                                  Este curso todavía no tiene módulos.
+                                </div>
+
+                              ) : (
+
+                                modulosCurso.map(
+                                  (modulo) => {
+
+                                    const moduloId =
+                                      String(
+                                        modulo.id
+                                      )
+
+
+                                    const moduloAsignado =
+                                      usuarioEsAdmin ||
+                                      permisos.modulos.has(
+                                        moduloId
+                                      )
+
+
+                                    const guardandoEste =
+                                      guardandoPermiso ===
+                                      `modulo-${modulo.id}`
+
+
+                                    return (
+                                      <div
+                                        key={
+                                          modulo.id
                                         }
-                                      </strong>
-
-
-                                      {modulo.descripcion && (
-                                        <p
-                                          className="muted"
-                                          style={{
-                                            marginTop:
-                                              3,
-                                            fontSize:
-                                              12,
-                                            lineHeight:
-                                              1.5
-                                          }}
-                                        >
-                                          {
-                                            modulo.descripcion
-                                          }
-                                        </p>
-                                      )}
-
-
-                                      <span
-                                        className="muted"
                                         style={{
                                           display:
-                                            "block",
-                                          marginTop:
-                                            5,
-                                          fontSize:
-                                            11
+                                            "flex",
+
+                                          justifyContent:
+                                            "space-between",
+
+                                          alignItems:
+                                            "center",
+
+                                          gap:
+                                            "16px",
+
+                                          padding:
+                                            "11px 0",
+
+                                          borderBottom:
+                                            "1px solid #f1f5f9"
                                         }}
                                       >
-                                        {
-                                          modulo.clave
-                                        }
-                                      </span>
-                                    </div>
+
+                                        <div
+                                          style={{
+                                            minWidth:
+                                              0
+                                          }}
+                                        >
+
+                                          <div
+                                            style={{
+                                              fontWeight:
+                                                600
+                                            }}
+                                          >
+                                            {modulo.nombre}
+                                          </div>
 
 
-                                    {procesandoModulo && (
-                                      <span
-                                        className="muted"
-                                        style={{
-                                          fontSize:
-                                            11
-                                        }}
-                                      >
-                                        Guardando...
-                                      </span>
-                                    )}
-                                  </label>
+                                          {modulo.descripcion && (
+
+                                            <div
+                                              className="muted"
+                                              style={{
+                                                marginTop:
+                                                  "2px"
+                                              }}
+                                            >
+                                              {modulo.descripcion}
+                                            </div>
+
+                                          )}
+
+
+                                          {modulo.clave && (
+
+                                            <code
+                                              style={{
+                                                display:
+                                                  "inline-block",
+
+                                                marginTop:
+                                                  "4px",
+
+                                                fontSize:
+                                                  "11px"
+                                              }}
+                                            >
+                                              {modulo.clave}
+                                            </code>
+
+                                          )}
+
+                                        </div>
+
+
+                                        <label
+                                          className="checkbox"
+                                          style={{
+                                            margin:
+                                              0,
+
+                                            flexShrink:
+                                              0
+                                          }}
+                                        >
+
+                                          <input
+                                            type="checkbox"
+                                            checked={
+                                              moduloAsignado
+                                            }
+                                            disabled={
+                                              usuarioEsAdmin ||
+                                              guardandoPermiso !==
+                                                ""
+                                            }
+                                            onChange={
+                                              (event) =>
+                                                cambiarModulo(
+                                                  curso,
+                                                  modulo,
+                                                  event.target.checked
+                                                )
+                                            }
+                                          />
+
+
+                                          <span>
+                                            {guardandoEste
+                                              ? "Guardando..."
+                                              : "Permitir"}
+                                          </span>
+
+                                        </label>
+
+                                      </div>
+                                    )
+                                  }
                                 )
-                              }
-                            )}
+
+                              )}
+
+                            </div>
+
                           </div>
-                        </div>
-                      )
-                    }
-                  )}
-                </div>
-              )}
-            </>
+                        )
+                      }
+                    )}
+
+                  </div>
+                )}
+
+              </>
+            )}
+
+          </div>
+
+        </div>
+      )}
+
+
+      {/* ====================================================
+          MODAL REGISTRAR USUARIO
+          ==================================================== */}
+
+      {mostrarRegistro && (
+
+        <Modal
+          title="Registrar usuario"
+          onClose={
+            () => {
+
+              setMostrarRegistro(
+                false
+              )
+
+
+              setErrorRegistro(
+                ""
+              )
+            }
+          }
+          footer={
+            (cerrar) => (
+              <>
+
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  disabled={
+                    registrando
+                  }
+                  onClick={
+                    cerrar
+                  }
+                >
+                  Cancelar
+                </button>
+
+
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={
+                    registrando
+                  }
+                  onClick={
+                    registrarNuevoUsuario
+                  }
+                >
+                  {registrando
+                    ? "Registrando..."
+                    : "Registrar usuario"}
+                </button>
+
+              </>
+            )
+          }
+        >
+
+          <p
+            className="muted"
+            style={{
+              marginBottom:
+                "18px"
+            }}
+          >
+
+            Crea una nueva cuenta de RIMBERIO.
+            Después podrás seleccionar al usuario y asignarle los cursos y módulos que necesite.
+
+          </p>
+
+
+          {/* ==================================================
+              NOMBRE
+              ================================================== */}
+
+          <div className="field">
+
+            <label>
+              Nombre completo
+            </label>
+
+
+            <input
+              type="text"
+              value={
+                nuevoUsuario.full_name
+              }
+              placeholder="Ej. Juan Pérez"
+              autoFocus
+              disabled={
+                registrando
+              }
+              onChange={
+                (event) =>
+                  setNuevoUsuario({
+                    ...nuevoUsuario,
+
+                    full_name:
+                      event.target.value
+                  })
+              }
+            />
+
+          </div>
+
+
+          {/* ==================================================
+              CORREO
+              ================================================== */}
+
+          <div className="field">
+
+            <label>
+              Correo electrónico
+            </label>
+
+
+            <input
+              type="email"
+              value={
+                nuevoUsuario.email
+              }
+              placeholder="juan@correo.com"
+              disabled={
+                registrando
+              }
+              onChange={
+                (event) =>
+                  setNuevoUsuario({
+                    ...nuevoUsuario,
+
+                    email:
+                      event.target.value
+                  })
+              }
+            />
+
+          </div>
+
+
+          {/* ==================================================
+              CONTRASEÑA
+              ================================================== */}
+
+          <div className="field">
+
+            <label>
+              Contraseña temporal
+            </label>
+
+
+            <input
+              type="password"
+              value={
+                nuevoUsuario.password
+              }
+              placeholder="Mínimo 8 caracteres"
+              disabled={
+                registrando
+              }
+              onChange={
+                (event) =>
+                  setNuevoUsuario({
+                    ...nuevoUsuario,
+
+                    password:
+                      event.target.value
+                  })
+              }
+            />
+
+
+            <span className="muted">
+
+              El usuario utilizará esta contraseña para iniciar sesión.
+
+            </span>
+
+          </div>
+
+
+          {/* ==================================================
+              EMPRESA
+              ================================================== */}
+
+          <div className="field">
+
+            <label>
+              Empresa
+            </label>
+
+
+            <input
+              type="text"
+              value={
+                nuevoUsuario.empresa
+              }
+              placeholder="Mi Restaurante"
+              disabled={
+                registrando
+              }
+              onChange={
+                (event) =>
+                  setNuevoUsuario({
+                    ...nuevoUsuario,
+
+                    empresa:
+                      event.target.value
+                  })
+              }
+            />
+
+
+            <span className="muted">
+
+              Los CSV propios se compartirán con los usuarios que pertenezcan a esta misma empresa.
+
+            </span>
+
+          </div>
+
+
+          {/* ==================================================
+              INFORMACION
+              ================================================== */}
+
+          <div
+            style={{
+              padding:
+                "12px",
+
+              marginTop:
+                "10px",
+
+              borderRadius:
+                "8px",
+
+              background:
+                "#f8fafc",
+
+              fontSize:
+                "13px"
+            }}
+          >
+
+            <strong>
+              Después del registro
+            </strong>
+
+
+            <div
+              className="muted"
+              style={{
+                marginTop:
+                  "4px"
+              }}
+            >
+
+              La cuenta se crea sin permisos de cursos.
+              Selecciona al nuevo usuario en esta misma pantalla y habilita solamente los módulos que necesite.
+
+            </div>
+
+          </div>
+
+
+          {/* ==================================================
+              ERROR
+              ================================================== */}
+
+          {errorRegistro && (
+
+            <div
+              className="alert alert-error"
+              style={{
+                marginTop:
+                  "16px"
+              }}
+            >
+              {errorRegistro}
+            </div>
+
           )}
-        </section>
-      </div>
+
+        </Modal>
+
+      )}
+
     </>
   )
 }
