@@ -11,12 +11,9 @@ import {
   subirDocumentoCurso,
   obtenerUrlDocumento,
   eliminarDocumentoCurso,
-  obtenerCurso,
   obtenerModulosCurso,
   getMessage,
   getPerfil,
-  getInitials,
-  getUserName,
   esAdmin
 } from "../api"
 
@@ -42,46 +39,6 @@ const EXTENSIONES =
 
 
 /* ==========================================================
-   NORMALIZAR CURSO
-   ========================================================== */
-
-const normalizarCurso =
-  (
-    respuesta
-  ) => {
-
-    if (
-      respuesta?.curso
-    ) {
-
-      return respuesta.curso
-    }
-
-
-    if (
-      respuesta?.data?.curso
-    ) {
-
-      return respuesta.data.curso
-    }
-
-
-    if (
-      respuesta?.data &&
-      !Array.isArray(
-        respuesta.data
-      )
-    ) {
-
-      return respuesta.data
-    }
-
-
-    return respuesta || null
-  }
-
-
-/* ==========================================================
    NORMALIZAR MODULOS
    ========================================================== */
 
@@ -95,7 +52,6 @@ const normalizarModulos =
         respuesta
       )
     ) {
-
       return respuesta
     }
 
@@ -105,7 +61,6 @@ const normalizarModulos =
         respuesta?.modulos
       )
     ) {
-
       return respuesta.modulos
     }
 
@@ -115,7 +70,6 @@ const normalizarModulos =
         respuesta?.modules
       )
     ) {
-
       return respuesta.modules
     }
 
@@ -125,7 +79,6 @@ const normalizarModulos =
         respuesta?.data
       )
     ) {
-
       return respuesta.data
     }
 
@@ -135,7 +88,6 @@ const normalizarModulos =
         respuesta?.data?.modulos
       )
     ) {
-
       return respuesta.data.modulos
     }
 
@@ -145,7 +97,6 @@ const normalizarModulos =
         respuesta?.data?.modules
       )
     ) {
-
       return respuesta.data.modules
     }
 
@@ -168,7 +119,6 @@ const normalizarDocumentos =
         respuesta
       )
     ) {
-
       return respuesta
     }
 
@@ -178,7 +128,6 @@ const normalizarDocumentos =
         respuesta?.documentos
       )
     ) {
-
       return respuesta.documentos
     }
 
@@ -188,7 +137,6 @@ const normalizarDocumentos =
         respuesta?.data?.documentos
       )
     ) {
-
       return respuesta.data.documentos
     }
 
@@ -198,7 +146,67 @@ const normalizarDocumentos =
 
 
 /* ==========================================================
-   FORMATEAR FECHA
+   FORMATO DE TAMAÑO
+   ========================================================== */
+
+const formatoTamano =
+  (
+    bytes
+  ) => {
+
+    const numero =
+      Number(
+        bytes ||
+        0
+      )
+
+
+    if (
+      !Number.isFinite(
+        numero
+      ) ||
+      numero <=
+        0
+    ) {
+      return "0 KB"
+    }
+
+
+    if (
+      numero <
+      1024
+    ) {
+      return `${numero} B`
+    }
+
+
+    if (
+      numero <
+      1024 * 1024
+    ) {
+      return `${(
+        numero /
+        1024
+      ).toFixed(
+        1
+      )} KB`
+    }
+
+
+    return `${(
+      numero /
+      (
+        1024 *
+        1024
+      )
+    ).toFixed(
+      1
+    )} MB`
+  }
+
+
+/* ==========================================================
+   FORMATO DE FECHA
    ========================================================== */
 
 const formatoFecha =
@@ -209,7 +217,6 @@ const formatoFecha =
     if (
       !valor
     ) {
-
       return "Sin fecha"
     }
 
@@ -225,7 +232,6 @@ const formatoFecha =
         fecha.getTime()
       )
     ) {
-
       return "Sin fecha"
     }
 
@@ -253,69 +259,6 @@ const formatoFecha =
 
 
 /* ==========================================================
-   FORMATEAR TAMAÑO
-   ========================================================== */
-
-const formatoTamano =
-  (
-    bytes
-  ) => {
-
-    const numero =
-      Number(
-        bytes ||
-        0
-      )
-
-
-    if (
-      !Number.isFinite(
-        numero
-      ) ||
-      numero <=
-        0
-    ) {
-
-      return "0 KB"
-    }
-
-
-    if (
-      numero <
-      1024
-    ) {
-
-      return `${numero} B`
-    }
-
-
-    if (
-      numero <
-      1024 * 1024
-    ) {
-
-      return `${(
-        numero /
-        1024
-      ).toFixed(
-        1
-      )} KB`
-    }
-
-
-    return `${(
-      numero /
-      (
-        1024 *
-        1024
-      )
-    ).toFixed(
-      1
-    )} MB`
-  }
-
-
-/* ==========================================================
    NOMBRE DEL TIPO
    ========================================================== */
 
@@ -337,7 +280,6 @@ const nombreTipo =
       valor ===
       "pdf"
     ) {
-
       return "PDF"
     }
 
@@ -348,7 +290,6 @@ const nombreTipo =
       valor ===
         "docx"
     ) {
-
       return "Word"
     }
 
@@ -359,7 +300,6 @@ const nombreTipo =
       valor ===
         "xlsx"
     ) {
-
       return "Excel"
     }
 
@@ -370,7 +310,6 @@ const nombreTipo =
       valor ===
         "pptx"
     ) {
-
       return "PowerPoint"
     }
 
@@ -382,116 +321,7 @@ const nombreTipo =
 
 
 /* ==========================================================
-   COLOR / ETIQUETA DEL TIPO
-   ========================================================== */
-
-const estiloTipo =
-  (
-    extension
-  ) => {
-
-    const valor =
-      String(
-        extension ||
-        ""
-      )
-        .trim()
-        .toLowerCase()
-
-
-    if (
-      valor ===
-      "pdf"
-    ) {
-
-      return {
-        background:
-          "#fef2f2",
-
-        color:
-          "#b91c1c",
-
-        border:
-          "1px solid #fecaca"
-      }
-    }
-
-
-    if (
-      valor ===
-        "doc" ||
-      valor ===
-        "docx"
-    ) {
-
-      return {
-        background:
-          "#eff6ff",
-
-        color:
-          "#1d4ed8",
-
-        border:
-          "1px solid #bfdbfe"
-      }
-    }
-
-
-    if (
-      valor ===
-        "xls" ||
-      valor ===
-        "xlsx"
-    ) {
-
-      return {
-        background:
-          "#f0fdf4",
-
-        color:
-          "#15803d",
-
-        border:
-          "1px solid #bbf7d0"
-      }
-    }
-
-
-    if (
-      valor ===
-        "ppt" ||
-      valor ===
-        "pptx"
-    ) {
-
-      return {
-        background:
-          "#fff7ed",
-
-        color:
-          "#c2410c",
-
-        border:
-          "1px solid #fed7aa"
-      }
-    }
-
-
-    return {
-      background:
-        "#f8fafc",
-
-      color:
-        "#475569",
-
-      border:
-        "1px solid #e2e8f0"
-    }
-  }
-
-
-/* ==========================================================
-   DOCUMENTOS DEL CURSO
+   PANEL DE DOCUMENTACION
    ========================================================== */
 
 const DocumentosCurso =
@@ -501,17 +331,8 @@ const DocumentosCurso =
   }) => {
 
     /* ========================================================
-       DATOS GENERALES
+       DATOS
        ======================================================== */
-
-    const [
-      curso,
-      setCurso
-    ] =
-      useState(
-        null
-      )
-
 
     const [
       modulos,
@@ -695,7 +516,7 @@ const DocumentosCurso =
 
 
     /* ========================================================
-       OBTENER NOMBRE DEL MODULO
+       NOMBRE DEL MODULO
        ======================================================== */
 
     const nombreModulo =
@@ -710,7 +531,6 @@ const DocumentosCurso =
             id ===
               undefined
           ) {
-
             return "General"
           }
 
@@ -731,7 +551,7 @@ const DocumentosCurso =
 
 
     /* ========================================================
-       CARGAR TODO
+       CARGAR DOCUMENTACION
        ======================================================== */
 
     const cargarDatos =
@@ -744,7 +564,6 @@ const DocumentosCurso =
           if (
             mostrarCarga
           ) {
-
             setCargando(
               true
             )
@@ -759,15 +578,10 @@ const DocumentosCurso =
           try {
 
             const [
-              respuestaCurso,
               respuestaModulos,
               respuestaDocumentos
             ] =
               await Promise.all([
-                obtenerCurso(
-                  cursoId
-                ),
-
                 obtenerModulosCurso(
                   cursoId
                 ),
@@ -776,13 +590,6 @@ const DocumentosCurso =
                   cursoId
                 )
               ])
-
-
-            setCurso(
-              normalizarCurso(
-                respuestaCurso
-              )
-            )
 
 
             setModulos(
@@ -813,7 +620,6 @@ const DocumentosCurso =
             if (
               mostrarCarga
             ) {
-
               setCargando(
                 false
               )
@@ -827,7 +633,7 @@ const DocumentosCurso =
 
 
     /* ========================================================
-       PRIMERA CARGA
+       CARGA INICIAL
        ======================================================== */
 
     useEffect(
@@ -843,7 +649,7 @@ const DocumentosCurso =
 
 
     /* ========================================================
-       MENSAJE TEMPORAL
+       AVISO TEMPORAL
        ======================================================== */
 
     const mostrarAviso =
@@ -993,7 +799,6 @@ const DocumentosCurso =
         if (
           inputArchivoRef.current
         ) {
-
           inputArchivoRef.current.value =
             ""
         }
@@ -1001,7 +806,7 @@ const DocumentosCurso =
 
 
     /* ========================================================
-       SUBIR
+       SUBIR DOCUMENTO
        ======================================================== */
 
     const enviarDocumento =
@@ -1015,7 +820,6 @@ const DocumentosCurso =
         if (
           subiendo
         ) {
-
           return
         }
 
@@ -1091,7 +895,7 @@ const DocumentosCurso =
 
 
     /* ========================================================
-       ABRIR
+       ABRIR DOCUMENTO
        ======================================================== */
 
     const abrirDocumento =
@@ -1102,17 +906,10 @@ const DocumentosCurso =
         if (
           abriendoId
         ) {
-
           return
         }
 
 
-        /*
-         * Abrimos primero una pestaña vacía.
-         *
-         * Esto evita que algunos navegadores
-         * bloqueen window.open después del await.
-         */
         const ventana =
           window.open(
             "",
@@ -1143,7 +940,7 @@ const DocumentosCurso =
           ) {
 
             throw new Error(
-              "No se pudo obtener el acceso al documento"
+              "No se pudo obtener el acceso al documento."
             )
           }
 
@@ -1175,7 +972,6 @@ const DocumentosCurso =
           if (
             ventana
           ) {
-
             ventana.close()
           }
 
@@ -1196,7 +992,7 @@ const DocumentosCurso =
 
 
     /* ========================================================
-       DESCARGAR
+       DESCARGAR DOCUMENTO
        ======================================================== */
 
     const descargarDocumento =
@@ -1207,7 +1003,6 @@ const DocumentosCurso =
         if (
           descargandoId
         ) {
-
           return
         }
 
@@ -1235,112 +1030,78 @@ const DocumentosCurso =
           ) {
 
             throw new Error(
-              "No se pudo obtener el acceso al documento"
+              "No se pudo obtener el acceso al documento."
             )
           }
 
 
-          /*
-           * Intentamos descargar como Blob.
-           *
-           * Si el navegador no permite leer
-           * directamente la URL firmada,
-           * usamos la URL como respaldo.
-           */
-        try {
+          try {
 
-          const respuesta =
-            await fetch(
-              resultado.url
+            const respuesta =
+              await fetch(
+                resultado.url
+              )
+
+
+            if (
+              !respuesta.ok
+            ) {
+
+              throw new Error(
+                "No se pudo descargar el archivo."
+              )
+            }
+
+
+            const blob =
+              await respuesta.blob()
+
+
+            const urlTemporal =
+              URL.createObjectURL(
+                blob
+              )
+
+
+            const enlace =
+              document.createElement(
+                "a"
+              )
+
+
+            enlace.href =
+              urlTemporal
+
+
+            enlace.download =
+              documento.nombre_original ||
+              documento.nombre_archivo ||
+              `documento-${documento.id}`
+
+
+            document.body.appendChild(
+              enlace
             )
 
 
-          if (
-            !respuesta.ok
-          ) {
+            enlace.click()
 
-            throw new Error(
-              "No se pudo descargar el archivo"
+
+            enlace.remove()
+
+
+            URL.revokeObjectURL(
+              urlTemporal
+            )
+
+          } catch {
+
+            window.open(
+              resultado.url,
+              "_blank",
+              "noopener,noreferrer"
             )
           }
-
-
-          const blob =
-            await respuesta.blob()
-
-
-          const urlTemporal =
-            URL.createObjectURL(
-              blob
-            )
-
-
-          const enlace =
-            document.createElement(
-              "a"
-            )
-
-
-          enlace.href =
-            urlTemporal
-
-
-          enlace.download =
-            documento.nombre_original ||
-            documento.nombre_archivo ||
-            `documento-${documento.id}`
-
-
-          document.body.appendChild(
-            enlace
-          )
-
-
-          enlace.click()
-
-
-          enlace.remove()
-
-
-          URL.revokeObjectURL(
-            urlTemporal
-          )
-
-        } catch {
-
-          const enlace =
-            document.createElement(
-              "a"
-            )
-
-
-          enlace.href =
-            resultado.url
-
-
-          enlace.target =
-            "_blank"
-
-
-          enlace.rel =
-            "noopener noreferrer"
-
-
-          enlace.download =
-            documento.nombre_original ||
-            ""
-
-
-          document.body.appendChild(
-            enlace
-          )
-
-
-          enlace.click()
-
-
-          enlace.remove()
-        }
 
         } catch (
           problema
@@ -1362,7 +1123,7 @@ const DocumentosCurso =
 
 
     /* ========================================================
-       PUEDE ELIMINAR
+       PERMISO DE ELIMINACION
        ======================================================== */
 
     const puedeEliminar =
@@ -1373,7 +1134,6 @@ const DocumentosCurso =
         if (
           administrador
         ) {
-
           return true
         }
 
@@ -1382,7 +1142,6 @@ const DocumentosCurso =
           !perfil?.id ||
           !documento?.user_id
         ) {
-
           return false
         }
 
@@ -1399,7 +1158,7 @@ const DocumentosCurso =
 
 
     /* ========================================================
-       ELIMINAR
+       ELIMINAR DOCUMENTO
        ======================================================== */
 
     const eliminarDocumento =
@@ -1410,21 +1169,19 @@ const DocumentosCurso =
         if (
           eliminandoId
         ) {
-
           return
         }
 
 
         const confirmado =
           window.confirm(
-            `¿Eliminar "${documento.nombre_original}"?\n\nEsta acción quitará el documento del curso.`
+            `¿Eliminar "${documento.nombre_original}"?`
           )
 
 
         if (
           !confirmado
         ) {
-
           return
         }
 
@@ -1490,7 +1247,7 @@ const DocumentosCurso =
 
 
     /* ========================================================
-       FILTRAR DOCUMENTOS
+       FILTRAR
        ======================================================== */
 
     const documentosVisibles =
@@ -1500,7 +1257,6 @@ const DocumentosCurso =
           if (
             !filtroModulo
           ) {
-
             return documentos
           }
 
@@ -1546,51 +1302,8 @@ const DocumentosCurso =
        ======================================================== */
 
     return (
-      <>
 
-        {/* ====================================================
-            CABECERA
-            ==================================================== */}
-
-        <div className="topbar">
-
-          <div>
-
-            <h1>
-              Documentación
-            </h1>
-
-
-            <p>
-              Gestiona los documentos del curso{" "}
-              <strong>
-                {curso?.nombre ||
-                  "Big Data"}
-              </strong>.
-            </p>
-
-          </div>
-
-
-          <div className="topbar-actions">
-
-            <div className="topbar-user">
-
-              <span className="avatar">
-                {getInitials()}
-              </span>
-
-
-              <span>
-                {getUserName()}
-              </span>
-
-            </div>
-
-          </div>
-
-        </div>
-
+      <div>
 
         {/* ====================================================
             MENSAJES
@@ -1615,17 +1328,13 @@ const DocumentosCurso =
 
 
         {/* ====================================================
-            CARGA
+            CARGANDO
             ==================================================== */}
 
         {cargando ? (
 
-          <div className="card">
-
-            <div className="loading">
-              Cargando documentos...
-            </div>
-
+          <div className="loading">
+            Cargando documentación...
           </div>
 
         ) : (
@@ -1633,7 +1342,7 @@ const DocumentosCurso =
           <>
 
             {/* =================================================
-                RESUMEN
+                INFORMACION
                 ================================================= */}
 
             <div
@@ -1645,102 +1354,144 @@ const DocumentosCurso =
                   "repeat(auto-fit, minmax(180px, 1fr))",
 
                 gap:
-                  "14px",
+                  "12px",
 
                 marginBottom:
-                  "20px"
+                  "18px"
               }}
             >
 
-              <div className="card">
+              <div
+                style={{
+                  border:
+                    "1px solid #eee5df",
+
+                  borderRadius:
+                    "12px",
+
+                  padding:
+                    "14px 16px",
+
+                  background:
+                    "#fff"
+                }}
+              >
 
                 <div
                   className="muted"
                   style={{
                     fontSize:
-                      "13px"
+                      "12px"
                   }}
                 >
-                  Documentos disponibles
+                  Documentos
                 </div>
 
 
-                <div
+                <strong
                   style={{
-                    fontSize:
-                      "28px",
-
-                    fontWeight:
-                      800,
+                    display:
+                      "block",
 
                     marginTop:
-                      "6px"
+                      "4px",
+
+                    fontSize:
+                      "22px"
                   }}
                 >
                   {documentos.length}
-                </div>
+                </strong>
 
               </div>
 
 
-              <div className="card">
+              <div
+                style={{
+                  border:
+                    "1px solid #eee5df",
+
+                  borderRadius:
+                    "12px",
+
+                  padding:
+                    "14px 16px",
+
+                  background:
+                    "#fff"
+                }}
+              >
 
                 <div
                   className="muted"
                   style={{
                     fontSize:
-                      "13px"
+                      "12px"
                   }}
                 >
-                  Módulos disponibles
+                  Formatos
                 </div>
 
 
-                <div
+                <strong
                   style={{
-                    fontSize:
-                      "28px",
-
-                    fontWeight:
-                      800,
+                    display:
+                      "block",
 
                     marginTop:
-                      "6px"
+                      "4px",
+
+                    fontSize:
+                      "14px"
                   }}
                 >
-                  {modulos.length}
-                </div>
+                  PDF · Word · Excel · PowerPoint
+                </strong>
 
               </div>
 
 
-              <div className="card">
+              <div
+                style={{
+                  border:
+                    "1px solid #eee5df",
+
+                  borderRadius:
+                    "12px",
+
+                  padding:
+                    "14px 16px",
+
+                  background:
+                    "#fff"
+                }}
+              >
 
                 <div
                   className="muted"
                   style={{
                     fontSize:
-                      "13px"
+                      "12px"
                   }}
                 >
-                  Límite por archivo
+                  Tamaño máximo
                 </div>
 
 
-                <div
+                <strong
                   style={{
-                    fontSize:
-                      "28px",
-
-                    fontWeight:
-                      800,
+                    display:
+                      "block",
 
                     marginTop:
-                      "6px"
+                      "4px",
+
+                    fontSize:
+                      "22px"
                   }}
                 >
                   25 MB
-                </div>
+                </strong>
 
               </div>
 
@@ -1748,12 +1499,23 @@ const DocumentosCurso =
 
 
             {/* =================================================
-                FORMULARIO DE SUBIDA
+                SUBIDA
                 ================================================= */}
 
             <div
-              className="card"
               style={{
+                border:
+                  "1px solid #eadfd7",
+
+                borderRadius:
+                  "14px",
+
+                padding:
+                  "18px",
+
+                background:
+                  "#fff",
+
                 marginBottom:
                   "20px"
               }}
@@ -1762,24 +1524,31 @@ const DocumentosCurso =
               <div
                 style={{
                   marginBottom:
-                    "18px"
+                    "16px"
                 }}
               >
 
-                <div className="chart-title">
-                  Subir documento
-                </div>
+                <strong
+                  style={{
+                    fontSize:
+                      "16px"
+                  }}
+                >
+                  Subir documentación
+                </strong>
 
 
                 <div
                   className="muted"
                   style={{
                     marginTop:
-                      "4px"
+                      "4px",
+
+                    fontSize:
+                      "13px"
                   }}
                 >
-                  Puedes subir PDF, Word, Excel o PowerPoint.
-                  El módulo es opcional.
+                  Adjunta material relacionado con el curso.
                 </div>
 
               </div>
@@ -1800,7 +1569,7 @@ const DocumentosCurso =
                       "repeat(auto-fit, minmax(240px, 1fr))",
 
                     gap:
-                      "16px"
+                      "14px"
                   }}
                 >
 
@@ -1840,7 +1609,7 @@ const DocumentosCurso =
                         ? `${archivo.name} · ${formatoTamano(
                             archivo.size
                           )}`
-                        : "Máximo 25 MB"}
+                        : "PDF, Word, Excel o PowerPoint"}
 
                     </span>
 
@@ -1854,7 +1623,7 @@ const DocumentosCurso =
                   <div className="field">
 
                     <label>
-                      Relacionar con módulo
+                      Relacionar con
                     </label>
 
 
@@ -1876,7 +1645,7 @@ const DocumentosCurso =
                     >
 
                       <option value="">
-                        Documento general del curso
+                        General del curso
                       </option>
 
 
@@ -1901,11 +1670,6 @@ const DocumentosCurso =
 
                     </select>
 
-
-                    <span className="muted">
-                      Si no eliges módulo será visible como documentación general.
-                    </span>
-
                   </div>
 
                 </div>
@@ -1919,7 +1683,7 @@ const DocumentosCurso =
                   className="field"
                   style={{
                     marginTop:
-                      "16px"
+                      "14px"
                   }}
                 >
 
@@ -1929,19 +1693,19 @@ const DocumentosCurso =
 
 
                   <textarea
-                    value={
-                      descripcion
-                    }
                     rows={
                       3
                     }
                     maxLength={
                       500
                     }
+                    value={
+                      descripcion
+                    }
                     disabled={
                       subiendo
                     }
-                    placeholder="Ejemplo: Material correspondiente a la semana 1..."
+                    placeholder="Ejemplo: Material de la semana 2..."
                     onChange={
                       (
                         event
@@ -1954,14 +1718,14 @@ const DocumentosCurso =
 
 
                   <span className="muted">
-                    {descripcion.length}/500 caracteres
+                    {descripcion.length}/500
                   </span>
 
                 </div>
 
 
                 {/* =============================================
-                    ACCIONES
+                    BOTONES
                     ============================================= */}
 
                 <div
@@ -1979,7 +1743,7 @@ const DocumentosCurso =
                       "wrap",
 
                     marginTop:
-                      "18px"
+                      "16px"
                   }}
                 >
 
@@ -2020,14 +1784,10 @@ const DocumentosCurso =
 
 
             {/* =================================================
-                DOCUMENTOS
+                LISTADO
                 ================================================= */}
 
-            <div className="card">
-
-              {/* ===============================================
-                  CABECERA LISTA
-                  =============================================== */}
+            <div>
 
               <div
                 style={{
@@ -2041,39 +1801,43 @@ const DocumentosCurso =
                     "flex-end",
 
                   gap:
-                    "16px",
+                    "14px",
 
                   flexWrap:
                     "wrap",
 
                   marginBottom:
-                    "18px"
+                    "14px"
                 }}
               >
 
                 <div>
 
-                  <div className="chart-title">
-                    Documentos del curso
-                  </div>
+                  <strong
+                    style={{
+                      fontSize:
+                        "16px"
+                    }}
+                  >
+                    Documentos cargados
+                  </strong>
 
 
                   <div
                     className="muted"
                     style={{
                       marginTop:
-                        "4px"
+                        "3px",
+
+                      fontSize:
+                        "13px"
                     }}
                   >
-                    {documentosVisibles.length} documento
+                    {documentosVisibles.length} archivo
                     {documentosVisibles.length ===
                     1
                       ? ""
-                      : "s"} visible
-                    {documentosVisibles.length ===
-                    1
-                      ? ""
-                      : "s"}.
+                      : "s"}
                   </div>
 
                 </div>
@@ -2091,7 +1855,7 @@ const DocumentosCurso =
                 >
 
                   <label>
-                    Filtrar
+                    Mostrar
                   </label>
 
 
@@ -2115,7 +1879,7 @@ const DocumentosCurso =
 
 
                     <option value="general">
-                      Documentos generales
+                      Generales
                     </option>
 
 
@@ -2146,7 +1910,7 @@ const DocumentosCurso =
 
 
               {/* ===============================================
-                  LISTA VACIA
+                  VACIO
                   =============================================== */}
 
               {documentosVisibles.length ===
@@ -2160,15 +1924,15 @@ const DocumentosCurso =
                         "block",
 
                       marginBottom:
-                        "6px"
+                        "5px"
                     }}
                   >
-                    No hay documentos
+                    No hay documentación cargada
                   </strong>
 
 
                   <span>
-                    Todavía no se han subido documentos en esta sección.
+                    Los documentos que subas aparecerán aquí.
                   </span>
 
                 </div>
@@ -2193,15 +1957,6 @@ const DocumentosCurso =
                       documento
                     ) => {
 
-                      const eliminando =
-                        String(
-                          eliminandoId
-                        ) ===
-                        String(
-                          documento.id
-                        )
-
-
                       const abriendo =
                         String(
                           abriendoId
@@ -2220,6 +1975,15 @@ const DocumentosCurso =
                         )
 
 
+                      const eliminando =
+                        String(
+                          eliminandoId
+                        ) ===
+                        String(
+                          documento.id
+                        )
+
+
                       return (
 
                         <div
@@ -2228,28 +1992,31 @@ const DocumentosCurso =
                           }
                           style={{
                             border:
-                              "1px solid #e5e7eb",
+                              "1px solid #eadfd7",
 
                             borderRadius:
                               "12px",
 
                             padding:
-                              "14px 16px",
+                              "13px 14px",
 
                             display:
                               "flex",
 
-                            justifyContent:
-                              "space-between",
-
                             alignItems:
                               "center",
 
+                            justifyContent:
+                              "space-between",
+
                             gap:
-                              "16px",
+                              "14px",
 
                             flexWrap:
-                              "wrap"
+                              "wrap",
+
+                            background:
+                              "#fff"
                           }}
                         >
 
@@ -2259,63 +2026,32 @@ const DocumentosCurso =
 
                           <div
                             style={{
-                              display:
-                                "flex",
-
-                              alignItems:
-                                "flex-start",
-
-                              gap:
-                                "12px",
-
                               minWidth:
                                 0,
 
                               flex:
-                                "1 1 340px"
+                                "1 1 320px"
                             }}
                           >
 
                             <div
                               style={{
-                                ...estiloTipo(
-                                  documento.extension
-                                ),
+                                display:
+                                  "flex",
 
-                                borderRadius:
+                                alignItems:
+                                  "center",
+
+                                gap:
                                   "8px",
 
-                                padding:
-                                  "6px 8px",
-
-                                fontSize:
-                                  "11px",
-
-                                fontWeight:
-                                  800,
-
-                                flexShrink:
-                                  0
-                              }}
-                            >
-                              {nombreTipo(
-                                documento.extension
-                              )}
-                            </div>
-
-
-                            <div
-                              style={{
-                                minWidth:
-                                  0
+                                flexWrap:
+                                  "wrap"
                               }}
                             >
 
-                              <div
+                              <strong
                                 style={{
-                                  fontWeight:
-                                    700,
-
                                   overflowWrap:
                                     "anywhere"
                                 }}
@@ -2323,79 +2059,107 @@ const DocumentosCurso =
                                 {documento.nombre_original ||
                                   documento.nombre_archivo ||
                                   `Documento ${documento.id}`}
-                              </div>
+                              </strong>
 
+
+                              <span
+                                style={{
+                                  border:
+                                    "1px solid #eadfd7",
+
+                                  borderRadius:
+                                    "999px",
+
+                                  padding:
+                                    "3px 7px",
+
+                                  fontSize:
+                                    "11px",
+
+                                  fontWeight:
+                                    700,
+
+                                  background:
+                                    "#faf7f5"
+                                }}
+                              >
+                                {nombreTipo(
+                                  documento.extension
+                                )}
+                              </span>
+
+                            </div>
+
+
+                            <div
+                              className="muted"
+                              style={{
+                                marginTop:
+                                  "5px",
+
+                                fontSize:
+                                  "12px",
+
+                                display:
+                                  "flex",
+
+                                gap:
+                                  "5px",
+
+                                flexWrap:
+                                  "wrap"
+                              }}
+                            >
+
+                              <span>
+                                {nombreModulo(
+                                  documento.modulo_id
+                                )}
+                              </span>
+
+
+                              <span>
+                                ·
+                              </span>
+
+
+                              <span>
+                                {formatoTamano(
+                                  documento.tamano_bytes
+                                )}
+                              </span>
+
+
+                              <span>
+                                ·
+                              </span>
+
+
+                              <span>
+                                {formatoFecha(
+                                  documento.created_at
+                                )}
+                              </span>
+
+                            </div>
+
+
+                            {documento.descripcion && (
 
                               <div
                                 className="muted"
                                 style={{
-                                  display:
-                                    "flex",
-
-                                  gap:
+                                  marginTop:
                                     "6px",
 
-                                  flexWrap:
-                                    "wrap",
-
-                                  marginTop:
-                                    "4px",
-
                                   fontSize:
-                                    "12px"
+                                    "13px"
                                 }}
                               >
-
-                                <span>
-                                  {nombreModulo(
-                                    documento.modulo_id
-                                  )}
-                                </span>
-
-                                <span>
-                                  ·
-                                </span>
-
-                                <span>
-                                  {formatoTamano(
-                                    documento.tamano_bytes
-                                  )}
-                                </span>
-
-                                <span>
-                                  ·
-                                </span>
-
-                                <span>
-                                  {formatoFecha(
-                                    documento.created_at
-                                  )}
-                                </span>
-
+                                {documento.descripcion}
                               </div>
 
-
-                              {documento.descripcion && (
-
-                                <div
-                                  className="muted"
-                                  style={{
-                                    marginTop:
-                                      "7px",
-
-                                    fontSize:
-                                      "13px",
-
-                                    lineHeight:
-                                      1.5
-                                  }}
-                                >
-                                  {documento.descripcion}
-                                </div>
-
-                              )}
-
-                            </div>
+                            )}
 
                           </div>
 
@@ -2410,10 +2174,7 @@ const DocumentosCurso =
                                 "flex",
 
                               gap:
-                                "8px",
-
-                              alignItems:
-                                "center",
+                                "7px",
 
                               flexWrap:
                                 "wrap"
@@ -2433,11 +2194,9 @@ const DocumentosCurso =
                                   )
                               }
                             >
-
                               {abriendo
                                 ? "Abriendo..."
                                 : "Abrir"}
-
                             </button>
 
 
@@ -2454,11 +2213,9 @@ const DocumentosCurso =
                                   )
                               }
                             >
-
                               {descargando
                                 ? "Descargando..."
                                 : "Descargar"}
-
                             </button>
 
 
@@ -2479,21 +2236,16 @@ const DocumentosCurso =
                                     )
                                 }
                                 style={{
-                                  border:
-                                    "1px solid #fecaca",
-
                                   color:
                                     "#b91c1c",
 
-                                  background:
-                                    "#ffffff"
+                                  border:
+                                    "1px solid #fecaca"
                                 }}
                               >
-
                                 {eliminando
                                   ? "Eliminando..."
                                   : "Eliminar"}
-
                               </button>
 
                             )}
@@ -2516,7 +2268,7 @@ const DocumentosCurso =
 
         )}
 
-      </>
+      </div>
     )
   }
 

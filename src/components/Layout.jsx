@@ -12,11 +12,11 @@ import {
 
 import {
   clearSession,
-  getUserName,
+  esAdmin,
+  getEmpresa,
   getInitials,
   getRol,
-  getEmpresa,
-  esAdmin,
+  getUserName,
   obtenerMisPermisos
 } from "../api"
 
@@ -25,13 +25,23 @@ import Confirm
 
 
 /* ==========================================================
-   CONFIGURACION
+   MODULOS PRINCIPALES DE BIG DATA
    ========================================================== */
 
-const BIG_DATA_CURSO_ID =
-  1
-
-
+/*
+ * IMPORTANTE:
+ *
+ * Graficos NO aparece en este menu.
+ *
+ * big_data.graficos sigue existiendo
+ * como permiso, pero ahora controla
+ * la pestaña "Graficos" dentro de
+ * Datasets.
+ *
+ * Documentacion tampoco es un modulo
+ * independiente. Esta integrada dentro
+ * de "Cargar archivos".
+ */
 const MODULOS_BIG_DATA = [
 
   {
@@ -42,7 +52,7 @@ const MODULOS_BIG_DATA = [
       "/big-data/importar",
 
     label:
-      "Importar datos"
+      "Cargar archivos"
   },
 
   {
@@ -87,104 +97,42 @@ const MODULOS_BIG_DATA = [
 
     label:
       "Estructura de datos"
-  },
-
-  {
-    clave:
-      "big_data.graficos",
-
-    to:
-      "/big-data/graficos",
-
-    label:
-      "Gráficos"
   }
 
 ]
 
 
 /* ==========================================================
-   NORMALIZAR CURSOS
+   NORMALIZAR PERMISOS
    ========================================================== */
 
-const obtenerCursosRespuesta =
+const obtenerClavesPermisos =
   (
     respuesta
   ) => {
 
-    if (
-      Array.isArray(
-        respuesta?.cursos
-      )
-    ) {
-
-      return respuesta.cursos
-    }
-
-
-    if (
-      Array.isArray(
-        respuesta?.permisos?.cursos
-      )
-    ) {
-
-      return respuesta.permisos.cursos
-    }
-
-
-    return []
-  }
-
-
-/* ==========================================================
-   EXTRAER CURSOS Y MODULOS PERMITIDOS
-   ========================================================== */
-
-const normalizarPermisos =
-  (
-    respuesta
-  ) => {
-
-    const cursosRespuesta =
-      obtenerCursosRespuesta(
-        respuesta
-      )
+    const claves =
+      new Set()
 
 
     const cursos =
-      new Set()
-
-
-    const modulos =
-      new Set()
+      Array.isArray(
+        respuesta?.cursos
+      )
+        ? respuesta.cursos
+        : Array.isArray(
+            respuesta?.permisos?.cursos
+          )
+          ? respuesta.permisos.cursos
+          : []
 
 
     for (
       const curso
-      of cursosRespuesta
+      of cursos
     ) {
 
-      const cursoId =
-        curso?.curso_id ??
-        curso?.id
-
-
-      if (
-        cursoId !==
-          null &&
-        cursoId !==
-          undefined
-      ) {
-
-        cursos.add(
-          String(
-            cursoId
-          )
-        )
-      }
-
-
-      const listaModulos =
+      const modulos =
         Array.isArray(
           curso?.modulos
         )
@@ -198,7 +146,7 @@ const normalizarPermisos =
 
       for (
         const modulo
-        of listaModulos
+        of modulos
       ) {
 
         if (
@@ -214,7 +162,7 @@ const normalizarPermisos =
           modulo?.clave
         ) {
 
-          modulos.add(
+          claves.add(
             String(
               modulo.clave
             )
@@ -225,10 +173,10 @@ const normalizarPermisos =
 
 
     /*
-     * Compatibilidad por si el backend
-     * devuelve módulos separados.
+     * Compatibilidad si el backend
+     * devuelve los modulos separados.
      */
-    const modulosSeparados =
+    const separados =
       Array.isArray(
         respuesta?.modulos
       )
@@ -242,7 +190,7 @@ const normalizarPermisos =
 
     for (
       const modulo
-      of modulosSeparados
+      of separados
     ) {
 
       if (
@@ -258,39 +206,24 @@ const normalizarPermisos =
         modulo?.clave
       ) {
 
-        modulos.add(
+        claves.add(
           String(
             modulo.clave
           )
         )
       }
-
-
-      if (
-        modulo?.curso_id
-      ) {
-
-        cursos.add(
-          String(
-            modulo.curso_id
-          )
-        )
-      }
     }
 
 
-    return {
-      cursos,
-      modulos
-    }
+    return claves
   }
 
 
 /* ==========================================================
-   COMPONENTE DEL MENU
+   ENLACE DEL SIDEBAR
    ========================================================== */
 
-const EnlaceMenu =
+const Enlace =
   ({
     to,
     children
@@ -300,8 +233,13 @@ const EnlaceMenu =
       to={
         to
       }
-      end={
-        false
+      className={
+        ({
+          isActive
+        }) =>
+          isActive
+            ? "active"
+            : ""
       }
     >
       {children}
@@ -328,7 +266,19 @@ const Layout =
 
 
     /* ========================================================
-       CONFIRMACION LOGOUT
+       USUARIO
+       ======================================================== */
+
+    const administrador =
+      esAdmin()
+
+
+    const rol =
+      getRol()
+
+
+    /* ========================================================
+       LOGOUT
        ======================================================== */
 
     const [
@@ -348,13 +298,9 @@ const Layout =
       permisos,
       setPermisos
     ] =
-      useState({
-        cursos:
-          new Set(),
-
-        modulos:
-          new Set()
-      })
+      useState(
+        new Set()
+      )
 
 
     const [
@@ -362,7 +308,7 @@ const Layout =
       setCargandoPermisos
     ] =
       useState(
-        true
+        !administrador
       )
 
 
@@ -375,50 +321,41 @@ const Layout =
       )
 
 
-    const rol =
-      getRol()
-
-
-    const administrador =
-      esAdmin()
-
-
     /* ========================================================
-       CARGAR PERMISOS DEL USUARIO
+       CARGAR PERMISOS
        ======================================================== */
 
     useEffect(
       () => {
 
         /*
-         * El administrador no necesita
-         * permisos individuales.
+         * ADMIN:
+         *
+         * tiene acceso visual a todos
+         * los modulos principales.
          */
         if (
           administrador
         ) {
 
-          setPermisos({
-            cursos:
-              new Set([
-                String(
-                  BIG_DATA_CURSO_ID
-                )
-              ]),
-
-            modulos:
-              new Set(
-                MODULOS_BIG_DATA.map(
-                  (
-                    modulo
-                  ) =>
-                    modulo.clave
-                )
+          setPermisos(
+            new Set(
+              MODULOS_BIG_DATA.map(
+                (
+                  modulo
+                ) =>
+                  modulo.clave
               )
-          })
+            )
+          )
 
 
           setCargandoPermisos(
+            false
+          )
+
+
+          setErrorPermisos(
             false
           )
 
@@ -459,7 +396,7 @@ const Layout =
 
 
               setPermisos(
-                normalizarPermisos(
+                obtenerClavesPermisos(
                   respuesta
                 )
               )
@@ -476,13 +413,9 @@ const Layout =
               }
 
 
-              setPermisos({
-                cursos:
-                  new Set(),
-
-                modulos:
-                  new Set()
-              })
+              setPermisos(
+                new Set()
+              )
 
 
               setErrorPermisos(
@@ -520,19 +453,6 @@ const Layout =
 
 
     /* ========================================================
-       ACCESO A BIG DATA
-       ======================================================== */
-
-    const tieneBigData =
-      administrador ||
-      permisos.cursos.has(
-        String(
-          BIG_DATA_CURSO_ID
-        )
-      )
-
-
-    /* ========================================================
        MODULOS VISIBLES
        ======================================================== */
 
@@ -544,15 +464,7 @@ const Layout =
             administrador
           ) {
 
-            /*
-             * Actualmente conservamos las
-             * rutas administrativas existentes.
-             *
-             * Los módulos normales siguen
-             * mostrándose al trabajador según
-             * sus permisos.
-             */
-            return []
+            return MODULOS_BIG_DATA
           }
 
 
@@ -560,7 +472,7 @@ const Layout =
             (
               modulo
             ) =>
-              permisos.modulos.has(
+              permisos.has(
                 modulo.clave
               )
           )
@@ -574,7 +486,7 @@ const Layout =
 
 
     /* ========================================================
-       CERRAR SESION
+       LOGOUT
        ======================================================== */
 
     const logout =
@@ -624,254 +536,167 @@ const Layout =
 
 
           {/* ==================================================
-              NAVEGACION
+              MENU
               ================================================== */}
 
           <nav className="sidebar-nav">
 
-            {/* ================================================
-                USUARIO NORMAL
-                ================================================ */}
+            {/* =================================================
+                BIG DATA
+                ================================================= */}
 
-            {!administrador && (
+            <div
+              style={{
+                padding:
+                  "8px 12px 5px",
 
-              <>
+                marginTop:
+                  "4px",
 
-                {/* =============================================
-                    CURSO BIG DATA
-                    ============================================= */}
+                fontSize:
+                  "11px",
 
-                {tieneBigData && (
+                fontWeight:
+                  800,
 
-                  <div
-                    style={{
-                      margin:
-                        "8px 0 6px",
+                letterSpacing:
+                  "0.08em",
 
-                      padding:
-                        "0 12px",
+                textTransform:
+                  "uppercase",
 
-                      fontSize:
-                        "11px",
-
-                      fontWeight:
-                        800,
-
-                      letterSpacing:
-                        "0.08em",
-
-                      textTransform:
-                        "uppercase",
-
-                      opacity:
-                        0.65
-                    }}
-                  >
-                    Big Data
-                  </div>
-
-                )}
+                opacity:
+                  0.65
+              }}
+            >
+              Big Data
+            </div>
 
 
-                {/* =============================================
-                    MODULOS DEL CURSO
-                    ============================================= */}
+            {/* =================================================
+                CARGANDO
+                ================================================= */}
 
-                {modulosVisibles.map(
-                  (
-                    modulo
-                  ) => (
+            {cargandoPermisos && (
 
-                    <EnlaceMenu
-                      key={
-                        modulo.clave
-                      }
-                      to={
-                        modulo.to
-                      }
-                    >
-                      {modulo.label}
-                    </EnlaceMenu>
+              <div
+                style={{
+                  padding:
+                    "10px 12px",
 
-                  )
-                )}
+                  fontSize:
+                    "12px",
 
-
-                {/* =============================================
-                    DOCUMENTACION
-
-                    NO es un séptimo módulo.
-                    Solo requiere acceso al curso.
-                    ============================================= */}
-
-                {tieneBigData && (
-
-                  <EnlaceMenu
-                    to="/big-data/documentos"
-                  >
-                    Documentación
-                  </EnlaceMenu>
-
-                )}
-
-
-                {/* =============================================
-                    CARGANDO
-                    ============================================= */}
-
-                {cargandoPermisos && (
-
-                  <div
-                    style={{
-                      padding:
-                        "10px 12px",
-
-                      fontSize:
-                        "12px",
-
-                      opacity:
-                        0.65
-                    }}
-                  >
-                    Cargando accesos...
-                  </div>
-
-                )}
-
-
-                {/* =============================================
-                    ERROR
-                    ============================================= */}
-
-                {!cargandoPermisos &&
-                  errorPermisos && (
-
-                  <div
-                    style={{
-                      padding:
-                        "10px 12px",
-
-                      fontSize:
-                        "12px",
-
-                      lineHeight:
-                        1.4,
-
-                      opacity:
-                        0.75
-                    }}
-                  >
-                    No se pudieron cargar tus permisos.
-                  </div>
-
-                )}
-
-
-                {/* =============================================
-                    SIN ACCESO
-                    ============================================= */}
-
-                {!cargandoPermisos &&
-                  !errorPermisos &&
-                  !tieneBigData && (
-
-                  <div
-                    style={{
-                      padding:
-                        "10px 12px",
-
-                      fontSize:
-                        "12px",
-
-                      lineHeight:
-                        1.4,
-
-                      opacity:
-                        0.7
-                    }}
-                  >
-                    No tienes cursos habilitados.
-                  </div>
-
-                )}
-
-              </>
+                  opacity:
+                    0.65
+                }}
+              >
+                Cargando módulos...
+              </div>
 
             )}
 
 
-            {/* ================================================
-                ADMINISTRADOR
-                ================================================ */}
+            {/* =================================================
+                MODULOS
+                ================================================= */}
+
+            {!cargandoPermisos &&
+              modulosVisibles.map(
+                (
+                  modulo
+                ) => (
+
+                  <Enlace
+                    key={
+                      modulo.clave
+                    }
+                    to={
+                      modulo.to
+                    }
+                  >
+                    {modulo.label}
+                  </Enlace>
+
+                )
+              )}
+
+
+            {/* =================================================
+                SIN MODULOS
+                ================================================= */}
+
+            {!administrador &&
+              !cargandoPermisos &&
+              !errorPermisos &&
+              modulosVisibles.length ===
+                0 && (
+
+              <div
+                style={{
+                  padding:
+                    "10px 12px",
+
+                  fontSize:
+                    "12px",
+
+                  lineHeight:
+                    1.5,
+
+                  opacity:
+                    0.7
+                }}
+              >
+                No tienes módulos habilitados.
+              </div>
+
+            )}
+
+
+            {/* =================================================
+                ERROR PERMISOS
+                ================================================= */}
+
+            {!administrador &&
+              !cargandoPermisos &&
+              errorPermisos && (
+
+              <div
+                style={{
+                  padding:
+                    "10px 12px",
+
+                  fontSize:
+                    "12px",
+
+                  lineHeight:
+                    1.5,
+
+                  opacity:
+                    0.7
+                }}
+              >
+                No se pudieron cargar tus permisos.
+              </div>
+
+            )}
+
+
+            {/* =================================================
+                ADMINISTRACION
+                ================================================= */}
 
             {administrador && (
 
               <>
 
-                {/* =============================================
-                    BIG DATA
-                    ============================================= */}
-
                 <div
                   style={{
-                    margin:
-                      "8px 0 6px",
-
                     padding:
-                      "0 12px",
+                      "8px 12px 5px",
 
-                    fontSize:
-                      "11px",
-
-                    fontWeight:
-                      800,
-
-                    letterSpacing:
-                      "0.08em",
-
-                    textTransform:
-                      "uppercase",
-
-                    opacity:
-                      0.65
-                  }}
-                >
-                  Big Data
-                </div>
-
-
-                <EnlaceMenu
-                  to="/archivos"
-                >
-                  Datasets
-                </EnlaceMenu>
-
-
-                <EnlaceMenu
-                  to="/comparar"
-                >
-                  Comparación
-                </EnlaceMenu>
-
-
-                <EnlaceMenu
-                  to="/big-data/documentos"
-                >
-                  Documentación
-                </EnlaceMenu>
-
-
-                {/* =============================================
-                    ADMINISTRACION
-                    ============================================= */}
-
-                <div
-                  style={{
-                    margin:
-                      "18px 0 6px",
-
-                    padding:
-                      "0 12px",
+                    marginTop:
+                      "18px",
 
                     fontSize:
                       "11px",
@@ -893,11 +718,11 @@ const Layout =
                 </div>
 
 
-                <EnlaceMenu
+                <Enlace
                   to="/administracion/usuarios"
                 >
                   Usuarios y permisos
-                </EnlaceMenu>
+                </Enlace>
 
               </>
 
@@ -907,7 +732,7 @@ const Layout =
 
 
           {/* ==================================================
-              PIE DEL SIDEBAR
+              USUARIO
               ================================================== */}
 
           <div className="sidebar-foot">
@@ -989,7 +814,7 @@ const Layout =
 
 
         {/* ====================================================
-            CONFIRMACION LOGOUT
+            CONFIRMAR LOGOUT
             ==================================================== */}
 
         {asking && (
@@ -1014,7 +839,6 @@ const Layout =
         )}
 
       </div>
-
     )
   }
 
