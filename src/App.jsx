@@ -1,4 +1,9 @@
 import {
+  useEffect,
+  useState
+} from "react"
+
+import {
   Navigate,
   Route,
   Routes
@@ -6,11 +11,17 @@ import {
 
 import {
   esAdmin,
-  isLogged
+  isLogged,
+  obtenerMisPermisos
 } from "./api"
 
 import Layout
   from "./components/Layout"
+
+
+/* ==========================================================
+   PAGINAS PUBLICAS
+   ========================================================== */
 
 import Login
   from "./pages/Login"
@@ -24,8 +35,18 @@ import RecuperarPassword
 import RestablecerPassword
   from "./pages/RestablecerPassword"
 
+
+/* ==========================================================
+   PAGINAS GENERALES
+   ========================================================== */
+
 import MisCursos
   from "./pages/MisCursos"
+
+
+/* ==========================================================
+   BIG DATA
+   ========================================================== */
 
 import Importar
   from "./pages/Importar"
@@ -39,31 +60,375 @@ import Comparar
 import DatosEmpresa
   from "./pages/DatosEmpresa"
 
+
+/* ==========================================================
+   ADMINISTRACION
+   ========================================================== */
+
 import AdminUsuarios
   from "./pages/AdminUsuarios"
 
+import AdminCursos
+  from "./pages/AdminCursos"
+
 
 /* ==========================================================
-   RUTA PRIVADA
+   PERMISOS BIG DATA
    ========================================================== */
 
-/*
- * Esta protección SOLO verifica
- * que exista una sesión.
- *
- * NO vuelve a consultar permisos aquí.
- *
- * Los permisos se utilizan:
- *
- * 1. En Layout.jsx para decidir qué mostrar.
- * 2. En las páginas que tienen funciones especiales.
- * 3. Principalmente en el BACKEND para seguridad real.
- *
- * Esto evita que React Router mande al usuario
- * nuevamente a /mis-cursos al intentar navegar.
- */
+const PERMISOS_BIG_DATA = {
 
-const Privada = ({
+  importar:
+    "big_data.importar",
+
+  datasets:
+    "big_data.datasets",
+
+  analisis:
+    "big_data.analisis",
+
+  comparar:
+    "big_data.comparar",
+
+  estructura:
+    "big_data.estructura",
+
+  graficos:
+    "big_data.graficos"
+}
+
+
+/* ==========================================================
+   RUTAS BIG DATA
+   ========================================================== */
+
+const RUTAS_BIG_DATA = {
+
+  importar:
+    "/big-data/importar",
+
+  datasets:
+    "/big-data/datasets",
+
+  analisis:
+    "/big-data/analisis",
+
+  comparar:
+    "/big-data/comparar",
+
+  estructura:
+    "/big-data/estructura"
+}
+
+
+/* ==========================================================
+   NORMALIZAR RESPUESTA DE PERMISOS
+   ========================================================== */
+
+const obtenerOrigenPermisos = (
+  respuesta
+) => {
+
+  if (
+    respuesta?.permisos &&
+    typeof respuesta.permisos ===
+      "object"
+  ) {
+
+    return respuesta.permisos
+  }
+
+
+  if (
+    respuesta?.data &&
+    typeof respuesta.data ===
+      "object" &&
+    !Array.isArray(
+      respuesta.data
+    )
+  ) {
+
+    return respuesta.data
+  }
+
+
+  return respuesta || {}
+}
+
+
+/* ==========================================================
+   OBTENER CURSOS
+   ========================================================== */
+
+const obtenerCursosRespuesta = (
+  respuesta
+) => {
+
+  const origen =
+    obtenerOrigenPermisos(
+      respuesta
+    )
+
+
+  if (
+    Array.isArray(
+      origen?.cursos
+    )
+  ) {
+
+    return origen.cursos
+  }
+
+
+  if (
+    Array.isArray(
+      respuesta?.cursos
+    )
+  ) {
+
+    return respuesta.cursos
+  }
+
+
+  return []
+}
+
+
+/* ==========================================================
+   OBTENER MODULOS DE CURSO
+   ========================================================== */
+
+const obtenerModulosCurso = (
+  curso
+) => {
+
+  if (
+    Array.isArray(
+      curso?.modulos
+    )
+  ) {
+
+    return curso.modulos
+  }
+
+
+  if (
+    Array.isArray(
+      curso?.modules
+    )
+  ) {
+
+    return curso.modules
+  }
+
+
+  return []
+}
+
+
+/* ==========================================================
+   EXTRAER CLAVES DE PERMISOS
+   ========================================================== */
+
+const obtenerClavesPermisos = (
+  respuesta
+) => {
+
+  const claves =
+    new Set()
+
+
+  const origen =
+    obtenerOrigenPermisos(
+      respuesta
+    )
+
+
+  const cursos =
+    obtenerCursosRespuesta(
+      respuesta
+    )
+
+
+  /* ========================================================
+     MODULOS DENTRO DE CURSOS
+     ======================================================== */
+
+  for (
+    const curso
+    of cursos
+  ) {
+
+    if (
+      curso?.activo ===
+      false
+    ) {
+      continue
+    }
+
+
+    const modulos =
+      obtenerModulosCurso(
+        curso
+      )
+
+
+    for (
+      const modulo
+      of modulos
+    ) {
+
+      if (
+        modulo?.activo ===
+        false
+      ) {
+        continue
+      }
+
+
+      if (
+        modulo?.clave
+      ) {
+
+        claves.add(
+          String(
+            modulo.clave
+          )
+        )
+      }
+    }
+  }
+
+
+  /* ========================================================
+     MODULOS SEPARADOS
+     ======================================================== */
+
+  const modulosSeparados =
+    Array.isArray(
+      origen?.modulos
+    )
+      ? origen.modulos
+
+      : Array.isArray(
+          origen?.modules
+        )
+        ? origen.modules
+
+        : []
+
+
+  for (
+    const modulo
+    of modulosSeparados
+  ) {
+
+    if (
+      modulo?.activo ===
+      false
+    ) {
+      continue
+    }
+
+
+    if (
+      modulo?.clave
+    ) {
+
+      claves.add(
+        String(
+          modulo.clave
+        )
+      )
+    }
+  }
+
+
+  /* ========================================================
+     COMPATIBILIDAD CON ARRAYS DE PERMISOS
+     ======================================================== */
+
+  const permisosSeparados =
+    Array.isArray(
+      origen?.permisos
+    )
+      ? origen.permisos
+
+      : Array.isArray(
+          origen?.permissions
+        )
+        ? origen.permissions
+
+        : []
+
+
+  for (
+    const permiso
+    of permisosSeparados
+  ) {
+
+    if (
+      typeof permiso ===
+      "string"
+    ) {
+
+      claves.add(
+        permiso
+      )
+
+      continue
+    }
+
+
+    if (
+      permiso?.clave &&
+      permiso?.activo !==
+        false
+    ) {
+
+      claves.add(
+        String(
+          permiso.clave
+        )
+      )
+    }
+  }
+
+
+  return claves
+}
+
+
+/* ==========================================================
+   RUTA PUBLICA
+   ========================================================== */
+
+const Publica = ({
+  children
+}) => {
+
+  if (
+    isLogged()
+  ) {
+
+    return (
+      <Navigate
+        to="/mis-cursos"
+        replace
+      />
+    )
+  }
+
+
+  return children
+}
+
+
+/* ==========================================================
+   RUTA PRIVADA GENERAL
+   ========================================================== */
+
+const PrivadaGeneral = ({
   children
 }) => {
 
@@ -89,10 +454,320 @@ const Privada = ({
 
 
 /* ==========================================================
-   SOLO ADMIN
+   RUTA DE MODULO
    ========================================================== */
 
-const SoloAdmin = ({
+const RutaModulo = ({
+  permiso,
+  children
+}) => {
+
+  const conectado =
+    isLogged()
+
+
+  const administrador =
+    esAdmin()
+
+
+  const [
+    permisos,
+    setPermisos
+  ] =
+    useState(null)
+
+
+  const [
+    cargando,
+    setCargando
+  ] =
+    useState(
+      conectado &&
+      !administrador
+    )
+
+
+  const [
+    errorPermisos,
+    setErrorPermisos
+  ] =
+    useState("")
+
+
+  /* ========================================================
+     CONSULTAR PERMISOS
+     ======================================================== */
+
+  useEffect(
+    () => {
+
+      if (
+        !conectado
+      ) {
+
+        setPermisos(
+          new Set()
+        )
+
+        setCargando(
+          false
+        )
+
+        setErrorPermisos(
+          ""
+        )
+
+        return
+      }
+
+
+      /*
+       * Administrador:
+       * acceso completo.
+       */
+      if (
+        administrador
+      ) {
+
+        setPermisos(
+          new Set()
+        )
+
+        setCargando(
+          false
+        )
+
+        setErrorPermisos(
+          ""
+        )
+
+        return
+      }
+
+
+      let activo =
+        true
+
+
+      const cargarPermisos =
+        async () => {
+
+          setCargando(
+            true
+          )
+
+          setErrorPermisos(
+            ""
+          )
+
+
+          try {
+
+            const respuesta =
+              await obtenerMisPermisos()
+
+
+            if (
+              !activo
+            ) {
+              return
+            }
+
+
+            const claves =
+              obtenerClavesPermisos(
+                respuesta
+              )
+
+
+            setPermisos(
+              claves
+            )
+
+          } catch (
+            error
+          ) {
+
+            if (
+              !activo
+            ) {
+              return
+            }
+
+
+            console.error(
+              "Error cargando permisos:",
+              error
+            )
+
+
+            setPermisos(
+              new Set()
+            )
+
+
+            setErrorPermisos(
+              "No se pudieron comprobar tus permisos."
+            )
+
+          } finally {
+
+            if (
+              activo
+            ) {
+
+              setCargando(
+                false
+              )
+            }
+          }
+        }
+
+
+      cargarPermisos()
+
+
+      return () => {
+
+        activo =
+          false
+      }
+
+    },
+    [
+      conectado,
+      administrador,
+      permiso
+    ]
+  )
+
+
+  /* ========================================================
+     SIN SESION
+     ======================================================== */
+
+  if (
+    !conectado
+  ) {
+
+    return (
+      <Navigate
+        to="/login"
+        replace
+      />
+    )
+  }
+
+
+  /* ========================================================
+     ADMIN
+     ======================================================== */
+
+  if (
+    administrador
+  ) {
+
+    return (
+      <Layout>
+        {children}
+      </Layout>
+    )
+  }
+
+
+  /* ========================================================
+     CARGANDO
+     ======================================================== */
+
+  if (
+    cargando ||
+    permisos === null
+  ) {
+
+    return (
+      <Layout>
+
+        <div className="loading">
+          Cargando módulo...
+        </div>
+
+      </Layout>
+    )
+  }
+
+
+  /* ========================================================
+     ERROR
+     ======================================================== */
+
+  if (
+    errorPermisos
+  ) {
+
+    return (
+      <Layout>
+
+        <div className="card">
+
+          <div className="alert alert-error">
+            {errorPermisos}
+          </div>
+
+
+          <button
+            type="button"
+            className="btn"
+            onClick={
+              () =>
+                window.location.reload()
+            }
+          >
+            Reintentar
+          </button>
+
+        </div>
+
+      </Layout>
+    )
+  }
+
+
+  /* ========================================================
+     SIN PERMISO
+     ======================================================== */
+
+  if (
+    !permisos.has(
+      permiso
+    )
+  ) {
+
+    return (
+      <Navigate
+        to="/mis-cursos"
+        replace
+      />
+    )
+  }
+
+
+  /* ========================================================
+     PERMITIDO
+     ======================================================== */
+
+  return (
+    <Layout>
+      {children}
+    </Layout>
+  )
+}
+
+
+/* ==========================================================
+   RUTA SOLO ADMINISTRADOR
+   ========================================================== */
+
+const RutaAdmin = ({
   children
 }) => {
 
@@ -131,35 +806,10 @@ const SoloAdmin = ({
 
 
 /* ==========================================================
-   RUTA PUBLICA
-   ========================================================== */
-
-const Publica = ({
-  children
-}) => {
-
-  if (
-    isLogged()
-  ) {
-
-    return (
-      <Navigate
-        to="/mis-cursos"
-        replace
-      />
-    )
-  }
-
-
-  return children
-}
-
-
-/* ==========================================================
    INICIO
    ========================================================== */
 
-const Inicio = () => {
+const InicioPrivado = () => {
 
   if (
     !isLogged()
@@ -226,7 +876,7 @@ const App = () => {
 
 
       {/* ====================================================
-          RECUPERAR PASSWORD
+          RECUPERAR CONTRASEÑA
           ==================================================== */}
 
       <Route
@@ -242,7 +892,7 @@ const App = () => {
 
 
       {/* ====================================================
-          RESTABLECER PASSWORD
+          RESTABLECER CONTRASEÑA
           ==================================================== */}
 
       <Route
@@ -258,13 +908,13 @@ const App = () => {
 
 
       {/* ====================================================
-          RAIZ
+          INICIO
           ==================================================== */}
 
       <Route
         path="/"
         element={
-          <Inicio />
+          <InicioPrivado />
         }
       />
 
@@ -276,116 +926,167 @@ const App = () => {
       <Route
         path="/mis-cursos"
         element={
-          <Privada>
+          <PrivadaGeneral>
 
             <MisCursos />
 
-          </Privada>
+          </PrivadaGeneral>
         }
       />
 
 
       {/* ====================================================
-          BIG DATA
-          ==================================================== */}
-
-
-      {/* ====================================================
-          CARGAR ARCHIVOS
+          BIG DATA - CARGAR ARCHIVOS
           ==================================================== */}
 
       <Route
-        path="/big-data/importar"
+        path={
+          RUTAS_BIG_DATA
+            .importar
+        }
         element={
-          <Privada>
+          <RutaModulo
+            permiso={
+              PERMISOS_BIG_DATA
+                .importar
+            }
+          >
 
             <Importar />
 
-          </Privada>
+          </RutaModulo>
         }
       />
 
 
       {/* ====================================================
-          DATASETS
+          BIG DATA - DATASETS
           ==================================================== */}
 
       <Route
-        path="/big-data/datasets"
+        path={
+          RUTAS_BIG_DATA
+            .datasets
+        }
         element={
-          <Privada>
+          <RutaModulo
+            permiso={
+              PERMISOS_BIG_DATA
+                .datasets
+            }
+          >
 
             <Archivos />
 
-          </Privada>
+          </RutaModulo>
         }
       />
 
 
       {/* ====================================================
-          ANALISIS
+          BIG DATA - ANALISIS
           ==================================================== */}
 
       <Route
-        path="/big-data/analisis"
+        path={
+          RUTAS_BIG_DATA
+            .analisis
+        }
         element={
-          <Privada>
+          <RutaModulo
+            permiso={
+              PERMISOS_BIG_DATA
+                .analisis
+            }
+          >
 
             <Comparar
               modo="analisis"
             />
 
-          </Privada>
+          </RutaModulo>
         }
       />
 
 
       {/* ====================================================
-          COMPARACION
+          BIG DATA - COMPARACION
           ==================================================== */}
 
       <Route
-        path="/big-data/comparar"
+        path={
+          RUTAS_BIG_DATA
+            .comparar
+        }
         element={
-          <Privada>
+          <RutaModulo
+            permiso={
+              PERMISOS_BIG_DATA
+                .comparar
+            }
+          >
 
             <Comparar
               modo="comparacion"
             />
 
-          </Privada>
+          </RutaModulo>
         }
       />
 
 
       {/* ====================================================
-          ESTRUCTURA DE DATOS
+          BIG DATA - ESTRUCTURA
           ==================================================== */}
 
       <Route
-        path="/big-data/estructura"
+        path={
+          RUTAS_BIG_DATA
+            .estructura
+        }
         element={
-          <Privada>
+          <RutaModulo
+            permiso={
+              PERMISOS_BIG_DATA
+                .estructura
+            }
+          >
 
             <DatosEmpresa />
 
-          </Privada>
+          </RutaModulo>
         }
       />
 
 
       {/* ====================================================
-          ADMINISTRACION
+          ADMINISTRACION - USUARIOS
           ==================================================== */}
 
       <Route
         path="/administracion/usuarios"
         element={
-          <SoloAdmin>
+          <RutaAdmin>
 
             <AdminUsuarios />
 
-          </SoloAdmin>
+          </RutaAdmin>
+        }
+      />
+
+
+      {/* ====================================================
+          ADMINISTRACION - CURSOS Y MODULOS
+          ==================================================== */}
+
+      <Route
+        path="/administracion/cursos"
+        element={
+          <RutaAdmin>
+
+            <AdminCursos />
+
+          </RutaAdmin>
         }
       />
 
@@ -394,44 +1095,65 @@ const App = () => {
           RUTAS ANTIGUAS
           ==================================================== */}
 
+
+      {/* IMPORTAR */}
+
       <Route
         path="/importar"
         element={
           <Navigate
-            to="/big-data/importar"
+            to={
+              RUTAS_BIG_DATA
+                .importar
+            }
             replace
           />
         }
       />
 
+
+      {/* DATASETS */}
 
       <Route
         path="/archivos"
         element={
           <Navigate
-            to="/big-data/datasets"
+            to={
+              RUTAS_BIG_DATA
+                .datasets
+            }
             replace
           />
         }
       />
 
 
-      <Route
-        path="/comparar"
-        element={
-          <Navigate
-            to="/big-data/comparar"
-            replace
-          />
-        }
-      />
-
+      {/* ESTRUCTURA */}
 
       <Route
         path="/datos-empresa"
         element={
           <Navigate
-            to="/big-data/estructura"
+            to={
+              RUTAS_BIG_DATA
+                .estructura
+            }
+            replace
+          />
+        }
+      />
+
+
+      {/* COMPARACION */}
+
+      <Route
+        path="/comparar"
+        element={
+          <Navigate
+            to={
+              RUTAS_BIG_DATA
+                .comparar
+            }
             replace
           />
         }
@@ -441,14 +1163,17 @@ const App = () => {
       {/* ====================================================
           GRAFICOS
 
-          Ahora están dentro de Datasets.
+          Ahora vive dentro de Datasets.
           ==================================================== */}
 
       <Route
         path="/big-data/graficos"
         element={
           <Navigate
-            to="/big-data/datasets"
+            to={
+              RUTAS_BIG_DATA
+                .datasets
+            }
             replace
           />
         }
@@ -458,14 +1183,32 @@ const App = () => {
       {/* ====================================================
           DOCUMENTACION
 
-          Ahora está dentro de Cargar archivos.
+          Ahora vive dentro de Cargar archivos.
           ==================================================== */}
 
       <Route
         path="/big-data/documentos"
         element={
           <Navigate
-            to="/big-data/importar"
+            to={
+              RUTAS_BIG_DATA
+                .importar
+            }
+            replace
+          />
+        }
+      />
+
+
+      {/* ====================================================
+          ALIAS MIS CURSOS
+          ==================================================== */}
+
+      <Route
+        path="/cursos"
+        element={
+          <Navigate
+            to="/mis-cursos"
             replace
           />
         }

@@ -809,11 +809,27 @@ const Layout = ({
               </div>
 
 
+              {/* =============================================
+                  USUARIOS Y PERMISOS
+                  ============================================= */}
+
               <EnlaceMenu
                 to="/administracion/usuarios"
                 icono="⚙"
               >
                 Usuarios y permisos
+              </EnlaceMenu>
+
+
+              {/* =============================================
+                  CURSOS Y MODULOS
+                  ============================================= */}
+
+              <EnlaceMenu
+                to="/administracion/cursos"
+                icono="▤"
+              >
+                Cursos y módulos
               </EnlaceMenu>
 
             </div>
