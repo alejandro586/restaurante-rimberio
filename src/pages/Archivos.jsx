@@ -22,14 +22,24 @@ import Modal from "../components/Modal"
 
 const FILAS_TABLA = 100
 
-/*
- * Usamos más filas para los cálculos de los gráficos,
- * pero seguimos mostrando solamente 100 en la tabla.
- */
 const FILAS_GRAFICO_MAX = 5000
 
 const PERMISO_GRAFICOS =
   "big_data.graficos"
+
+
+const COLORES_SERIES = [
+  "#c85c2d",
+  "#256f68",
+  "#7c3aed",
+  "#2563eb",
+  "#a16207",
+  "#4d7c0f",
+  "#be123c",
+  "#0f766e",
+  "#9333ea",
+  "#0369a1"
+]
 
 
 /* ==========================================================
@@ -41,19 +51,27 @@ const normalizarTexto = (valor) =>
     .trim()
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replace(
+      /[\u0300-\u036f]/g,
+      ""
+    )
 
 
 /* ==========================================================
-   CONVERTIR VALORES A NUMERO
+   CONVERTIR A NUMERO
    ========================================================== */
 
 const aNumero = (valor) => {
-  if (typeof valor === "number") {
+
+  if (
+    typeof valor ===
+    "number"
+  ) {
     return Number.isFinite(valor)
       ? valor
       : null
   }
+
 
   if (
     valor === null ||
@@ -62,13 +80,16 @@ const aNumero = (valor) => {
     return null
   }
 
+
   let texto =
     String(valor)
       .trim()
 
+
   if (!texto) {
     return null
   }
+
 
   texto =
     texto
@@ -78,32 +99,47 @@ const aNumero = (valor) => {
       .replace(/€/g, "")
       .replace(/%/g, "")
 
+
   /*
-   * Ejemplos:
+   * Ejemplos compatibles:
    *
    * 1,200.50
    * 1.200,50
+   * 28,50
+   * S/. 2,500.00
    */
   if (
     texto.includes(",") &&
     texto.includes(".")
   ) {
+
     const ultimaComa =
       texto.lastIndexOf(",")
 
     const ultimoPunto =
       texto.lastIndexOf(".")
 
-    if (ultimaComa > ultimoPunto) {
+
+    if (
+      ultimaComa >
+      ultimoPunto
+    ) {
+
       texto =
         texto
           .replace(/\./g, "")
           .replace(",", ".")
+
     } else {
+
       texto =
         texto.replace(/,/g, "")
     }
-  } else if (texto.includes(",")) {
+
+  } else if (
+    texto.includes(",")
+  ) {
+
     const partes =
       texto.split(",")
 
@@ -112,29 +148,29 @@ const aNumero = (valor) => {
         partes.length - 1
       ]
 
-    /*
-     * 25,50
-     */
+
     if (
       partes.length === 2 &&
       ultima.length <= 2
     ) {
+
       texto =
         texto.replace(",", ".")
+
     } else {
-      /*
-       * 1,200
-       */
+
       texto =
         texto.replace(/,/g, "")
     }
   }
+
 
   texto =
     texto.replace(
       /[^0-9.-]/g,
       ""
     )
+
 
   if (
     !texto ||
@@ -144,8 +180,10 @@ const aNumero = (valor) => {
     return null
   }
 
+
   const numero =
     Number(texto)
+
 
   return Number.isFinite(numero)
     ? numero
@@ -154,16 +192,21 @@ const aNumero = (valor) => {
 
 
 /* ==========================================================
-   FORMATEAR NUMERO
+   FORMATO NUMERICO
    ========================================================== */
 
 const formatoNumero = (numero) => {
+
   const valor =
     Number(numero)
 
-  if (!Number.isFinite(valor)) {
+
+  if (
+    !Number.isFinite(valor)
+  ) {
     return "0"
   }
+
 
   return valor.toLocaleString(
     "es-PE",
@@ -175,22 +218,74 @@ const formatoNumero = (numero) => {
 
 
 /* ==========================================================
+   FORMATO CORTO PARA EJES
+   ========================================================== */
+
+const formatoCorto = (numero) => {
+
+  const valor =
+    Number(numero)
+
+
+  if (
+    !Number.isFinite(valor)
+  ) {
+    return "0"
+  }
+
+
+  const absoluto =
+    Math.abs(valor)
+
+
+  if (
+    absoluto >= 1000000
+  ) {
+    return `${(
+      valor /
+      1000000
+    ).toFixed(1)}M`
+  }
+
+
+  if (
+    absoluto >= 1000
+  ) {
+    return `${(
+      valor /
+      1000
+    ).toFixed(0)}k`
+  }
+
+
+  return valor.toLocaleString(
+    "es-PE",
+    {
+      maximumFractionDigits: 1
+    }
+  )
+}
+
+
+/* ==========================================================
    ACORTAR TEXTO
    ========================================================== */
 
 const cortarTexto = (
   valor,
-  limite = 13
+  limite = 14
 ) => {
+
   const texto =
     String(valor ?? "")
 
+
   if (
-    texto.length <=
-    limite
+    texto.length <= limite
   ) {
     return texto
   }
+
 
   return `${texto.slice(
     0,
@@ -200,23 +295,30 @@ const cortarTexto = (
 
 
 /* ==========================================================
-   DETECTAR COLUMNAS NUMERICAS Y DIMENSIONES
+   DETECTAR COLUMNAS
    ========================================================== */
 
 const detectarColumnas = (
   filas,
   columnas
 ) => {
+
   const muestra =
-    filas.slice(0, 200)
+    filas.slice(
+      0,
+      200
+    )
+
 
   const numericas = []
   const dimensiones = []
+
 
   for (
     const columna
     of columnas
   ) {
+
     const valores =
       muestra
         .map(
@@ -230,9 +332,11 @@ const detectarColumnas = (
             String(valor).trim() !== ""
         )
 
+
     if (
       valores.length === 0
     ) {
+
       dimensiones.push(
         columna
       )
@@ -240,28 +344,35 @@ const detectarColumnas = (
       continue
     }
 
+
     const convertibles =
       valores.filter(
         (valor) =>
           aNumero(valor) !== null
       )
 
+
     const porcentaje =
       convertibles.length /
       valores.length
 
+
     if (
       porcentaje >= 0.7
     ) {
+
       numericas.push(
         columna
       )
+
     } else {
+
       dimensiones.push(
         columna
       )
     }
   }
+
 
   return {
     numericas,
@@ -271,24 +382,25 @@ const detectarColumnas = (
 
 
 /* ==========================================================
-   METRICA INICIAL
+   ELEGIR METRICA INICIAL
    ========================================================== */
 
 const elegirMetrica = (
   columnas
 ) => {
+
   if (
     columnas.length === 0
   ) {
     return ""
   }
 
+
   const prioridades = [
     "ingreso_total",
     "ingreso",
     "venta_total",
     "ventas",
-    "venta",
     "ganancia",
     "utilidad",
     "unidades_vendidas",
@@ -300,19 +412,24 @@ const elegirMetrica = (
     "costo"
   ]
 
+
   for (
     const prioridad
     of prioridades
   ) {
+
     const encontrada =
       columnas.find(
         (columna) => {
+
           const texto =
-            normalizarTexto(columna)
-              .replace(
-                /\s+/g,
-                "_"
-              )
+            normalizarTexto(
+              columna
+            ).replace(
+              /\s+/g,
+              "_"
+            )
+
 
           return (
             texto === prioridad ||
@@ -323,27 +440,33 @@ const elegirMetrica = (
         }
       )
 
-    if (encontrada) {
+
+    if (
+      encontrada
+    ) {
       return encontrada
     }
   }
+
 
   return columnas[0]
 }
 
 
 /* ==========================================================
-   DIMENSION INICIAL
+   ELEGIR DIMENSION
    ========================================================== */
 
 const elegirDimension = (
   columnas
 ) => {
+
   if (
     columnas.length === 0
   ) {
     return "__fila__"
   }
+
 
   const prioridades = [
     "mes",
@@ -358,10 +481,12 @@ const elegirDimension = (
     "cliente"
   ]
 
+
   for (
     const prioridad
     of prioridades
   ) {
+
     const encontrada =
       columnas.find(
         (columna) =>
@@ -374,22 +499,30 @@ const elegirDimension = (
           )
       )
 
-    if (encontrada) {
+
+    if (
+      encontrada
+    ) {
       return encontrada
     }
   }
+
 
   return columnas[0]
 }
 
 
 /* ==========================================================
-   DETECTAR DIMENSION TEMPORAL
+   DIMENSION TEMPORAL
    ========================================================== */
 
 const esTemporal = (columna) => {
+
   const texto =
-    normalizarTexto(columna)
+    normalizarTexto(
+      columna
+    )
+
 
   return (
     texto.includes("fecha") ||
@@ -401,7 +534,7 @@ const esTemporal = (columna) => {
 
 
 /* ==========================================================
-   CONSTRUIR SERIE
+   SERIE PARA UNA METRICA
    ========================================================== */
 
 const construirSerie = (
@@ -409,52 +542,53 @@ const construirSerie = (
   dimension,
   metrica
 ) => {
+
   if (!metrica) {
     return []
   }
 
+
   /*
-   * Si no existe una dimensión textual,
-   * usamos cada fila individualmente.
+   * Si no existe dimensión categórica,
+   * usamos las filas.
    */
   if (
-    dimension ===
-    "__fila__"
+    dimension === "__fila__"
   ) {
+
     return filas
-      .slice(0, 30)
+      .slice(0, 20)
       .map(
         (
           fila,
           indice
-        ) => {
-          const valor =
+        ) => ({
+          etiqueta:
+            `Fila ${indice + 1}`,
+
+          valor:
             aNumero(
               fila[metrica]
-            )
-
-          return {
-            etiqueta:
-              `Fila ${indice + 1}`,
-
-            valor:
-              valor ?? 0
-          }
-        }
+            ) ?? 0
+        })
       )
   }
 
+
   const grupos =
     new Map()
+
 
   for (
     const fila
     of filas
   ) {
+
     const valor =
       aNumero(
         fila[metrica]
       )
+
 
     if (
       valor === null
@@ -462,27 +596,32 @@ const construirSerie = (
       continue
     }
 
+
     let etiqueta =
       String(
         fila[dimension] ??
         ""
       ).trim()
 
+
     if (!etiqueta) {
       etiqueta =
         "Sin dato"
     }
 
-    const actual =
-      grupos.get(
-        etiqueta
-      ) || 0
 
     grupos.set(
       etiqueta,
-      actual + valor
+      (
+        grupos.get(
+          etiqueta
+        ) ||
+        0
+      ) +
+      valor
     )
   }
+
 
   let serie =
     Array.from(
@@ -497,18 +636,13 @@ const construirSerie = (
       })
     )
 
-  /*
-   * Fechas y meses:
-   * respetamos el orden natural.
-   *
-   * El resto:
-   * ordenamos del mayor al menor.
-   */
+
   if (
     esTemporal(
       dimension
     )
   ) {
+
     serie =
       serie.sort(
         (a, b) =>
@@ -524,7 +658,9 @@ const construirSerie = (
             }
           )
       )
+
   } else {
+
     serie =
       serie.sort(
         (a, b) =>
@@ -533,10 +669,7 @@ const construirSerie = (
       )
   }
 
-  /*
-   * Evitamos mostrar cientos de
-   * categorías simultáneamente.
-   */
+
   return serie.slice(
     0,
     15
@@ -545,15 +678,350 @@ const construirSerie = (
 
 
 /* ==========================================================
-   GRAFICO DE BARRAS
+   TODAS LAS METRICAS
+   ========================================================== */
+
+const construirTodasMetricas = (
+  filas,
+  dimension,
+  metricas,
+  metricaOrden
+) => {
+
+  if (
+    metricas.length === 0
+  ) {
+    return {
+      etiquetas: [],
+      series: []
+    }
+  }
+
+
+  let registros = []
+
+
+  /* ========================================================
+     POR FILA
+     ======================================================== */
+
+  if (
+    dimension === "__fila__"
+  ) {
+
+    registros =
+      filas
+        .slice(0, 15)
+        .map(
+          (
+            fila,
+            indice
+          ) => {
+
+            const valores = {}
+
+
+            for (
+              const metrica
+              of metricas
+            ) {
+
+              valores[metrica] =
+                aNumero(
+                  fila[metrica]
+                ) ?? 0
+            }
+
+
+            return {
+              etiqueta:
+                `Fila ${indice + 1}`,
+              valores
+            }
+          }
+        )
+
+  } else {
+
+    /* ======================================================
+       AGRUPADO
+       ====================================================== */
+
+    const grupos =
+      new Map()
+
+
+    for (
+      const fila
+      of filas
+    ) {
+
+      let etiqueta =
+        String(
+          fila[dimension] ??
+          ""
+        ).trim()
+
+
+      if (!etiqueta) {
+        etiqueta =
+          "Sin dato"
+      }
+
+
+      if (
+        !grupos.has(
+          etiqueta
+        )
+      ) {
+
+        const valores = {}
+
+
+        for (
+          const metrica
+          of metricas
+        ) {
+          valores[metrica] =
+            0
+        }
+
+
+        grupos.set(
+          etiqueta,
+          valores
+        )
+      }
+
+
+      const grupo =
+        grupos.get(
+          etiqueta
+        )
+
+
+      for (
+        const metrica
+        of metricas
+      ) {
+
+        const numero =
+          aNumero(
+            fila[metrica]
+          )
+
+
+        if (
+          numero !== null
+        ) {
+
+          grupo[metrica] +=
+            numero
+        }
+      }
+    }
+
+
+    registros =
+      Array.from(
+        grupos.entries()
+      ).map(
+        ([
+          etiqueta,
+          valores
+        ]) => ({
+          etiqueta,
+          valores
+        })
+      )
+
+
+    if (
+      esTemporal(
+        dimension
+      )
+    ) {
+
+      registros.sort(
+        (a, b) =>
+          String(
+            a.etiqueta
+          ).localeCompare(
+            String(
+              b.etiqueta
+            ),
+            "es",
+            {
+              numeric: true
+            }
+          )
+      )
+
+    } else {
+
+      registros.sort(
+        (a, b) =>
+          (
+            b.valores[
+              metricaOrden
+            ] ||
+            0
+          ) -
+          (
+            a.valores[
+              metricaOrden
+            ] ||
+            0
+          )
+      )
+    }
+
+
+    registros =
+      registros.slice(
+        0,
+        15
+      )
+  }
+
+
+  /* ========================================================
+     NORMALIZAR CADA METRICA 0 - 100
+     ======================================================== */
+
+  const series =
+    metricas.map(
+      (
+        metrica,
+        indice
+      ) => {
+
+        const valores =
+          registros.map(
+            (registro) =>
+              Number(
+                registro
+                  .valores[
+                  metrica
+                ] ||
+                0
+              )
+          )
+
+
+        const minimo =
+          Math.min(
+            ...valores
+          )
+
+
+        const maximo =
+          Math.max(
+            ...valores
+          )
+
+
+        const rango =
+          maximo -
+          minimo
+
+
+        const puntos =
+          registros.map(
+            (
+              registro
+            ) => {
+
+              const real =
+                Number(
+                  registro
+                    .valores[
+                    metrica
+                  ] ||
+                  0
+                )
+
+
+              let normalizado = 0
+
+
+              if (
+                rango === 0
+              ) {
+
+                normalizado =
+                  maximo === 0
+                    ? 0
+                    : 100
+
+              } else {
+
+                normalizado =
+                  (
+                    (
+                      real -
+                      minimo
+                    ) /
+                    rango
+                  ) *
+                  100
+              }
+
+
+              return {
+                etiqueta:
+                  registro.etiqueta,
+
+                valorReal:
+                  real,
+
+                valorNormalizado:
+                  normalizado
+              }
+            }
+          )
+
+
+        return {
+          nombre:
+            metrica,
+
+          color:
+            COLORES_SERIES[
+              indice %
+              COLORES_SERIES.length
+            ],
+
+          puntos
+        }
+      }
+    )
+
+
+  return {
+    etiquetas:
+      registros.map(
+        (registro) =>
+          registro.etiqueta
+      ),
+
+    series
+  }
+}
+
+
+/* ==========================================================
+   GRAFICO DE BARRAS VERTICALES
    ========================================================== */
 
 const GraficoBarras = ({
   datos
 }) => {
+
   if (
     datos.length === 0
   ) {
+
     return (
       <div className="empty">
         No hay datos suficientes para construir este gráfico.
@@ -561,143 +1029,22 @@ const GraficoBarras = ({
     )
   }
 
-  const maximo =
+
+  const ancho =
     Math.max(
-      ...datos.map(
-        (item) =>
-          Math.abs(
-            item.valor
-          )
-      ),
-      1
+      760,
+      datos.length * 90
     )
 
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "11px"
-      }}
-    >
-      {datos.map(
-        (
-          item,
-          indice
-        ) => {
-          const ancho =
-            Math.max(
-              2,
-              (
-                Math.abs(
-                  item.valor
-                ) /
-                maximo
-              ) * 100
-            )
-
-          return (
-            <div
-              key={
-                `${item.etiqueta}-${indice}`
-              }
-              style={{
-                display: "grid",
-                gridTemplateColumns:
-                  "minmax(110px, 180px) 1fr minmax(85px, auto)",
-                alignItems: "center",
-                gap: "10px"
-              }}
-            >
-              <div
-                title={
-                  item.etiqueta
-                }
-                style={{
-                  fontSize: "12px",
-                  overflow: "hidden",
-                  textOverflow:
-                    "ellipsis",
-                  whiteSpace:
-                    "nowrap"
-                }}
-              >
-                {item.etiqueta}
-              </div>
-
-              <div
-                style={{
-                  height: "20px",
-                  borderRadius:
-                    "999px",
-                  background:
-                    "#f2ebe6",
-                  overflow:
-                    "hidden"
-                }}
-              >
-                <div
-                  style={{
-                    width:
-                      `${ancho}%`,
-                    height: "100%",
-                    borderRadius:
-                      "999px",
-                    background:
-                      "#c85c2d",
-                    transition:
-                      "width .3s ease"
-                  }}
-                />
-              </div>
-
-              <div
-                style={{
-                  textAlign:
-                    "right",
-                  fontSize:
-                    "12px",
-                  fontWeight:
-                    700
-                }}
-              >
-                {formatoNumero(
-                  item.valor
-                )}
-              </div>
-            </div>
-          )
-        }
-      )}
-    </div>
-  )
-}
+  const alto =
+    390
 
 
-/* ==========================================================
-   GRAFICO DE PUNTOS
-   ========================================================== */
-
-const GraficoPuntos = ({
-  datos
-}) => {
-  if (
-    datos.length === 0
-  ) {
-    return (
-      <div className="empty">
-        No hay datos suficientes para construir este gráfico.
-      </div>
-    )
-  }
-
-  const ancho = 900
-  const alto = 320
-
-  const margenIzquierdo = 60
+  const margenIzquierdo = 70
   const margenDerecho = 25
-  const margenSuperior = 35
-  const margenInferior = 70
+  const margenSuperior = 50
+  const margenInferior = 85
+
 
   const areaAncho =
     ancho -
@@ -709,6 +1056,7 @@ const GraficoPuntos = ({
     margenSuperior -
     margenInferior
 
+
   const valores =
     datos.map(
       (item) =>
@@ -717,68 +1065,55 @@ const GraficoPuntos = ({
         ) || 0
     )
 
+
   const maximo =
     Math.max(
       ...valores,
       1
     )
 
-  /*
-   * Normalmente nuestros valores
-   * de ventas/cantidades serán positivos.
-   * Dejamos cero como base visual.
-   */
+
   const minimo =
     Math.min(
       ...valores,
       0
     )
 
+
   const rango =
     maximo -
     minimo ||
     1
 
-  const puntos =
-    datos.map(
+
+  const convertirY =
+    (valor) =>
+      margenSuperior +
       (
-        item,
-        indice
-      ) => {
-        const x =
-          datos.length === 1
-            ? margenIzquierdo +
-              areaAncho / 2
-            : margenIzquierdo +
-              (
-                indice /
-                (
-                  datos.length -
-                  1
-                )
-              ) *
-                areaAncho
+        (
+          maximo -
+          valor
+        ) /
+        rango
+      ) *
+        areaAlto
 
-        const y =
-          margenSuperior +
-          (
-            (
-              maximo -
-              Number(
-                item.valor || 0
-              )
-            ) /
-            rango
-          ) *
-            areaAlto
 
-        return {
-          ...item,
-          x,
-          y
-        }
-      }
+  const baseY =
+    convertirY(0)
+
+
+  const espacio =
+    areaAncho /
+    datos.length
+
+
+  const anchoBarra =
+    Math.min(
+      52,
+      espacio * 0.58
     )
+
 
   return (
     <div
@@ -791,17 +1126,18 @@ const GraficoPuntos = ({
         viewBox={
           `0 0 ${ancho} ${alto}`
         }
-        role="img"
-        aria-label="Gráfico de puntos"
         style={{
           display: "block",
+          minWidth:
+            `${ancho}px`,
           width: "100%",
-          minWidth: "650px",
           height: "auto"
         }}
+        role="img"
+        aria-label="Gráfico de barras"
       >
         {/* ================================================
-            GUIAS HORIZONTALES
+            GUIAS
             ================================================ */}
 
         {[
@@ -812,15 +1148,18 @@ const GraficoPuntos = ({
           1
         ].map(
           (proporcion) => {
-            const y =
-              margenSuperior +
-              areaAlto *
-                proporcion
 
             const valor =
               maximo -
               rango *
                 proporcion
+
+
+            const y =
+              convertirY(
+                valor
+              )
+
 
             return (
               <g
@@ -832,29 +1171,29 @@ const GraficoPuntos = ({
                   x1={
                     margenIzquierdo
                   }
-                  y1={y}
                   x2={
                     ancho -
                     margenDerecho
                   }
+                  y1={y}
                   y2={y}
-                  stroke="#eee7e2"
-                  strokeDasharray="4 4"
+                  stroke="#eadfd7"
+                  strokeDasharray="4 5"
                 />
 
                 <text
                   x={
                     margenIzquierdo -
-                    10
+                    12
                   }
                   y={
                     y + 4
                   }
                   textAnchor="end"
                   fontSize="11"
-                  fill="#86786f"
+                  fill="#8a7568"
                 >
-                  {formatoNumero(
+                  {formatoCorto(
                     valor
                   )}
                 </text>
@@ -863,51 +1202,484 @@ const GraficoPuntos = ({
           }
         )}
 
-        {/* ================================================
-            EJE X
-            ================================================ */}
+
+        {/* EJE Y */}
 
         <line
           x1={
             margenIzquierdo
           }
-          y1={
-            margenSuperior +
-            areaAlto
-          }
           x2={
-            ancho -
-            margenDerecho
-          }
-          y2={
-            margenSuperior +
-            areaAlto
-          }
-          stroke="#d8cdc5"
-          strokeWidth="1"
-        />
-
-        {/* ================================================
-            EJE Y
-            ================================================ */}
-
-        <line
-          x1={
             margenIzquierdo
           }
           y1={
             margenSuperior
           }
-          x2={
+          y2={
+            margenSuperior +
+            areaAlto
+          }
+          stroke="#cfc2b9"
+        />
+
+
+        {/* EJE X */}
+
+        <line
+          x1={
             margenIzquierdo
+          }
+          x2={
+            ancho -
+            margenDerecho
+          }
+          y1={
+            baseY
+          }
+          y2={
+            baseY
+          }
+          stroke="#cfc2b9"
+        />
+
+
+        {/* ================================================
+            BARRAS
+            ================================================ */}
+
+        {datos.map(
+          (
+            item,
+            indice
+          ) => {
+
+            const valor =
+              Number(
+                item.valor
+              ) || 0
+
+
+            const centroX =
+              margenIzquierdo +
+              espacio *
+                indice +
+              espacio /
+                2
+
+
+            const yValor =
+              convertirY(
+                valor
+              )
+
+
+            const yBarra =
+              Math.min(
+                yValor,
+                baseY
+              )
+
+
+            const alturaBarra =
+              Math.max(
+                1,
+                Math.abs(
+                  baseY -
+                  yValor
+                )
+              )
+
+
+            return (
+              <g
+                key={
+                  `${item.etiqueta}-${indice}`
+                }
+              >
+                <rect
+                  x={
+                    centroX -
+                    anchoBarra /
+                      2
+                  }
+                  y={
+                    yBarra
+                  }
+                  width={
+                    anchoBarra
+                  }
+                  height={
+                    alturaBarra
+                  }
+                  rx="7"
+                  fill="#c85c2d"
+                >
+                  <title>
+                    {`${item.etiqueta}: ${formatoNumero(
+                      valor
+                    )}`}
+                  </title>
+                </rect>
+
+
+                {/* VALOR */}
+
+                <text
+                  x={
+                    centroX
+                  }
+                  y={
+                    yValor -
+                    10
+                  }
+                  textAnchor="middle"
+                  fontSize="11"
+                  fontWeight="700"
+                  fill="#4f3c32"
+                >
+                  {formatoCorto(
+                    valor
+                  )}
+                </text>
+
+
+                {/* ETIQUETA */}
+
+                <text
+                  x={
+                    centroX
+                  }
+                  y={
+                    margenSuperior +
+                    areaAlto +
+                    25
+                  }
+                  textAnchor="end"
+                  transform={
+                    `rotate(-35 ${centroX} ${
+                      margenSuperior +
+                      areaAlto +
+                      25
+                    })`
+                  }
+                  fontSize="11"
+                  fill="#6c5b51"
+                >
+                  {cortarTexto(
+                    item.etiqueta,
+                    17
+                  )}
+                </text>
+              </g>
+            )
+          }
+        )}
+      </svg>
+    </div>
+  )
+}
+
+
+/* ==========================================================
+   GRAFICO DE LINEA + PUNTOS
+   ========================================================== */
+
+const GraficoLineaPuntos = ({
+  datos
+}) => {
+
+  if (
+    datos.length === 0
+  ) {
+
+    return (
+      <div className="empty">
+        No hay datos suficientes para construir este gráfico.
+      </div>
+    )
+  }
+
+
+  const ancho =
+    Math.max(
+      780,
+      datos.length * 90
+    )
+
+  const alto =
+    390
+
+
+  const margenIzquierdo = 75
+  const margenDerecho = 30
+  const margenSuperior = 55
+  const margenInferior = 75
+
+
+  const areaAncho =
+    ancho -
+    margenIzquierdo -
+    margenDerecho
+
+  const areaAlto =
+    alto -
+    margenSuperior -
+    margenInferior
+
+
+  const valores =
+    datos.map(
+      (item) =>
+        Number(
+          item.valor
+        ) || 0
+    )
+
+
+  const minimoReal =
+    Math.min(
+      ...valores
+    )
+
+
+  const maximoReal =
+    Math.max(
+      ...valores
+    )
+
+
+  const diferencia =
+    maximoReal -
+    minimoReal
+
+
+  const padding =
+    diferencia > 0
+      ? diferencia * 0.16
+      : Math.max(
+          Math.abs(maximoReal) *
+            0.1,
+          1
+        )
+
+
+  const minimo =
+    minimoReal -
+    padding
+
+  const maximo =
+    maximoReal +
+    padding
+
+
+  const rango =
+    maximo -
+    minimo ||
+    1
+
+
+  const puntos =
+    datos.map(
+      (
+        item,
+        indice
+      ) => {
+
+        const x =
+          datos.length === 1
+            ? margenIzquierdo +
+              areaAncho /
+                2
+            : margenIzquierdo +
+              (
+                indice /
+                (
+                  datos.length -
+                  1
+                )
+              ) *
+                areaAncho
+
+
+        const y =
+          margenSuperior +
+          (
+            (
+              maximo -
+              Number(
+                item.valor
+              )
+            ) /
+            rango
+          ) *
+            areaAlto
+
+
+        return {
+          ...item,
+          x,
+          y
+        }
+      }
+    )
+
+
+  const linea =
+    puntos
+      .map(
+        (punto) =>
+          `${punto.x},${punto.y}`
+      )
+      .join(" ")
+
+
+  return (
+    <div
+      style={{
+        width: "100%",
+        overflowX: "auto"
+      }}
+    >
+      <svg
+        viewBox={
+          `0 0 ${ancho} ${alto}`
+        }
+        style={{
+          display: "block",
+          minWidth:
+            `${ancho}px`,
+          width: "100%",
+          height: "auto"
+        }}
+        role="img"
+        aria-label="Gráfico de línea con puntos"
+      >
+        {/* ================================================
+            GUIAS
+            ================================================ */}
+
+        {[
+          0,
+          0.25,
+          0.5,
+          0.75,
+          1
+        ].map(
+          (proporcion) => {
+
+            const valor =
+              maximo -
+              rango *
+                proporcion
+
+
+            const y =
+              margenSuperior +
+              areaAlto *
+                proporcion
+
+
+            return (
+              <g
+                key={
+                  proporcion
+                }
+              >
+                <line
+                  x1={
+                    margenIzquierdo
+                  }
+                  x2={
+                    ancho -
+                    margenDerecho
+                  }
+                  y1={y}
+                  y2={y}
+                  stroke="#eadfd7"
+                  strokeDasharray="4 5"
+                />
+
+                <text
+                  x={
+                    margenIzquierdo -
+                    12
+                  }
+                  y={
+                    y + 4
+                  }
+                  textAnchor="end"
+                  fontSize="11"
+                  fill="#89756a"
+                >
+                  {formatoCorto(
+                    valor
+                  )}
+                </text>
+              </g>
+            )
+          }
+        )}
+
+
+        {/* EJE X */}
+
+        <line
+          x1={
+            margenIzquierdo
+          }
+          x2={
+            ancho -
+            margenDerecho
+          }
+          y1={
+            margenSuperior +
+            areaAlto
           }
           y2={
             margenSuperior +
             areaAlto
           }
-          stroke="#d8cdc5"
-          strokeWidth="1"
+          stroke="#cfc2b9"
         />
+
+
+        {/* EJE Y */}
+
+        <line
+          x1={
+            margenIzquierdo
+          }
+          x2={
+            margenIzquierdo
+          }
+          y1={
+            margenSuperior
+          }
+          y2={
+            margenSuperior +
+            areaAlto
+          }
+          stroke="#cfc2b9"
+        />
+
+
+        {/* ================================================
+            LINEA QUE CONECTA TODOS LOS PUNTOS
+            ================================================ */}
+
+        {puntos.length > 1 && (
+          <polyline
+            points={
+              linea
+            }
+            fill="none"
+            stroke="#c85c2d"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        )}
+
 
         {/* ================================================
             PUNTOS
@@ -923,28 +1695,6 @@ const GraficoPuntos = ({
                 `${punto.etiqueta}-${indice}`
               }
             >
-              {/* guía vertical */}
-
-              <line
-                x1={
-                  punto.x
-                }
-                y1={
-                  punto.y
-                }
-                x2={
-                  punto.x
-                }
-                y2={
-                  margenSuperior +
-                  areaAlto
-                }
-                stroke="#eadfd7"
-                strokeDasharray="3 3"
-              />
-
-              {/* punto */}
-
               <circle
                 cx={
                   punto.x
@@ -952,10 +1702,10 @@ const GraficoPuntos = ({
                 cy={
                   punto.y
                 }
-                r="7"
-                fill="#c85c2d"
-                stroke="#ffffff"
-                strokeWidth="3"
+                r="6"
+                fill="#ffffff"
+                stroke="#c85c2d"
+                strokeWidth="4"
               >
                 <title>
                   {`${punto.etiqueta}: ${formatoNumero(
@@ -964,7 +1714,6 @@ const GraficoPuntos = ({
                 </title>
               </circle>
 
-              {/* valor */}
 
               <text
                 x={
@@ -977,14 +1726,13 @@ const GraficoPuntos = ({
                 textAnchor="middle"
                 fontSize="11"
                 fontWeight="700"
-                fill="#5f5149"
+                fill="#4f3c32"
               >
-                {formatoNumero(
+                {formatoCorto(
                   punto.valor
                 )}
               </text>
 
-              {/* etiqueta */}
 
               <text
                 x={
@@ -993,15 +1741,15 @@ const GraficoPuntos = ({
                 y={
                   margenSuperior +
                   areaAlto +
-                  25
+                  26
                 }
                 textAnchor="middle"
-                fontSize="10"
-                fill="#756861"
+                fontSize="11"
+                fill="#6c5b51"
               >
                 {cortarTexto(
                   punto.etiqueta,
-                  11
+                  12
                 )}
               </text>
             </g>
@@ -1014,18 +1762,429 @@ const GraficoPuntos = ({
 
 
 /* ==========================================================
-   PANEL COMPLETO DE GRAFICOS
+   LINEAS DE TODAS LAS METRICAS
+   ========================================================== */
+
+const GraficoTodasMetricas = ({
+  modelo
+}) => {
+
+  const {
+    etiquetas,
+    series
+  } = modelo
+
+
+  if (
+    etiquetas.length === 0 ||
+    series.length === 0
+  ) {
+
+    return (
+      <div className="empty">
+        No hay suficientes datos para comparar las métricas.
+      </div>
+    )
+  }
+
+
+  const ancho =
+    Math.max(
+      800,
+      etiquetas.length * 95
+    )
+
+  const alto =
+    420
+
+
+  const margenIzquierdo = 65
+  const margenDerecho = 30
+  const margenSuperior = 30
+  const margenInferior = 80
+
+
+  const areaAncho =
+    ancho -
+    margenIzquierdo -
+    margenDerecho
+
+  const areaAlto =
+    alto -
+    margenSuperior -
+    margenInferior
+
+
+  const posicionX =
+    (indice) => {
+
+      if (
+        etiquetas.length === 1
+      ) {
+
+        return margenIzquierdo +
+          areaAncho /
+            2
+      }
+
+
+      return margenIzquierdo +
+        (
+          indice /
+          (
+            etiquetas.length -
+            1
+          )
+        ) *
+          areaAncho
+    }
+
+
+  const posicionY =
+    (valor) =>
+      margenSuperior +
+      (
+        (
+          100 -
+          valor
+        ) /
+        100
+      ) *
+        areaAlto
+
+
+  return (
+    <>
+      {/* ====================================================
+          LEYENDA
+          ==================================================== */}
+
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "8px 16px",
+          marginBottom: "18px"
+        }}
+      >
+        {series.map(
+          (serie) => (
+            <div
+              key={
+                serie.nombre
+              }
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "7px",
+                fontSize: "12px"
+              }}
+            >
+              <span
+                style={{
+                  width: "12px",
+                  height: "12px",
+                  borderRadius:
+                    "999px",
+                  display:
+                    "inline-block",
+                  background:
+                    serie.color
+                }}
+              />
+
+              <strong>
+                {serie.nombre}
+              </strong>
+            </div>
+          )
+        )}
+      </div>
+
+
+      <div
+        style={{
+          width: "100%",
+          overflowX: "auto"
+        }}
+      >
+        <svg
+          viewBox={
+            `0 0 ${ancho} ${alto}`
+          }
+          style={{
+            display: "block",
+            minWidth:
+              `${ancho}px`,
+            width: "100%",
+            height: "auto"
+          }}
+          role="img"
+          aria-label="Comparación de todas las métricas"
+        >
+          {/* ==============================================
+              GUIAS 0 - 100
+              ============================================== */}
+
+          {[
+            0,
+            25,
+            50,
+            75,
+            100
+          ].map(
+            (valor) => {
+
+              const y =
+                posicionY(
+                  valor
+                )
+
+
+              return (
+                <g
+                  key={
+                    valor
+                  }
+                >
+                  <line
+                    x1={
+                      margenIzquierdo
+                    }
+                    x2={
+                      ancho -
+                      margenDerecho
+                    }
+                    y1={y}
+                    y2={y}
+                    stroke="#eadfd7"
+                    strokeDasharray="4 5"
+                  />
+
+                  <text
+                    x={
+                      margenIzquierdo -
+                      12
+                    }
+                    y={
+                      y + 4
+                    }
+                    textAnchor="end"
+                    fontSize="11"
+                    fill="#89756a"
+                  >
+                    {valor}%
+                  </text>
+                </g>
+              )
+            }
+          )}
+
+
+          {/* EJE X */}
+
+          <line
+            x1={
+              margenIzquierdo
+            }
+            x2={
+              ancho -
+              margenDerecho
+            }
+            y1={
+              margenSuperior +
+              areaAlto
+            }
+            y2={
+              margenSuperior +
+              areaAlto
+            }
+            stroke="#cfc2b9"
+          />
+
+
+          {/* EJE Y */}
+
+          <line
+            x1={
+              margenIzquierdo
+            }
+            x2={
+              margenIzquierdo
+            }
+            y1={
+              margenSuperior
+            }
+            y2={
+              margenSuperior +
+              areaAlto
+            }
+            stroke="#cfc2b9"
+          />
+
+
+          {/* ==============================================
+              ETIQUETAS X
+              ============================================== */}
+
+          {etiquetas.map(
+            (
+              etiqueta,
+              indice
+            ) => {
+
+              const x =
+                posicionX(
+                  indice
+                )
+
+
+              return (
+                <text
+                  key={
+                    `${etiqueta}-${indice}`
+                  }
+                  x={x}
+                  y={
+                    margenSuperior +
+                    areaAlto +
+                    28
+                  }
+                  textAnchor="middle"
+                  fontSize="10"
+                  fill="#6c5b51"
+                >
+                  {cortarTexto(
+                    etiqueta,
+                    12
+                  )}
+                </text>
+              )
+            }
+          )}
+
+
+          {/* ==============================================
+              TODAS LAS SERIES
+              ============================================== */}
+
+          {series.map(
+            (serie) => {
+
+              const puntos =
+                serie.puntos.map(
+                  (
+                    punto,
+                    indice
+                  ) => ({
+                    ...punto,
+
+                    x:
+                      posicionX(
+                        indice
+                      ),
+
+                    y:
+                      posicionY(
+                        punto.valorNormalizado
+                      )
+                  })
+                )
+
+
+              const linea =
+                puntos
+                  .map(
+                    (punto) =>
+                      `${punto.x},${punto.y}`
+                  )
+                  .join(" ")
+
+
+              return (
+                <g
+                  key={
+                    serie.nombre
+                  }
+                >
+                  {puntos.length >
+                    1 && (
+                    <polyline
+                      points={
+                        linea
+                      }
+                      fill="none"
+                      stroke={
+                        serie.color
+                      }
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  )}
+
+
+                  {puntos.map(
+                    (
+                      punto,
+                      indice
+                    ) => (
+                      <circle
+                        key={
+                          `${serie.nombre}-${indice}`
+                        }
+                        cx={
+                          punto.x
+                        }
+                        cy={
+                          punto.y
+                        }
+                        r="5"
+                        fill="#ffffff"
+                        stroke={
+                          serie.color
+                        }
+                        strokeWidth="3"
+                      >
+                        <title>
+                          {`${serie.nombre}
+${punto.etiqueta}
+Valor real: ${formatoNumero(
+                            punto.valorReal
+                          )}
+Escala visual: ${punto.valorNormalizado.toFixed(
+                            1
+                          )}%`}
+                        </title>
+                      </circle>
+                    )
+                  )}
+                </g>
+              )
+            }
+          )}
+        </svg>
+      </div>
+    </>
+  )
+}
+
+
+/* ==========================================================
+   PANEL DE GRAFICOS
    ========================================================== */
 
 const PanelGraficos = ({
   detalle
 }) => {
+
   const filas =
     Array.isArray(
       detalle?.filas
     )
       ? detalle.filas
       : []
+
 
   const columnas =
     Array.isArray(
@@ -1035,6 +2194,7 @@ const PanelGraficos = ({
     )
       ? detalle.importacion.columnas
       : []
+
 
   const deteccion =
     useMemo(
@@ -1049,6 +2209,7 @@ const PanelGraficos = ({
       ]
     )
 
+
   const [
     metrica,
     setMetrica
@@ -1059,6 +2220,7 @@ const PanelGraficos = ({
           deteccion.numericas
         )
     )
+
 
   const [
     dimension,
@@ -1072,17 +2234,30 @@ const PanelGraficos = ({
     )
 
 
+  const [
+    modoLinea,
+    setModoLinea
+  ] =
+    useState(
+      "una"
+    )
+
+
   /* ========================================================
-     CORREGIR SELECCIONES AL CAMBIAR DATASET
+     CORREGIR SELECCIONES
      ======================================================== */
 
   useEffect(
     () => {
+
       if (
-        !deteccion.numericas.includes(
-          metrica
-        )
+        !deteccion
+          .numericas
+          .includes(
+            metrica
+          )
       ) {
+
         setMetrica(
           elegirMetrica(
             deteccion.numericas
@@ -1090,19 +2265,24 @@ const PanelGraficos = ({
         )
       }
 
+
       if (
         dimension !==
           "__fila__" &&
-        !deteccion.dimensiones.includes(
-          dimension
-        )
+        !deteccion
+          .dimensiones
+          .includes(
+            dimension
+          )
       ) {
+
         setDimension(
           elegirDimension(
             deteccion.dimensiones
           )
         )
       }
+
     },
     [
       deteccion,
@@ -1113,7 +2293,7 @@ const PanelGraficos = ({
 
 
   /* ========================================================
-     SERIE
+     SERIE PRINCIPAL
      ======================================================== */
 
   const serie =
@@ -1133,13 +2313,37 @@ const PanelGraficos = ({
 
 
   /* ========================================================
-     RESUMEN NUMERICO
+     TODAS LAS METRICAS
+     ======================================================== */
+
+  const todasMetricas =
+    useMemo(
+      () =>
+        construirTodasMetricas(
+          filas,
+          dimension,
+          deteccion.numericas,
+          metrica
+        ),
+      [
+        filas,
+        dimension,
+        deteccion,
+        metrica
+      ]
+    )
+
+
+  /* ========================================================
+     RESUMEN
      ======================================================== */
 
   const resumen =
     useMemo(
       () => {
+
         if (!metrica) {
+
           return {
             total: 0,
             promedio: 0,
@@ -1149,14 +2353,13 @@ const PanelGraficos = ({
           }
         }
 
+
         const valores =
           filas
             .map(
               (fila) =>
                 aNumero(
-                  fila[
-                    metrica
-                  ]
+                  fila[metrica]
                 )
             )
             .filter(
@@ -1164,10 +2367,11 @@ const PanelGraficos = ({
                 valor !== null
             )
 
+
         if (
-          valores.length ===
-          0
+          valores.length === 0
         ) {
+
           return {
             total: 0,
             promedio: 0,
@@ -1176,6 +2380,7 @@ const PanelGraficos = ({
             cantidad: 0
           }
         }
+
 
         const total =
           valores.reduce(
@@ -1187,6 +2392,7 @@ const PanelGraficos = ({
               valor,
             0
           )
+
 
         return {
           total,
@@ -1224,19 +2430,22 @@ const PanelGraficos = ({
       0
     )
 
+
   const muestraParcial =
     filas.length <
     totalFilas
 
 
   /* ========================================================
-     SIN DATOS NUMERICOS
+     SIN NUMEROS
      ======================================================== */
 
   if (
-    deteccion.numericas.length ===
-    0
+    deteccion
+      .numericas
+      .length === 0
   ) {
+
     return (
       <div
         className="empty"
@@ -1254,16 +2463,12 @@ const PanelGraficos = ({
         </strong>
 
         <span>
-          Este archivo no contiene suficientes valores numéricos para generar gráficos automáticamente.
+          El archivo no contiene suficientes datos numéricos para generar gráficos.
         </span>
       </div>
     )
   }
 
-
-  /* ========================================================
-     RENDER
-     ======================================================== */
 
   return (
     <div
@@ -1272,7 +2477,7 @@ const PanelGraficos = ({
       }}
     >
       {/* ====================================================
-          INFORMACION SOBRE LA MUESTRA
+          MUESTRA
           ==================================================== */}
 
       <div
@@ -1288,9 +2493,9 @@ const PanelGraficos = ({
         {muestraParcial
           ? `El dataset tiene ${miles(
               totalFilas
-            )} filas. Para mantener una visualización rápida, los gráficos utilizan las primeras ${miles(
+            )} filas. Los gráficos utilizan las primeras ${miles(
               filas.length
-            )} filas.`
+            )} para mantener una visualización rápida.`
           : `Los gráficos utilizan las ${miles(
               filas.length
             )} filas disponibles de este dataset.`}
@@ -1310,11 +2515,9 @@ const PanelGraficos = ({
           marginBottom: "18px"
         }}
       >
-        {/* METRICA */}
-
         <div className="field">
           <label>
-            Métrica
+            Métrica principal
           </label>
 
           <select
@@ -1346,8 +2549,6 @@ const PanelGraficos = ({
         </div>
 
 
-        {/* AGRUPACION */}
-
         <div className="field">
           <label>
             Agrupar por
@@ -1364,8 +2565,9 @@ const PanelGraficos = ({
                 )
             }
           >
-            {deteccion.dimensiones.length ===
-              0 && (
+            {deteccion
+              .dimensiones
+              .length === 0 && (
               <option value="__fila__">
                 Número de fila
               </option>
@@ -1391,7 +2593,7 @@ const PanelGraficos = ({
 
 
       {/* ====================================================
-          METRICAS
+          INDICADORES
           ==================================================== */}
 
       <div className="metrics metrics-4">
@@ -1407,6 +2609,7 @@ const PanelGraficos = ({
           </strong>
         </div>
 
+
         <div className="metric">
           <span>
             Promedio
@@ -1419,6 +2622,7 @@ const PanelGraficos = ({
           </strong>
         </div>
 
+
         <div className="metric">
           <span>
             Máximo
@@ -1430,6 +2634,7 @@ const PanelGraficos = ({
             )}
           </strong>
         </div>
+
 
         <div className="metric">
           <span>
@@ -1446,7 +2651,7 @@ const PanelGraficos = ({
 
 
       {/* ====================================================
-          GRAFICO DE BARRAS
+          BARRAS
           ==================================================== */}
 
       <div
@@ -1460,11 +2665,12 @@ const PanelGraficos = ({
           Gráfico de barras
         </div>
 
+
         <p
           className="muted"
           style={{
             margin:
-              "4px 0 18px"
+              "4px 0 10px"
           }}
         >
           {dimension ===
@@ -1472,6 +2678,7 @@ const PanelGraficos = ({
             ? `${metrica} por registro.`
             : `Comparación de ${metrica} agrupada por ${dimension}.`}
         </p>
+
 
         <GraficoBarras
           datos={
@@ -1482,7 +2689,7 @@ const PanelGraficos = ({
 
 
       {/* ====================================================
-          GRAFICO DE PUNTOS
+          LINEAS
           ==================================================== */}
 
       <div
@@ -1492,28 +2699,135 @@ const PanelGraficos = ({
           boxShadow: "none"
         }}
       >
-        <div className="chart-title">
-          Gráfico de puntos
-        </div>
-
-        <p
-          className="muted"
+        <div
           style={{
-            margin:
-              "4px 0 12px"
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent:
+              "space-between",
+            gap: "16px",
+            flexWrap: "wrap",
+            marginBottom: "12px"
           }}
         >
-          {dimension ===
-          "__fila__"
-            ? `Distribución de ${metrica} por registro.`
-            : `Distribución visual de ${metrica} agrupada por ${dimension}.`}
-        </p>
+          <div>
+            <div className="chart-title">
+              Gráfico de línea y puntos
+            </div>
 
-        <GraficoPuntos
-          datos={
-            serie
-          }
-        />
+            <p
+              className="muted"
+              style={{
+                margin:
+                  "4px 0 0"
+              }}
+            >
+              Observa la evolución de una métrica o compara todas las métricas numéricas del dataset.
+            </p>
+          </div>
+
+
+          {/* ================================================
+              MODO
+              ================================================ */}
+
+          <div
+            className="tabs"
+            style={{
+              flexShrink: 0
+            }}
+          >
+            <button
+              type="button"
+              className={
+                modoLinea ===
+                "una"
+                  ? "active"
+                  : ""
+              }
+              onClick={
+                () =>
+                  setModoLinea(
+                    "una"
+                  )
+              }
+            >
+              Métrica seleccionada
+            </button>
+
+            <button
+              type="button"
+              className={
+                modoLinea ===
+                "todas"
+                  ? "active"
+                  : ""
+              }
+              onClick={
+                () =>
+                  setModoLinea(
+                    "todas"
+                  )
+              }
+            >
+              Todas las métricas
+            </button>
+          </div>
+        </div>
+
+
+        {/* ================================================
+            UNA METRICA
+            ================================================ */}
+
+        {modoLinea ===
+          "una" && (
+          <>
+            <p
+              className="muted"
+              style={{
+                margin:
+                  "0 0 12px"
+              }}
+            >
+              {dimension ===
+              "__fila__"
+                ? `${metrica} por registro.`
+                : `${metrica} agrupada por ${dimension}.`}
+            </p>
+
+            <GraficoLineaPuntos
+              datos={
+                serie
+              }
+            />
+          </>
+        )}
+
+
+        {/* ================================================
+            TODAS LAS METRICAS
+            ================================================ */}
+
+        {modoLinea ===
+          "todas" && (
+          <>
+            <div
+              className="alert"
+              style={{
+                marginBottom: "16px"
+              }}
+            >
+              Para comparar métricas con escalas diferentes, cada línea se normaliza visualmente de 0 a 100. Los valores reales del CSV no se modifican.
+            </div>
+
+            <GraficoTodasMetricas
+              modelo={
+                todasMetricas
+              }
+            />
+          </>
+        )}
       </div>
     </div>
   )
@@ -1527,8 +2841,10 @@ const PanelGraficos = ({
 const obtenerClavesPermisos = (
   respuesta
 ) => {
+
   const claves =
     new Set()
+
 
   const cursos =
     Array.isArray(
@@ -1540,13 +2856,17 @@ const obtenerClavesPermisos = (
             ?.permisos
             ?.cursos
         )
-        ? respuesta.permisos.cursos
+        ? respuesta
+            .permisos
+            .cursos
         : []
+
 
   for (
     const curso
     of cursos
   ) {
+
     const modulos =
       Array.isArray(
         curso?.modulos
@@ -1558,10 +2878,12 @@ const obtenerClavesPermisos = (
           ? curso.modules
           : []
 
+
     for (
       const modulo
       of modulos
     ) {
+
       if (
         modulo?.activo ===
         false
@@ -1569,9 +2891,11 @@ const obtenerClavesPermisos = (
         continue
       }
 
+
       if (
         modulo?.clave
       ) {
+
         claves.add(
           String(
             modulo.clave
@@ -1581,10 +2905,7 @@ const obtenerClavesPermisos = (
     }
   }
 
-  /*
-   * Compatibilidad si los módulos
-   * llegan separados.
-   */
+
   const separados =
     Array.isArray(
       respuesta?.modulos
@@ -1595,13 +2916,17 @@ const obtenerClavesPermisos = (
             ?.permisos
             ?.modulos
         )
-        ? respuesta.permisos.modulos
+        ? respuesta
+            .permisos
+            .modulos
         : []
+
 
   for (
     const modulo
     of separados
   ) {
+
     if (
       modulo?.activo ===
       false
@@ -1609,9 +2934,11 @@ const obtenerClavesPermisos = (
       continue
     }
 
+
     if (
       modulo?.clave
     ) {
+
       claves.add(
         String(
           modulo.clave
@@ -1620,18 +2947,16 @@ const obtenerClavesPermisos = (
     }
   }
 
+
   return claves
 }
 
 
 /* ==========================================================
-   ARCHIVOS / DATASETS
+   DATASETS
    ========================================================== */
 
 const Archivos = () => {
-  /* ========================================================
-     LISTADO
-     ======================================================== */
 
   const [
     lista,
@@ -1639,11 +2964,13 @@ const Archivos = () => {
   ] =
     useState([])
 
+
   const [
     cargando,
     setCargando
   ] =
     useState(true)
+
 
   const [
     error,
@@ -1651,11 +2978,15 @@ const Archivos = () => {
   ] =
     useState("")
 
+
   const [
     filtro,
     setFiltro
   ] =
-    useState("todos")
+    useState(
+      "todos"
+    )
+
 
   const [
     busqueda,
@@ -1674,11 +3005,13 @@ const Archivos = () => {
   ] =
     useState(null)
 
+
   const [
     detalle,
     setDetalle
   ] =
     useState(null)
+
 
   const [
     cargandoDetalle,
@@ -1686,17 +3019,21 @@ const Archivos = () => {
   ] =
     useState(false)
 
+
   const [
     errorDetalle,
     setErrorDetalle
   ] =
     useState("")
 
+
   const [
     vistaModal,
     setVistaModal
   ] =
-    useState("datos")
+    useState(
+      "datos"
+    )
 
 
   /* ========================================================
@@ -1709,6 +3046,7 @@ const Archivos = () => {
   ] =
     useState(false)
 
+
   const [
     cargandoPermisoGraficos,
     setCargandoPermisoGraficos
@@ -1717,27 +3055,38 @@ const Archivos = () => {
 
 
   /* ========================================================
-     CARGAR DATASETS
+     LISTAR DATASETS
      ======================================================== */
 
   useEffect(
     () => {
-      let activo = true
+
+      let activo =
+        true
+
 
       const cargar =
         async () => {
-          setCargando(true)
+
+          setCargando(
+            true
+          )
+
           setError("")
 
+
           try {
+
             const respuesta =
               await api.get(
                 "/imports"
               )
 
+
             if (!activo) {
               return
             }
+
 
             setLista(
               Array.isArray(
@@ -1746,18 +3095,24 @@ const Archivos = () => {
                 ? respuesta.data
                 : []
             )
+
           } catch (
             problema
           ) {
+
             if (activo) {
+
               setError(
                 getMessage(
                   problema
                 )
               )
             }
+
           } finally {
+
             if (activo) {
+
               setCargando(
                 false
               )
@@ -1765,29 +3120,30 @@ const Archivos = () => {
           }
         }
 
+
       cargar()
+
 
       return () => {
         activo = false
       }
+
     },
     []
   )
 
 
   /* ========================================================
-     PERMISO DE GRAFICOS
+     PERMISO GRAFICOS
      ======================================================== */
 
   useEffect(
     () => {
-      /*
-       * Admin siempre puede
-       * visualizar gráficos.
-       */
+
       if (
         esAdmin()
       ) {
+
         setPuedeVerGraficos(
           true
         )
@@ -1799,43 +3155,52 @@ const Archivos = () => {
         return
       }
 
-      let activo = true
+
+      let activo =
+        true
+
 
       const cargarPermisos =
         async () => {
+
           try {
+
             const respuesta =
               await obtenerMisPermisos()
+
 
             if (!activo) {
               return
             }
+
 
             const claves =
               obtenerClavesPermisos(
                 respuesta
               )
 
+
             setPuedeVerGraficos(
               claves.has(
                 PERMISO_GRAFICOS
               )
             )
+
           } catch (
             problema
           ) {
+
             if (activo) {
-              /*
-               * Si no podemos comprobar
-               * el permiso, ocultamos
-               * la funcionalidad.
-               */
+
               setPuedeVerGraficos(
                 false
               )
             }
+
           } finally {
+
             if (activo) {
+
               setCargandoPermisoGraficos(
                 false
               )
@@ -1843,11 +3208,14 @@ const Archivos = () => {
           }
         }
 
+
       cargarPermisos()
+
 
       return () => {
         activo = false
       }
+
     },
     []
   )
@@ -1861,37 +3229,24 @@ const Archivos = () => {
     async (
       importacion
     ) => {
+
       setAbierta(
         importacion
       )
 
-      setDetalle(
-        null
-      )
+      setDetalle(null)
+      setVistaModal("datos")
+      setErrorDetalle("")
+      setCargandoDetalle(true)
 
-      setVistaModal(
-        "datos"
-      )
 
-      setErrorDetalle(
-        ""
-      )
-
-      setCargandoDetalle(
-        true
-      )
-
-      /*
-       * La tabla mostrará 100,
-       * pero podemos cargar hasta 5000
-       * para los gráficos.
-       */
       const total =
         Number(
           importacion
             .total_filas ||
           FILAS_TABLA
         )
+
 
       const limite =
         Math.min(
@@ -1902,24 +3257,31 @@ const Archivos = () => {
           FILAS_GRAFICO_MAX
         )
 
+
       try {
+
         const respuesta =
           await api.get(
             `/imports/${importacion.id}?limite=${limite}`
           )
 
+
         setDetalle(
           respuesta.data
         )
+
       } catch (
         problema
       ) {
+
         setErrorDetalle(
           getMessage(
             problema
           )
         )
+
       } finally {
+
         setCargandoDetalle(
           false
         )
@@ -1932,6 +3294,7 @@ const Archivos = () => {
      ======================================================== */
 
   const cerrarModal = () => {
+
     setAbierta(null)
     setDetalle(null)
     setVistaModal("datos")
@@ -1940,20 +3303,23 @@ const Archivos = () => {
 
 
   /* ========================================================
-     FILTROS
+     FILTRADO
      ======================================================== */
 
   const visibles =
     useMemo(
       () => {
+
         const texto =
           busqueda
             .trim()
             .toLowerCase()
 
+
         return lista
           .filter(
             (item) => {
+
               if (
                 filtro ===
                 "propias"
@@ -1963,6 +3329,7 @@ const Archivos = () => {
                 )
               }
 
+
               if (
                 filtro ===
                 "otras"
@@ -1970,14 +3337,17 @@ const Archivos = () => {
                 return !item.es_propia
               }
 
+
               return true
             }
           )
           .filter(
             (item) => {
+
               if (!texto) {
                 return true
               }
+
 
               const empresa =
                 String(
@@ -1985,11 +3355,13 @@ const Archivos = () => {
                   ""
                 ).toLowerCase()
 
+
               const archivo =
                 String(
                   item.archivo ||
                   ""
                 ).toLowerCase()
+
 
               return (
                 empresa.includes(
@@ -2017,6 +3389,7 @@ const Archivos = () => {
   const totales =
     useMemo(
       () => ({
+
         archivos:
           lista.length,
 
@@ -2045,6 +3418,7 @@ const Archivos = () => {
               ),
             0
           )
+
       }),
       [
         lista
@@ -2053,12 +3427,13 @@ const Archivos = () => {
 
 
   /* ========================================================
-     FILAS DE TABLA
+     FILAS PARA TABLA
      ======================================================== */
 
   const filasTabla =
     useMemo(
       () => {
+
         if (
           !Array.isArray(
             detalle?.filas
@@ -2067,10 +3442,13 @@ const Archivos = () => {
           return []
         }
 
-        return detalle.filas.slice(
-          0,
-          FILAS_TABLA
-        )
+
+        return detalle
+          .filas
+          .slice(
+            0,
+            FILAS_TABLA
+          )
       },
       [
         detalle
@@ -2089,6 +3467,7 @@ const Archivos = () => {
           ==================================================== */}
 
       <div className="topbar">
+
         <div>
           <h1>
             Datasets
@@ -2099,8 +3478,11 @@ const Archivos = () => {
           </p>
         </div>
 
+
         <div className="topbar-actions">
+
           <div className="topbar-user">
+
             <span className="avatar">
               {getInitials()}
             </span>
@@ -2108,16 +3490,20 @@ const Archivos = () => {
             <span>
               {getUserName()}
             </span>
+
           </div>
+
         </div>
+
       </div>
 
 
       {/* ====================================================
-          METRICAS GENERALES
+          INDICADORES GENERALES
           ==================================================== */}
 
       <div className="metrics metrics-4">
+
         <div className="metric">
           <span>
             Archivos
@@ -2127,6 +3513,7 @@ const Archivos = () => {
             {totales.archivos}
           </strong>
         </div>
+
 
         <div className="metric">
           <span>
@@ -2138,6 +3525,7 @@ const Archivos = () => {
           </strong>
         </div>
 
+
         <div className="metric">
           <span>
             De la competencia
@@ -2147,6 +3535,7 @@ const Archivos = () => {
             {totales.otras}
           </strong>
         </div>
+
 
         <div className="metric">
           <span>
@@ -2159,15 +3548,18 @@ const Archivos = () => {
             )}
           </strong>
         </div>
+
       </div>
 
 
       {/* ====================================================
-          BUSCADOR
+          TOOLBAR
           ==================================================== */}
 
       <div className="toolbar">
+
         <div className="toolbar-left">
+
           <input
             value={
               busqueda
@@ -2180,30 +3572,24 @@ const Archivos = () => {
             }
             placeholder="Buscar por restaurante o archivo"
           />
+
         </div>
 
 
-        {/* ==================================================
-            FILTROS
-            ================================================== */}
-
         <div className="tabs">
+
           {[
             {
-              valor:
-                "todos",
-              label:
-                "Todos"
+              valor: "todos",
+              label: "Todos"
             },
             {
-              valor:
-                "propias",
+              valor: "propias",
               label:
                 "De la empresa"
             },
             {
-              valor:
-                "otras",
+              valor: "otras",
               label:
                 "Competencia"
             }
@@ -2231,7 +3617,9 @@ const Archivos = () => {
               </button>
             )
           )}
+
         </div>
+
       </div>
 
 
@@ -2245,6 +3633,7 @@ const Archivos = () => {
         </div>
       )}
 
+
       {error && (
         <div className="alert alert-error">
           {error}
@@ -2252,29 +3641,30 @@ const Archivos = () => {
       )}
 
 
-      {/* ====================================================
-          VACIO
-          ==================================================== */}
-
       {!cargando &&
         visibles.length === 0 && (
+
         <div className="card">
+
           <div className="empty">
             {lista.length === 0
               ? "Todavía no hay archivos importados."
               : "Ningún archivo coincide con la búsqueda."}
           </div>
+
         </div>
       )}
 
 
       {/* ====================================================
-          TARJETAS
+          CARDS
           ==================================================== */}
 
       <div className="cards">
+
         {visibles.map(
           (item) => (
+
             <button
               type="button"
               key={
@@ -2294,11 +3684,8 @@ const Archivos = () => {
                   )
               }
             >
-              {/* ============================================
-                  CABECERA CARD
-                  ============================================ */}
-
               <div className="archivo-head">
+
                 <span
                   className={
                     `chip ${
@@ -2313,33 +3700,29 @@ const Archivos = () => {
                     : "Competencia"}
                 </span>
 
+
                 <span className="chip chip-tipo">
                   {String(
                     item.formato ||
                     ""
                   ).toUpperCase()}
                 </span>
+
               </div>
 
-
-              {/* ============================================
-                  EMPRESA / ARCHIVO
-                  ============================================ */}
 
               <h3>
                 {item.empresa}
               </h3>
+
 
               <p className="archivo-nombre">
                 {item.archivo}
               </p>
 
 
-              {/* ============================================
-                  CIFRAS
-                  ============================================ */}
-
               <div className="archivo-cifras">
+
                 <div>
                   <strong>
                     {miles(
@@ -2351,6 +3734,7 @@ const Archivos = () => {
                     filas
                   </span>
                 </div>
+
 
                 <div>
                   <strong>
@@ -2365,19 +3749,20 @@ const Archivos = () => {
                     columnas
                   </span>
                 </div>
+
               </div>
 
 
-              {/* ============================================
-                  COLUMNAS
-                  ============================================ */}
-
               <div className="archivo-columnas">
+
                 {Array.isArray(
                   item.columnas
                 ) &&
                   item.columnas
-                    .slice(0, 4)
+                    .slice(
+                      0,
+                      4
+                    )
                     .map(
                       (columna) => (
                         <span
@@ -2390,27 +3775,27 @@ const Archivos = () => {
                       )
                     )}
 
+
                 {Array.isArray(
                   item.columnas
                 ) &&
                   item.columnas.length >
                     4 && (
+
                   <span className="mas">
-                    +{item.columnas.length -
-                      4}
+                    +{item.columnas.length - 4}
                   </span>
                 )}
+
               </div>
 
 
-              {/* ============================================
-                  PIE
-                  ============================================ */}
-
               <div className="archivo-pie">
+
                 <span>
                   {item.autor}
                 </span>
+
 
                 <span>
                   {item.created_at
@@ -2421,18 +3806,22 @@ const Archivos = () => {
                       )
                     : "—"}
                 </span>
+
               </div>
+
             </button>
           )
         )}
+
       </div>
 
 
       {/* ====================================================
-          MODAL DATASET
+          MODAL
           ==================================================== */}
 
       {abierta && (
+
         <Modal
           ancho
           title={
@@ -2442,39 +3831,32 @@ const Archivos = () => {
             cerrarModal
           }
         >
-          {/* ================================================
-              CARGANDO
-              ================================================ */}
-
           {cargandoDetalle && (
+
             <div className="loading">
               Cargando contenido
             </div>
+
           )}
 
 
-          {/* ================================================
-              ERROR
-              ================================================ */}
-
           {errorDetalle && (
+
             <div className="alert alert-error">
               {errorDetalle}
             </div>
+
           )}
 
-
-          {/* ================================================
-              DETALLE
-              ================================================ */}
 
           {detalle && (
             <>
               {/* ============================================
-                  METRICAS DATASET
+                  METRICAS DEL DATASET
                   ============================================ */}
 
               <div className="metrics metrics-4">
+
                 <div className="metric">
                   <span>
                     Filas
@@ -2482,10 +3864,13 @@ const Archivos = () => {
 
                   <strong>
                     {miles(
-                      detalle.importacion.total_filas
+                      detalle
+                        .importacion
+                        .total_filas
                     )}
                   </strong>
                 </div>
+
 
                 <div className="metric">
                   <span>
@@ -2494,12 +3879,18 @@ const Archivos = () => {
 
                   <strong>
                     {Array.isArray(
-                      detalle.importacion.columnas
+                      detalle
+                        .importacion
+                        .columnas
                     )
-                      ? detalle.importacion.columnas.length
+                      ? detalle
+                          .importacion
+                          .columnas
+                          .length
                       : 0}
                   </strong>
                 </div>
+
 
                 <div className="metric">
                   <span>
@@ -2507,11 +3898,14 @@ const Archivos = () => {
                   </span>
 
                   <strong>
-                    {detalle.importacion.es_propia
+                    {detalle
+                      .importacion
+                      .es_propia
                       ? "Propia"
                       : "Competencia"}
                   </strong>
                 </div>
+
 
                 <div className="metric">
                   <span>
@@ -2519,24 +3913,29 @@ const Archivos = () => {
                   </span>
 
                   <strong className="ellipsis">
-                    {detalle.importacion.autor}
+                    {detalle
+                      .importacion
+                      .autor}
                   </strong>
                 </div>
+
               </div>
 
 
               {/* ============================================
-                  TABS
+                  DATOS / GRAFICOS
                   ============================================ */}
 
               <div
                 className="tabs"
                 style={{
                   marginTop: "20px",
-                  marginBottom: "18px",
+                  marginBottom:
+                    "18px",
                   borderBottom:
                     "1px solid #eadfd7",
-                  paddingBottom: "8px"
+                  paddingBottom:
+                    "8px"
                 }}
               >
                 <button
@@ -2557,8 +3956,10 @@ const Archivos = () => {
                   Datos
                 </button>
 
+
                 {!cargandoPermisoGraficos &&
                   puedeVerGraficos && (
+
                   <button
                     type="button"
                     className={
@@ -2577,11 +3978,12 @@ const Archivos = () => {
                     Gráficos
                   </button>
                 )}
+
               </div>
 
 
               {/* ============================================
-                  TAB DATOS
+                  DATOS
                   ============================================ */}
 
               {vistaModal ===
@@ -2598,34 +4000,48 @@ const Archivos = () => {
                     {filasTabla.length} filas del archivo con sus columnas originales.
                   </p>
 
+
                   <div className="table-wrap tabla-modal">
+
                     <table className="tabla-dinamica">
+
                       <thead>
                         <tr>
+
                           <th className="col-num">
                             #
                           </th>
 
-                          {detalle.importacion.columnas.map(
-                            (columna) => (
-                              <th
-                                key={
-                                  columna
-                                }
-                              >
-                                {columna}
-                              </th>
-                            )
-                          )}
+
+                          {detalle
+                            .importacion
+                            .columnas
+                            .map(
+                              (columna) => (
+
+                                <th
+                                  key={
+                                    columna
+                                  }
+                                >
+                                  {columna}
+                                </th>
+
+                              )
+                            )}
+
                         </tr>
                       </thead>
 
+
                       <tbody>
+
                         {filasTabla.map(
                           (
                             fila,
                             indice
                           ) => (
+
                             <tr
                               key={
                                 indice
@@ -2635,62 +4051,86 @@ const Archivos = () => {
                                 {indice + 1}
                               </td>
 
-                              {detalle.importacion.columnas.map(
-                                (columna) => (
-                                  <td
-                                    key={
-                                      columna
-                                    }
-                                  >
-                                    {fila[columna] ===
-                                      undefined ||
-                                    fila[columna] ===
-                                      null ||
-                                    fila[columna] ===
-                                      ""
-                                      ? (
-                                      <span className="vacio">
-                                        &mdash;
-                                      </span>
-                                    )
-                                      : String(
-                                          fila[
-                                            columna
-                                          ]
-                                        )}
-                                  </td>
-                                )
-                              )}
+
+                              {detalle
+                                .importacion
+                                .columnas
+                                .map(
+                                  (columna) => (
+
+                                    <td
+                                      key={
+                                        columna
+                                      }
+                                    >
+                                      {fila[
+                                        columna
+                                      ] ===
+                                        undefined ||
+                                      fila[
+                                        columna
+                                      ] ===
+                                        null ||
+                                      fila[
+                                        columna
+                                      ] ===
+                                        ""
+                                        ? (
+                                        <span className="vacio">
+                                          &mdash;
+                                        </span>
+                                      )
+                                        : String(
+                                            fila[
+                                              columna
+                                            ]
+                                          )}
+                                    </td>
+
+                                  )
+                                )}
+
                             </tr>
+
                           )
                         )}
+
                       </tbody>
+
                     </table>
+
                   </div>
                 </>
               )}
 
 
               {/* ============================================
-                  TAB GRAFICOS
+                  GRAFICOS
                   ============================================ */}
 
               {vistaModal ===
                 "graficos" &&
                 puedeVerGraficos && (
+
                 <PanelGraficos
                   key={
-                    detalle.importacion.id
+                    detalle
+                      .importacion
+                      .id
                   }
                   detalle={
                     detalle
                   }
                 />
+
               )}
+
             </>
           )}
+
         </Modal>
       )}
+
     </>
   )
 }
