@@ -16,20 +16,19 @@ import {
   obtenerMisPermisos
 } from "./api"
 
-import Layout
-  from "./components/Layout"
+import Layout from "./components/Layout"
 
-import Login
-  from "./pages/Login"
-
-import Register
-  from "./pages/Register"
+import Login from "./pages/Login"
+import Register from "./pages/Register"
 
 import RecuperarPassword
   from "./pages/RecuperarPassword"
 
 import RestablecerPassword
   from "./pages/RestablecerPassword"
+
+import MisCursos
+  from "./pages/MisCursos"
 
 import Importar
   from "./pages/Importar"
@@ -48,214 +47,100 @@ import AdminUsuarios
 
 
 /* ==========================================================
-   RUTAS PRINCIPALES DE BIG DATA
+   NORMALIZAR RESPUESTA DE PERMISOS
    ========================================================== */
 
-/*
- * IMPORTANTE:
- *
- * big_data.graficos SIGUE EXISTIENDO
- * como permiso administrativo.
- *
- * Pero ya NO tiene una página propia.
- *
- * Ahora controla la pestaña:
- *
- * Datasets
- *    ├── Datos
- *    └── Gráficos
- *
- *
- * Documentación tampoco tiene
- * una ruta principal propia.
- *
- * Ahora está integrada en:
- *
- * Cargar archivos
- *    ├── Datos CSV / Excel
- *    └── Documentación
- */
+const obtenerCursosRespuesta = (
+  respuesta
+) => {
 
-const RUTA_POR_PERMISO = {
+  if (
+    Array.isArray(
+      respuesta?.cursos
+    )
+  ) {
+    return respuesta.cursos
+  }
 
-  "big_data.importar":
-    "/big-data/importar",
 
-  "big_data.datasets":
-    "/big-data/datasets",
+  if (
+    Array.isArray(
+      respuesta
+        ?.permisos
+        ?.cursos
+    )
+  ) {
+    return respuesta
+      .permisos
+      .cursos
+  }
 
-  "big_data.analisis":
-    "/big-data/analisis",
 
-  "big_data.comparar":
-    "/big-data/comparar",
+  if (
+    Array.isArray(
+      respuesta
+        ?.data
+        ?.cursos
+    )
+  ) {
+    return respuesta
+      .data
+      .cursos
+  }
 
-  "big_data.estructura":
-    "/big-data/estructura"
 
+  return []
 }
 
 
 /* ==========================================================
-   ORDEN PARA PAGINA INICIAL
+   OBTENER CLAVES DE MODULOS
    ========================================================== */
 
-/*
- * Solo aparecen aquí los módulos
- * que tienen página propia.
- *
- * big_data.graficos queda fuera porque
- * es una funcionalidad interna
- * del módulo Datasets.
- */
+const obtenerClavesPermisos = (
+  respuesta
+) => {
 
-const ORDEN_PERMISOS = [
-
-  "big_data.importar",
-
-  "big_data.datasets",
-
-  "big_data.analisis",
-
-  "big_data.comparar",
-
-  "big_data.estructura"
-
-]
+  const claves =
+    new Set()
 
 
-/* ==========================================================
-   OBTENER CURSOS DE LA RESPUESTA
-   ========================================================== */
+  const cursos =
+    obtenerCursosRespuesta(
+      respuesta
+    )
 
-const obtenerCursosRespuesta =
-  (
-    respuesta
-  ) => {
 
-    if (
+  /* ========================================================
+     MODULOS DENTRO DE CURSOS
+     ======================================================== */
+
+  for (
+    const curso
+    of cursos
+  ) {
+
+    const modulos =
       Array.isArray(
-        respuesta?.cursos
+        curso?.modulos
       )
-    ) {
-
-      return respuesta.cursos
-    }
-
-
-    if (
-      Array.isArray(
-        respuesta?.permisos?.cursos
-      )
-    ) {
-
-      return respuesta.permisos.cursos
-    }
-
-
-    return []
-  }
-
-
-/* ==========================================================
-   EXTRAER PERMISOS
-   ========================================================== */
-
-const obtenerClavesPermisos =
-  (
-    respuesta
-  ) => {
-
-    const claves =
-      new Set()
-
-
-    const cursos =
-      obtenerCursosRespuesta(
-        respuesta
-      )
-
-
-    /* ========================================================
-       MODULOS DENTRO DE CURSOS
-       ======================================================== */
-
-    for (
-      const curso
-      of cursos
-    ) {
-
-      const modulos =
-        Array.isArray(
-          curso?.modulos
-        )
-          ? curso.modulos
-          : Array.isArray(
-              curso?.modules
-            )
-            ? curso.modules
-            : []
-
-
-      for (
-        const modulo
-        of modulos
-      ) {
-
-        /*
-         * Si backend indica que el módulo
-         * está desactivado, no cuenta.
-         */
-        if (
-          modulo?.activo ===
-          false
-        ) {
-
-          continue
-        }
-
-
-        if (
-          modulo?.clave
-        ) {
-
-          claves.add(
-            String(
-              modulo.clave
-            )
-          )
-        }
-      }
-    }
-
-
-    /* ========================================================
-       COMPATIBILIDAD:
-       MODULOS FUERA DE CURSOS
-       ======================================================== */
-
-    const modulosSeparados =
-      Array.isArray(
-        respuesta?.modulos
-      )
-        ? respuesta.modulos
+        ? curso.modulos
         : Array.isArray(
-            respuesta?.permisos?.modulos
+            curso?.modules
           )
-          ? respuesta.permisos.modulos
+          ? curso.modules
           : []
 
 
     for (
       const modulo
-      of modulosSeparados
+      of modulos
     ) {
 
       if (
         modulo?.activo ===
         false
       ) {
-
         continue
       }
 
@@ -271,1009 +156,744 @@ const obtenerClavesPermisos =
         )
       }
     }
-
-
-    return claves
   }
+
+
+  /* ========================================================
+     COMPATIBILIDAD:
+     MODULOS SEPARADOS
+     ======================================================== */
+
+  const separados =
+    Array.isArray(
+      respuesta?.modulos
+    )
+      ? respuesta.modulos
+      : Array.isArray(
+          respuesta
+            ?.permisos
+            ?.modulos
+        )
+        ? respuesta
+            .permisos
+            .modulos
+        : []
+
+
+  for (
+    const modulo
+    of separados
+  ) {
+
+    if (
+      modulo?.activo ===
+      false
+    ) {
+      continue
+    }
+
+
+    if (
+      modulo?.clave
+    ) {
+
+      claves.add(
+        String(
+          modulo.clave
+        )
+      )
+    }
+  }
+
+
+  return claves
+}
 
 
 /* ==========================================================
    RUTA PRIVADA
    ========================================================== */
 
-const Privada =
-  ({
-    rol,
-    permiso,
-    children
-  }) => {
+const Privada = ({
+  rol,
+  permiso,
+  children
+}) => {
 
-    const conectado =
-      isLogged()
-
-
-    const administrador =
-      esAdmin()
+  const conectado =
+    isLogged()
 
 
-    const trabajador =
-      esTrabajador()
+  const administrador =
+    esAdmin()
 
 
-    const [
-      permisos,
-      setPermisos
-    ] =
-      useState(
-        null
-      )
+  const trabajador =
+    esTrabajador()
 
 
-    const [
-      errorPermisos,
-      setErrorPermisos
-    ] =
-      useState(
-        false
-      )
+  const [
+    permisos,
+    setPermisos
+  ] =
+    useState(null)
 
 
-    /* ========================================================
-       CARGAR PERMISOS
-       ======================================================== */
-
-    useEffect(
-      () => {
-
-        /*
-         * SIN LOGIN
-         */
-        if (
-          !conectado
-        ) {
-
-          setPermisos(
-            new Set()
-          )
+  const [
+    errorPermisos,
+    setErrorPermisos
+  ] =
+    useState(false)
 
 
-          return
-        }
+  /* ========================================================
+     COMPROBAR PERMISOS
+     ======================================================== */
+
+  useEffect(
+    () => {
+
+      /*
+       * Sin sesión.
+       */
+      if (
+        !conectado
+      ) {
+
+        setPermisos(
+          new Set()
+        )
+
+        return
+      }
 
 
-        /*
-         * ADMIN
-         *
-         * No necesita consultar permisos
-         * individuales.
-         */
-        if (
-          administrador
-        ) {
+      /*
+       * Admin puede acceder a todos
+       * los módulos.
+       */
+      if (
+        administrador
+      ) {
 
-          setPermisos(
-            new Set()
-          )
+        setPermisos(
+          new Set()
+        )
 
+        setErrorPermisos(
+          false
+        )
+
+        return
+      }
+
+
+      /*
+       * Ruta privada general.
+       *
+       * Ejemplo:
+       * /mis-cursos
+       */
+      if (
+        !permiso
+      ) {
+
+        setPermisos(
+          new Set()
+        )
+
+        setErrorPermisos(
+          false
+        )
+
+        return
+      }
+
+
+      let activo =
+        true
+
+
+      const cargar =
+        async () => {
 
           setErrorPermisos(
             false
           )
 
 
-          return
-        }
+          try {
+
+            const respuesta =
+              await obtenerMisPermisos()
 
 
-        /*
-         * RUTA QUE NO REQUIERE
-         * UN PERMISO DE MODULO.
-         */
-        if (
-          !permiso
-        ) {
-
-          setPermisos(
-            new Set()
-          )
+            if (
+              !activo
+            ) {
+              return
+            }
 
 
-          setErrorPermisos(
-            false
-          )
-
-
-          return
-        }
-
-
-        let activo =
-          true
-
-
-        const cargar =
-          async () => {
-
-            setErrorPermisos(
-              false
+            setPermisos(
+              obtenerClavesPermisos(
+                respuesta
+              )
             )
 
+          } catch (
+            error
+          ) {
 
-            try {
-
-              const respuesta =
-                await obtenerMisPermisos()
-
-
-              if (
-                !activo
-              ) {
-
-                return
-              }
-
-
-              const claves =
-                obtenerClavesPermisos(
-                  respuesta
-                )
-
-
-              setPermisos(
-                claves
-              )
-
-            } catch (
-              error
+            if (
+              !activo
             ) {
-
-              if (
-                !activo
-              ) {
-
-                return
-              }
-
-
-              /*
-               * Seguridad por defecto:
-               *
-               * si no podemos comprobar
-               * el permiso, no damos acceso.
-               */
-              setPermisos(
-                new Set()
-              )
-
-
-              setErrorPermisos(
-                true
-              )
+              return
             }
+
+
+            /*
+             * Seguridad por defecto:
+             *
+             * si no se puede comprobar
+             * el permiso, no damos acceso.
+             */
+            setPermisos(
+              new Set()
+            )
+
+            setErrorPermisos(
+              true
+            )
           }
-
-
-        cargar()
-
-
-        return () => {
-
-          activo =
-            false
         }
 
-      },
-      [
-        conectado,
-        administrador,
-        permiso
-      ]
-    )
+
+      cargar()
 
 
-    /* ========================================================
-       NO CONECTADO
-       ======================================================== */
+      return () => {
 
-    if (
-      !conectado
-    ) {
-
-      return (
-
-        <Navigate
-          to="/login"
-          replace
-        />
-
-      )
-    }
-
-
-    /* ========================================================
-       SOLO ADMIN
-       ======================================================== */
-
-    if (
-      rol ===
-        "admin" &&
-      !administrador
-    ) {
-
-      return (
-
-        <Navigate
-          to="/"
-          replace
-        />
-
-      )
-    }
-
-
-    /* ========================================================
-       USUARIO NORMAL
-       ======================================================== */
-
-    /*
-     * Actualmente el backend conserva
-     * el rol legacy "trabajador".
-     *
-     * El administrador también puede
-     * entrar a Big Data, así que no
-     * lo bloqueamos por esta condición.
-     */
-
-    if (
-      rol ===
-        "trabajador" &&
-      !administrador &&
-      !trabajador
-    ) {
-
-      return (
-
-        <Navigate
-          to="/"
-          replace
-        />
-
-      )
-    }
-
-
-    /* ========================================================
-       COMPROBAR PERMISO
-       ======================================================== */
-
-    if (
-      permiso &&
-      !administrador
-    ) {
-
-      /*
-       * Todavía consultando.
-       */
-      if (
-        permisos ===
-        null
-      ) {
-
-        return (
-
-          <Layout>
-
-            <div className="loading">
-              Comprobando permiso...
-            </div>
-
-          </Layout>
-
-        )
+        activo =
+          false
       }
 
-
-      /*
-       * Error o permiso no asignado.
-       */
-      if (
-        errorPermisos ||
-        !permisos.has(
-          permiso
-        )
-      ) {
-
-        return (
-
-          <Navigate
-            to="/"
-            replace
-          />
-
-        )
-      }
-    }
+    },
+    [
+      conectado,
+      administrador,
+      permiso
+    ]
+  )
 
 
-    /* ========================================================
-       AUTORIZADO
-       ======================================================== */
+  /* ========================================================
+     SIN SESION
+     ======================================================== */
+
+  if (
+    !conectado
+  ) {
 
     return (
-
-      <Layout>
-        {children}
-      </Layout>
-
+      <Navigate
+        to="/login"
+        replace
+      />
     )
   }
+
+
+  /* ========================================================
+     SOLO ADMIN
+     ======================================================== */
+
+  if (
+    rol === "admin" &&
+    !administrador
+  ) {
+
+    return (
+      <Navigate
+        to="/mis-cursos"
+        replace
+      />
+    )
+  }
+
+
+  /* ========================================================
+     RUTA PARA USUARIO NORMAL
+     ======================================================== */
+
+  /*
+   * Actualmente el backend utiliza
+   * el rol legacy "trabajador".
+   *
+   * Admin también puede acceder a
+   * estas páginas.
+   */
+  if (
+    rol === "trabajador" &&
+    !administrador &&
+    !trabajador
+  ) {
+
+    return (
+      <Navigate
+        to="/mis-cursos"
+        replace
+      />
+    )
+  }
+
+
+  /* ========================================================
+     COMPROBAR PERMISO DEL MODULO
+     ======================================================== */
+
+  if (
+    permiso &&
+    !administrador
+  ) {
+
+    if (
+      permisos === null
+    ) {
+
+      return (
+        <Layout>
+
+          <div className="loading">
+            Comprobando permiso...
+          </div>
+
+        </Layout>
+      )
+    }
+
+
+    if (
+      errorPermisos ||
+      !permisos.has(
+        permiso
+      )
+    ) {
+
+      return (
+        <Navigate
+          to="/mis-cursos"
+          replace
+        />
+      )
+    }
+  }
+
+
+  /* ========================================================
+     AUTORIZADO
+     ======================================================== */
+
+  return (
+    <Layout>
+      {children}
+    </Layout>
+  )
+}
 
 
 /* ==========================================================
    RUTA PUBLICA
    ========================================================== */
 
-const Publica =
-  ({
-    children
-  }) => {
+const Publica = ({
+  children
+}) => {
 
-    /*
-     * Si ya existe sesión,
-     * no dejamos volver al Login,
-     * Registro o recuperación.
-     */
+  if (
+    isLogged()
+  ) {
 
-    if (
-      isLogged()
-    ) {
-
-      return (
-
-        <Navigate
-          to="/"
-          replace
-        />
-
-      )
-    }
-
-
-    return children
+    return (
+      <Navigate
+        to="/mis-cursos"
+        replace
+      />
+    )
   }
+
+
+  return children
+}
 
 
 /* ==========================================================
-   INICIO INTELIGENTE
+   INICIO DEL ERP
    ========================================================== */
 
-const InicioPrivado =
-  () => {
-
-    const [
-      cargando,
-      setCargando
-    ] =
-      useState(
-        true
-      )
-
-
-    const [
-      ruta,
-      setRuta
-    ] =
-      useState(
-        ""
-      )
-
-
-    /* ========================================================
-       CALCULAR PRIMER MODULO
-       ======================================================== */
-
-    useEffect(
-      () => {
-
-        /*
-         * Sin sesión.
-         */
-        if (
-          !isLogged()
-        ) {
-
-          setCargando(
-            false
-          )
-
-
-          return
-        }
-
-
-        /*
-         * ADMIN
-         *
-         * Datasets es una página adecuada
-         * como inicio administrativo.
-         */
-        if (
-          esAdmin()
-        ) {
-
-          setRuta(
-            "/big-data/datasets"
-          )
-
-
-          setCargando(
-            false
-          )
-
-
-          return
-        }
-
-
-        let activo =
-          true
-
-
-        const cargar =
-          async () => {
-
-            try {
-
-              const respuesta =
-                await obtenerMisPermisos()
-
-
-              if (
-                !activo
-              ) {
-
-                return
-              }
-
-
-              const claves =
-                obtenerClavesPermisos(
-                  respuesta
-                )
-
-
-              /*
-               * Elegimos el primer módulo
-               * principal permitido.
-               */
-              const primerPermiso =
-                ORDEN_PERMISOS.find(
-                  (
-                    clave
-                  ) =>
-                    claves.has(
-                      clave
-                    )
-                )
-
-
-              if (
-                primerPermiso
-              ) {
-
-                setRuta(
-                  RUTA_POR_PERMISO[
-                    primerPermiso
-                  ]
-                )
-
-              } else {
-
-                /*
-                 * Por ejemplo:
-                 *
-                 * si un usuario tuviera
-                 * solamente big_data.graficos,
-                 * NO puede entrar a Datasets,
-                 * porque también necesita
-                 * big_data.datasets.
-                 */
-                setRuta(
-                  ""
-                )
-              }
-
-            } catch (
-              error
-            ) {
-
-              if (
-                activo
-              ) {
-
-                setRuta(
-                  ""
-                )
-              }
-
-            } finally {
-
-              if (
-                activo
-              ) {
-
-                setCargando(
-                  false
-                )
-              }
-            }
-          }
-
-
-        cargar()
-
-
-        return () => {
-
-          activo =
-            false
-        }
-
-      },
-      []
-    )
-
-
-    /* ========================================================
-       NO LOGUEADO
-       ======================================================== */
-
-    if (
-      !isLogged()
-    ) {
-
-      return (
-
-        <Navigate
-          to="/login"
-          replace
-        />
-
-      )
-    }
-
-
-    /* ========================================================
-       CARGANDO
-       ======================================================== */
-
-    if (
-      cargando
-    ) {
-
-      return (
-
-        <Layout>
-
-          <div className="loading">
-            Cargando tus módulos...
-          </div>
-
-        </Layout>
-
-      )
-    }
-
-
-    /* ========================================================
-       TIENE MODULO
-       ======================================================== */
-
-    if (
-      ruta
-    ) {
-
-      return (
-
-        <Navigate
-          to={
-            ruta
-          }
-          replace
-        />
-
-      )
-    }
-
-
-    /* ========================================================
-       SIN MODULOS
-       ======================================================== */
+const InicioPrivado = () => {
+
+  if (
+    !isLogged()
+  ) {
 
     return (
-
-      <Layout>
-
-        <div className="topbar">
-
-          <div>
-
-            <h1>
-              RIMBERIO
-            </h1>
-
-
-            <p>
-              Sistema ERP organizado por cursos.
-            </p>
-
-          </div>
-
-        </div>
-
-
-        <div className="card">
-
-          <div className="empty">
-
-            <strong
-              style={{
-                display:
-                  "block",
-
-                marginBottom:
-                  "7px"
-              }}
-            >
-              No tienes módulos habilitados
-            </strong>
-
-
-            <span>
-              Un administrador debe asignarte acceso para comenzar.
-            </span>
-
-          </div>
-
-        </div>
-
-      </Layout>
-
+      <Navigate
+        to="/login"
+        replace
+      />
     )
   }
+
+
+  /*
+   * NUEVO FLUJO:
+   *
+   * Login
+   *   ↓
+   * Mis cursos
+   *   ↓
+   * Curso
+   *   ↓
+   * Módulo
+   */
+  return (
+    <Navigate
+      to="/mis-cursos"
+      replace
+    />
+  )
+}
 
 
 /* ==========================================================
    APP
    ========================================================== */
 
-const App =
-  () => (
+const App = () => (
 
-    <Routes>
+  <Routes>
 
-      {/* ======================================================
-          PUBLICAS
-          ====================================================== */}
+    {/* ======================================================
+        PUBLICAS
+        ====================================================== */}
 
-      <Route
-        path="/login"
-        element={
-          <Publica>
+    <Route
+      path="/login"
+      element={
+        <Publica>
 
-            <Login />
+          <Login />
 
-          </Publica>
-        }
-      />
+        </Publica>
+      }
+    />
 
 
-      <Route
-        path="/registro"
-        element={
-          <Publica>
+    <Route
+      path="/registro"
+      element={
+        <Publica>
 
-            <Register />
+          <Register />
 
-          </Publica>
-        }
-      />
+        </Publica>
+      }
+    />
 
 
-      <Route
-        path="/recuperar-password"
-        element={
-          <Publica>
+    <Route
+      path="/recuperar-password"
+      element={
+        <Publica>
 
-            <RecuperarPassword />
+          <RecuperarPassword />
 
-          </Publica>
-        }
-      />
+        </Publica>
+      }
+    />
 
 
-      <Route
-        path="/restablecer-password"
-        element={
-          <Publica>
+    <Route
+      path="/restablecer-password"
+      element={
+        <Publica>
 
-            <RestablecerPassword />
+          <RestablecerPassword />
 
-          </Publica>
-        }
-      />
+        </Publica>
+      }
+    />
 
 
-      {/* ======================================================
-          INICIO
-          ====================================================== */}
+    {/* ======================================================
+        INICIO
+        ====================================================== */}
 
-      <Route
-        path="/"
-        element={
-          <InicioPrivado />
-        }
-      />
+    <Route
+      path="/"
+      element={
+        <InicioPrivado />
+      }
+    />
 
 
-      {/* ======================================================
-          BIG DATA - CARGAR ARCHIVOS
+    {/* ======================================================
+        MIS CURSOS
+        ====================================================== */}
 
-          Incluye:
+    <Route
+      path="/mis-cursos"
+      element={
+        <Privada>
 
-          DATOS:
-          - CSV
-          - XLS
-          - XLSX
+          <MisCursos />
 
-          DOCUMENTACION:
-          - PDF
-          - Word
-          - Excel
-          - PowerPoint
+        </Privada>
+      }
+    />
 
-          Todo se controla mediante:
-          big_data.importar
-          ====================================================== */}
 
-      <Route
-        path="/big-data/importar"
-        element={
-          <Privada
-            rol="trabajador"
-            permiso="big_data.importar"
-          >
+    {/* ======================================================
+        BIG DATA
+        ====================================================== */}
 
-            <Importar />
 
-          </Privada>
-        }
-      />
+    {/* ======================================================
+        CARGAR ARCHIVOS
 
+        Incluye:
+        - CSV
+        - XLS
+        - XLSX
+        - Documentación
+        ====================================================== */}
 
-      {/* ======================================================
-          BIG DATA - DATASETS
-
-          El módulo contiene:
-
-          [ Datos ]
-
-          y, solamente cuando tiene:
-
-          big_data.graficos
-
-          también:
-
-          [ Gráficos ]
-
-          El acceso a la página completa
-          sigue dependiendo de:
-          big_data.datasets
-          ====================================================== */}
-
-      <Route
-        path="/big-data/datasets"
-        element={
-          <Privada
-            rol="trabajador"
-            permiso="big_data.datasets"
-          >
-
-            <Archivos />
-
-          </Privada>
-        }
-      />
-
-
-      {/* ======================================================
-          BIG DATA - ANALISIS
-          ====================================================== */}
-
-      <Route
-        path="/big-data/analisis"
-        element={
-          <Privada
-            rol="trabajador"
-            permiso="big_data.analisis"
-          >
-
-            <Comparar
-              modo="analisis"
-            />
-
-          </Privada>
-        }
-      />
-
-
-      {/* ======================================================
-          BIG DATA - COMPARACION
-          ====================================================== */}
-
-      <Route
-        path="/big-data/comparar"
-        element={
-          <Privada
-            rol="trabajador"
-            permiso="big_data.comparar"
-          >
-
-            <Comparar
-              modo="comparacion"
-            />
-
-          </Privada>
-        }
-      />
-
-
-      {/* ======================================================
-          BIG DATA - ESTRUCTURA
-          ====================================================== */}
-
-      <Route
-        path="/big-data/estructura"
-        element={
-          <Privada
-            rol="trabajador"
-            permiso="big_data.estructura"
-          >
-
-            <DatosEmpresa />
-
-          </Privada>
-        }
-      />
-
-
-      {/* ======================================================
-          ADMINISTRACION
-          ====================================================== */}
-
-      <Route
-        path="/administracion/usuarios"
-        element={
-          <Privada
-            rol="admin"
-          >
-
-            <AdminUsuarios />
-
-          </Privada>
-        }
-      />
-
-
-      {/* ======================================================
-          COMPATIBILIDAD CON RUTAS ANTIGUAS
-          ====================================================== */}
-
-      <Route
-        path="/importar"
-        element={
-          <Navigate
-            to="/big-data/importar"
-            replace
+    <Route
+      path="/big-data/importar"
+      element={
+        <Privada
+          rol="trabajador"
+          permiso="big_data.importar"
+        >
+
+          <Importar />
+
+        </Privada>
+      }
+    />
+
+
+    {/* ======================================================
+        DATASETS
+
+        Incluye:
+        - Datos
+        - Gráficos
+
+        La pestaña Gráficos se controla
+        internamente mediante:
+        big_data.graficos
+        ====================================================== */}
+
+    <Route
+      path="/big-data/datasets"
+      element={
+        <Privada
+          rol="trabajador"
+          permiso="big_data.datasets"
+        >
+
+          <Archivos />
+
+        </Privada>
+      }
+    />
+
+
+    {/* ======================================================
+        ANALISIS
+        ====================================================== */}
+
+    <Route
+      path="/big-data/analisis"
+      element={
+        <Privada
+          rol="trabajador"
+          permiso="big_data.analisis"
+        >
+
+          <Comparar
+            modo="analisis"
           />
-        }
-      />
+
+        </Privada>
+      }
+    />
 
 
-      <Route
-        path="/datos-empresa"
-        element={
-          <Navigate
-            to="/big-data/estructura"
-            replace
+    {/* ======================================================
+        COMPARACION
+        ====================================================== */}
+
+    <Route
+      path="/big-data/comparar"
+      element={
+        <Privada
+          rol="trabajador"
+          permiso="big_data.comparar"
+        >
+
+          <Comparar
+            modo="comparacion"
           />
-        }
-      />
+
+        </Privada>
+      }
+    />
 
 
-      <Route
-        path="/archivos"
-        element={
-          <Navigate
-            to="/big-data/datasets"
-            replace
-          />
-        }
-      />
+    {/* ======================================================
+        ESTRUCTURA DE DATOS
+        ====================================================== */}
+
+    <Route
+      path="/big-data/estructura"
+      element={
+        <Privada
+          rol="trabajador"
+          permiso="big_data.estructura"
+        >
+
+          <DatosEmpresa />
+
+        </Privada>
+      }
+    />
 
 
-      <Route
-        path="/comparar"
-        element={
-          <Navigate
-            to="/big-data/comparar"
-            replace
-          />
-        }
-      />
+    {/* ======================================================
+        ADMINISTRACION
+        ====================================================== */}
+
+    <Route
+      path="/administracion/usuarios"
+      element={
+        <Privada
+          rol="admin"
+        >
+
+          <AdminUsuarios />
+
+        </Privada>
+      }
+    />
 
 
-      {/* ======================================================
-          GRAFICOS - RUTA ANTIGUA
+    {/* ======================================================
+        RUTAS ANTIGUAS
+        ====================================================== */}
 
-          Ya NO tiene pantalla propia.
-
-          Redirigimos al dataset,
-          donde se encuentra ahora
-          la pestaña Graficos.
-          ====================================================== */}
-
-      <Route
-        path="/big-data/graficos"
-        element={
-          <Navigate
-            to="/big-data/datasets"
-            replace
-          />
-        }
-      />
+    <Route
+      path="/importar"
+      element={
+        <Navigate
+          to="/big-data/importar"
+          replace
+        />
+      }
+    />
 
 
-      {/* ======================================================
-          DOCUMENTACION - RUTA ANTIGUA
-
-          Ya NO tiene pantalla propia.
-
-          Ahora está integrada en:
-          Cargar archivos.
-          ====================================================== */}
-
-      <Route
-        path="/big-data/documentos"
-        element={
-          <Navigate
-            to="/big-data/importar"
-            replace
-          />
-        }
-      />
+    <Route
+      path="/datos-empresa"
+      element={
+        <Navigate
+          to="/big-data/estructura"
+          replace
+        />
+      }
+    />
 
 
-      {/* ======================================================
-          RUTA DESCONOCIDA
-          ====================================================== */}
+    <Route
+      path="/archivos"
+      element={
+        <Navigate
+          to="/big-data/datasets"
+          replace
+        />
+      }
+    />
 
-      <Route
-        path="*"
-        element={
-          <Navigate
-            to={
-              isLogged()
-                ? "/"
-                : "/login"
-            }
-            replace
-          />
-        }
-      />
 
-    </Routes>
-  )
+    <Route
+      path="/comparar"
+      element={
+        <Navigate
+          to="/big-data/comparar"
+          replace
+        />
+      }
+    />
+
+
+    {/* ======================================================
+        GRAFICOS - ANTIGUA RUTA
+
+        Los gráficos ahora están dentro
+        de cada dataset.
+        ====================================================== */}
+
+    <Route
+      path="/big-data/graficos"
+      element={
+        <Navigate
+          to="/big-data/datasets"
+          replace
+        />
+      }
+    />
+
+
+    {/* ======================================================
+        DOCUMENTACION - ANTIGUA RUTA
+
+        Documentación ahora está dentro
+        de Cargar archivos.
+        ====================================================== */}
+
+    <Route
+      path="/big-data/documentos"
+      element={
+        <Navigate
+          to="/big-data/importar"
+          replace
+        />
+      }
+    />
+
+
+    {/* ======================================================
+        RUTA DESCONOCIDA
+        ====================================================== */}
+
+    <Route
+      path="*"
+      element={
+        <Navigate
+          to={
+            isLogged()
+              ? "/mis-cursos"
+              : "/login"
+          }
+          replace
+        />
+      }
+    />
+
+  </Routes>
+)
 
 
 export default App
