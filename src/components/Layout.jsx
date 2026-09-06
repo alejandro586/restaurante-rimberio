@@ -6,7 +6,6 @@ import {
 
 import {
   NavLink,
-  useLocation,
   useNavigate
 } from "react-router-dom"
 
@@ -25,19 +24,6 @@ import {
    MODULOS VISIBLES DE BIG DATA
    ========================================================== */
 
-/*
- * IMPORTANTE:
- *
- * No incluimos:
- *
- * big_data.graficos
- * porque Gráficos está dentro de Datasets.
- *
- * Tampoco existe una página independiente
- * de Documentación porque ahora está
- * dentro de Cargar archivos.
- */
-
 const MODULOS_BIG_DATA = [
   {
     clave:
@@ -52,6 +38,7 @@ const MODULOS_BIG_DATA = [
     icono:
       "↑"
   },
+
   {
     clave:
       "big_data.datasets",
@@ -65,6 +52,7 @@ const MODULOS_BIG_DATA = [
     icono:
       "▦"
   },
+
   {
     clave:
       "big_data.analisis",
@@ -78,6 +66,7 @@ const MODULOS_BIG_DATA = [
     icono:
       "⌁"
   },
+
   {
     clave:
       "big_data.comparar",
@@ -91,6 +80,7 @@ const MODULOS_BIG_DATA = [
     icono:
       "⇄"
   },
+
   {
     clave:
       "big_data.estructura",
@@ -119,15 +109,12 @@ const obtenerClavesPermisos = (
     new Set()
 
 
-  /* ========================================================
-     CURSOS
-     ======================================================== */
-
   const cursos =
     Array.isArray(
       respuesta?.cursos
     )
       ? respuesta.cursos
+
       : Array.isArray(
           respuesta
             ?.permisos
@@ -136,6 +123,7 @@ const obtenerClavesPermisos = (
         ? respuesta
             .permisos
             .cursos
+
         : Array.isArray(
             respuesta
               ?.data
@@ -144,6 +132,7 @@ const obtenerClavesPermisos = (
           ? respuesta
               .data
               .cursos
+
           : []
 
 
@@ -165,10 +154,12 @@ const obtenerClavesPermisos = (
         curso?.modulos
       )
         ? curso.modulos
+
         : Array.isArray(
             curso?.modules
           )
           ? curso.modules
+
           : []
 
 
@@ -200,15 +191,15 @@ const obtenerClavesPermisos = (
 
 
   /* ========================================================
-     COMPATIBILIDAD:
-     MODULOS SEPARADOS
+     COMPATIBILIDAD CON RESPUESTAS ANTIGUAS
      ======================================================== */
 
-  const modulosSeparados =
+  const separados =
     Array.isArray(
       respuesta?.modulos
     )
       ? respuesta.modulos
+
       : Array.isArray(
           respuesta
             ?.permisos
@@ -217,12 +208,13 @@ const obtenerClavesPermisos = (
         ? respuesta
             .permisos
             .modulos
+
         : []
 
 
   for (
     const modulo
-    of modulosSeparados
+    of separados
   ) {
 
     if (
@@ -251,15 +243,14 @@ const obtenerClavesPermisos = (
 
 
 /* ==========================================================
-   ENLACE DEL MENU
+   ENLACE
    ========================================================== */
 
 const EnlaceMenu = ({
   to,
   icono,
   children,
-  end = false,
-  onClick
+  end = false
 }) => {
 
   return (
@@ -270,27 +261,23 @@ const EnlaceMenu = ({
       end={
         end
       }
-      onClick={
-        onClick
-      }
       className={
         ({
           isActive
         }) =>
-          `nav-link${
-            isActive
-              ? " active"
-              : ""
-          }`
+          isActive
+            ? "active"
+            : ""
       }
     >
       <span
+        aria-hidden="true"
         style={{
           width:
-            "24px",
+            "22px",
 
-          height:
-            "24px",
+          minWidth:
+            "22px",
 
           display:
             "inline-flex",
@@ -301,11 +288,11 @@ const EnlaceMenu = ({
           justifyContent:
             "center",
 
-          flexShrink:
-            0,
+          marginRight:
+            "8px",
 
           fontSize:
-            "16px",
+            "15px",
 
           lineHeight:
             1
@@ -315,7 +302,12 @@ const EnlaceMenu = ({
       </span>
 
 
-      <span>
+      <span
+        style={{
+          minWidth:
+            0
+        }}
+      >
         {children}
       </span>
     </NavLink>
@@ -335,10 +327,6 @@ const Layout = ({
     useNavigate()
 
 
-  const location =
-    useLocation()
-
-
   const administrador =
     esAdmin()
 
@@ -346,21 +334,6 @@ const Layout = ({
   const rol =
     getRol()
 
-
-  /* ========================================================
-     SIDEBAR MOVIL
-     ======================================================== */
-
-  const [
-    menuAbierto,
-    setMenuAbierto
-  ] =
-    useState(false)
-
-
-  /* ========================================================
-     PERMISOS
-     ======================================================== */
 
   const [
     permisos,
@@ -397,36 +370,12 @@ const Layout = ({
 
 
   /* ========================================================
-     CERRAR MENU AL CAMBIAR RUTA
-     ======================================================== */
-
-  useEffect(
-    () => {
-
-      setMenuAbierto(
-        false
-      )
-
-    },
-    [
-      location.pathname
-    ]
-  )
-
-
-  /* ========================================================
      CARGAR PERMISOS
      ======================================================== */
 
   useEffect(
     () => {
 
-      /*
-       * ADMIN:
-       *
-       * siempre ve todos los módulos
-       * disponibles del curso.
-       */
       if (
         administrador
       ) {
@@ -442,13 +391,16 @@ const Layout = ({
           )
         )
 
+
         setCargandoPermisos(
           false
         )
 
+
         setErrorPermisos(
           false
         )
+
 
         return
       }
@@ -464,6 +416,7 @@ const Layout = ({
           setCargandoPermisos(
             true
           )
+
 
           setErrorPermisos(
             false
@@ -500,15 +453,10 @@ const Layout = ({
             }
 
 
-            /*
-             * Seguridad:
-             *
-             * si no podemos comprobar permisos,
-             * no mostramos módulos privados.
-             */
             setPermisos(
               new Set()
             )
+
 
             setErrorPermisos(
               true
@@ -545,7 +493,7 @@ const Layout = ({
 
 
   /* ========================================================
-     MODULOS QUE PUEDE VER
+     MODULOS VISIBLES
      ======================================================== */
 
   const modulosVisibles =
@@ -583,15 +531,19 @@ const Layout = ({
 
 
   /* ========================================================
-     NOMBRE DEL ROL
+     ROL VISUAL
      ======================================================== */
 
   const nombreRol =
     administrador
       ? "Administrador"
-      : rol === "trabajador"
-        ? "Usuario"
-        : "Usuario"
+      : "Usuario"
+
+
+  const claseRol =
+    administrador
+      ? "rol-chip rol-admin"
+      : "rol-chip rol-trabajador"
 
 
   /* ========================================================
@@ -601,14 +553,14 @@ const Layout = ({
   const cerrarSesion =
     () => {
 
-      const confirmar =
+      const confirmado =
         window.confirm(
           "¿Deseas cerrar tu sesión en RIMBERIO?"
         )
 
 
       if (
-        !confirmar
+        !confirmado
       ) {
         return
       }
@@ -635,130 +587,25 @@ const Layout = ({
     <div className="layout">
 
       {/* ====================================================
-          BOTON MOVIL
-          ==================================================== */}
-
-      <button
-        type="button"
-        aria-label="Abrir menú"
-        onClick={
-          () =>
-            setMenuAbierto(
-              (
-                actual
-              ) =>
-                !actual
-            )
-        }
-        style={{
-          position:
-            "fixed",
-
-          top:
-            "14px",
-
-          left:
-            "14px",
-
-          zIndex:
-            1200,
-
-          width:
-            "42px",
-
-          height:
-            "42px",
-
-          borderRadius:
-            "10px",
-
-          border:
-            "1px solid #eadfd7",
-
-          background:
-            "#ffffff",
-
-          alignItems:
-            "center",
-
-          justifyContent:
-            "center",
-
-          cursor:
-            "pointer"
-        }}
-        className="sidebar-mobile-button"
-      >
-        ☰
-      </button>
-
-
-      {/* ====================================================
-          FONDO MOVIL
-          ==================================================== */}
-
-      {menuAbierto && (
-        <button
-          type="button"
-          aria-label="Cerrar menú"
-          onClick={
-            () =>
-              setMenuAbierto(
-                false
-              )
-          }
-          className="sidebar-overlay"
-          style={{
-            position:
-              "fixed",
-
-            inset:
-              0,
-
-            zIndex:
-              998,
-
-            border:
-              0,
-
-            padding:
-              0,
-
-            background:
-              "rgba(0,0,0,.28)"
-          }}
-        />
-      )}
-
-
-      {/* ====================================================
           SIDEBAR
           ==================================================== */}
 
-      <aside
-        className={
-          `sidebar${
-            menuAbierto
-              ? " open"
-              : ""
-          }`
-        }
-      >
+      <aside className="sidebar">
 
         {/* ==================================================
-            MARCA
+            LOGO / MARCA
             ================================================== */}
 
         <div
-          className="brand"
+          className="sidebar-brand"
+          role="button"
+          tabIndex={0}
           onClick={
             () =>
               navigate(
                 "/mis-cursos"
               )
           }
-          role="button"
-          tabIndex={0}
           onKeyDown={
             (
               event
@@ -784,24 +631,37 @@ const Layout = ({
         >
 
           <div
-            className="brand-mark"
+            className="brand-logo"
+            style={{
+              display:
+                "flex",
+
+              alignItems:
+                "center",
+
+              justifyContent:
+                "center",
+
+              background:
+                "#ffffff",
+
+              color:
+                "#c1541f",
+
+              fontWeight:
+                800,
+
+              fontSize:
+                "17px"
+            }}
           >
             R
           </div>
 
 
-          <div>
-
-            <strong>
-              RIMBERIO
-            </strong>
-
-
-            <span>
-              ERP por cursos
-            </span>
-
-          </div>
+          <span>
+            RIMBERIO
+          </span>
 
         </div>
 
@@ -810,25 +670,27 @@ const Layout = ({
             NAVEGACION
             ================================================== */}
 
-        <nav className="nav">
+        <nav className="sidebar-nav">
 
           {/* =================================================
               MIS CURSOS
               ================================================= */}
 
-          <div
-            style={{
-              marginBottom:
-                "8px"
-            }}
-          >
+          <div>
+
+            <div>
+              Inicio
+            </div>
+
+
             <EnlaceMenu
               to="/mis-cursos"
-              end
               icono="⌂"
+              end
             >
               Mis cursos
             </EnlaceMenu>
+
           </div>
 
 
@@ -838,41 +700,13 @@ const Layout = ({
 
           {(administrador ||
             cargandoPermisos ||
+            errorPermisos ||
             modulosVisibles.length >
-              0 ||
-            errorPermisos) && (
+              0) && (
 
-            <div
-              style={{
-                marginTop:
-                  "16px"
-              }}
-            >
+            <div>
 
-              <div
-                style={{
-                  padding:
-                    "0 12px 8px",
-
-                  fontSize:
-                    "10px",
-
-                  lineHeight:
-                    1,
-
-                  letterSpacing:
-                    ".12em",
-
-                  fontWeight:
-                    800,
-
-                  color:
-                    "#9a887b",
-
-                  textTransform:
-                    "uppercase"
-                }}
-              >
+              <div>
                 Big Data
               </div>
 
@@ -882,18 +716,22 @@ const Layout = ({
                   ============================================= */}
 
               {cargandoPermisos && (
+
                 <div
-                  className="muted"
                   style={{
                     padding:
                       "9px 12px",
 
+                    color:
+                      "rgba(247,241,230,.58)",
+
                     fontSize:
-                      "12px"
+                      "11px"
                   }}
                 >
-                  Cargando módulos...
+                  Cargando...
                 </div>
+
               )}
 
 
@@ -905,13 +743,18 @@ const Layout = ({
                 errorPermisos && (
 
                 <div
-                  className="muted"
                   style={{
                     padding:
                       "9px 12px",
 
+                    color:
+                      "rgba(247,241,230,.58)",
+
                     fontSize:
-                      "12px"
+                      "11px",
+
+                    lineHeight:
+                      1.4
                   }}
                 >
                   No se pudieron cargar los módulos.
@@ -954,106 +797,14 @@ const Layout = ({
 
 
           {/* =================================================
-              SIN MODULOS
-              ================================================= */}
-
-          {!administrador &&
-            !cargandoPermisos &&
-            !errorPermisos &&
-            modulosVisibles.length ===
-              0 && (
-
-            <div
-              style={{
-                marginTop:
-                  "16px",
-
-                padding:
-                  "12px",
-
-                borderRadius:
-                  "9px",
-
-                background:
-                  "#faf7f5",
-
-                border:
-                  "1px solid #eee5df"
-              }}
-            >
-              <strong
-                style={{
-                  display:
-                    "block",
-
-                  fontSize:
-                    "11px",
-
-                  marginBottom:
-                    "4px"
-                }}
-              >
-                Sin módulos
-              </strong>
-
-
-              <span
-                className="muted"
-                style={{
-                  display:
-                    "block",
-
-                  fontSize:
-                    "11px",
-
-                  lineHeight:
-                    1.4
-                }}
-              >
-                El administrador todavía no te ha asignado funciones.
-              </span>
-            </div>
-
-          )}
-
-
-          {/* =================================================
               ADMINISTRACION
               ================================================= */}
 
           {administrador && (
 
-            <div
-              style={{
-                marginTop:
-                  "22px"
-              }}
-            >
+            <div>
 
-              <div
-                style={{
-                  padding:
-                    "0 12px 8px",
-
-                  fontSize:
-                    "10px",
-
-                  lineHeight:
-                    1,
-
-                  letterSpacing:
-                    ".12em",
-
-                  fontWeight:
-                    800,
-
-                  color:
-                    "#9a887b",
-
-                  textTransform:
-                    "uppercase"
-                }}
-              >
+              <div>
                 Administración
               </div>
 
@@ -1073,97 +824,33 @@ const Layout = ({
 
 
         {/* ==================================================
-            ESPACIADOR
+            PIE DEL SIDEBAR
             ================================================== */}
 
-        <div
-          style={{
-            flex:
-              1
-          }}
-        />
+        <div className="sidebar-foot">
 
+          {/* =================================================
+              USUARIO
+              ================================================= */}
 
-        {/* ==================================================
-            USUARIO
-            ================================================== */}
+          <div className="sidebar-user">
 
-        <div className="sidebar-user">
-
-          <div
-            style={{
-              display:
-                "flex",
-
-              alignItems:
-                "center",
-
-              gap:
-                "10px",
-
-              minWidth:
-                0
-            }}
-          >
-
-            <div className="avatar">
+            <span className="avatar avatar-light">
               {getInitials()}
-            </div>
+            </span>
 
 
-            <div
-              style={{
-                minWidth:
-                  0,
+            <div className="sidebar-ident">
 
-                flex:
-                  1
-              }}
-            >
-
-              <strong
-                style={{
-                  display:
-                    "block",
-
-                  overflow:
-                    "hidden",
-
-                  textOverflow:
-                    "ellipsis",
-
-                  whiteSpace:
-                    "nowrap",
-
-                  fontSize:
-                    "13px"
-                }}
-              >
+              <span className="sidebar-name">
                 {getUserName()}
-              </strong>
+              </span>
 
 
               <span
-                className="muted"
-                style={{
-                  display:
-                    "block",
-
-                  marginTop:
-                    "2px",
-
-                  overflow:
-                    "hidden",
-
-                  textOverflow:
-                    "ellipsis",
-
-                  whiteSpace:
-                    "nowrap",
-
-                  fontSize:
-                    "11px"
-                }}
+                className={
+                  claseRol
+                }
               >
                 {nombreRol}
               </span>
@@ -1177,36 +864,14 @@ const Layout = ({
               EMPRESA
               ================================================= */}
 
-          <div
-            className="muted"
-            style={{
-              marginTop:
-                "10px",
-
-              paddingTop:
-                "10px",
-
-              borderTop:
-                "1px solid #eadfd7",
-
-              overflow:
-                "hidden",
-
-              textOverflow:
-                "ellipsis",
-
-              whiteSpace:
-                "nowrap",
-
-              fontSize:
-                "11px"
-            }}
+          <span
+            className="sidebar-empresa"
             title={
               getEmpresa()
             }
           >
             {getEmpresa()}
-          </div>
+          </span>
 
 
           {/* =================================================
@@ -1215,14 +880,10 @@ const Layout = ({
 
           <button
             type="button"
-            className="btn btn-light btn-block"
+            className="btn btn-logout"
             onClick={
               cerrarSesion
             }
-            style={{
-              marginTop:
-                "10px"
-            }}
           >
             Cerrar sesión
           </button>
@@ -1233,13 +894,11 @@ const Layout = ({
 
 
       {/* ====================================================
-          CONTENIDO
+          CONTENIDO PRINCIPAL
           ==================================================== */}
 
       <main className="main">
-
         {children}
-
       </main>
 
     </div>
