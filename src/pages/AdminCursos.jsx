@@ -9,35 +9,34 @@ import {
 } from "react-router-dom"
 
 import {
+  listarCatalogoAdminCursos,
+  crearCursoAdmin,
+  actualizarCursoAdmin,
+  cambiarEstadoCursoAdmin,
+  crearModuloAdmin,
+  actualizarModuloAdmin,
+  cambiarEstadoModuloAdmin,
   getInitials,
   getMessage,
-  getUserName,
-  obtenerCatalogoCursos
+  getUserName
 } from "../api"
+
+import Modal
+  from "../components/Modal"
 
 
 /* ==========================================================
-   RUTAS IMPLEMENTADAS ACTUALMENTE
+   MODULOS YA CONECTADOS AL FRONTEND
    ========================================================== */
-
-/*
- * IMPORTANTE:
- *
- * Esta tabla NO inventa módulos.
- *
- * Solamente relaciona las funciones
- * que ya existen actualmente en Big Data
- * con sus pantallas reales.
- */
 
 const RUTAS_IMPLEMENTADAS = {
 
   "big_data.importar": {
-    ruta:
-      "/big-data/importar",
-
     nombre:
       "Cargar archivos",
+
+    ruta:
+      "/big-data/importar",
 
     tipo:
       "Pantalla"
@@ -45,11 +44,11 @@ const RUTAS_IMPLEMENTADAS = {
 
 
   "big_data.datasets": {
-    ruta:
-      "/big-data/datasets",
-
     nombre:
       "Datasets",
+
+    ruta:
+      "/big-data/datasets",
 
     tipo:
       "Pantalla"
@@ -57,11 +56,11 @@ const RUTAS_IMPLEMENTADAS = {
 
 
   "big_data.analisis": {
-    ruta:
-      "/big-data/analisis",
-
     nombre:
       "Análisis",
+
+    ruta:
+      "/big-data/analisis",
 
     tipo:
       "Pantalla"
@@ -69,11 +68,11 @@ const RUTAS_IMPLEMENTADAS = {
 
 
   "big_data.comparar": {
-    ruta:
-      "/big-data/comparar",
-
     nombre:
       "Comparación",
+
+    ruta:
+      "/big-data/comparar",
 
     tipo:
       "Pantalla"
@@ -81,32 +80,23 @@ const RUTAS_IMPLEMENTADAS = {
 
 
   "big_data.estructura": {
-    ruta:
-      "/big-data/estructura",
-
     nombre:
       "Estructura de datos",
+
+    ruta:
+      "/big-data/estructura",
 
     tipo:
       "Pantalla"
   },
 
 
-  /*
-   * Gráficos ya no tiene una pantalla
-   * independiente.
-   *
-   * Está dentro de:
-   *
-   * Datasets
-   *   └── Gráficos
-   */
   "big_data.graficos": {
-    ruta:
-      "/big-data/datasets",
-
     nombre:
       "Gráficos",
+
+    ruta:
+      "/big-data/datasets",
 
     tipo:
       "Integrado en Datasets"
@@ -116,17 +106,34 @@ const RUTAS_IMPLEMENTADAS = {
 
 
 /* ==========================================================
-   NORMALIZAR LISTA DE CURSOS
+   UTILIDADES
+   ========================================================== */
+
+const texto = (
+  valor,
+  respaldo = "—"
+) => {
+
+  const contenido =
+    String(
+      valor ??
+      ""
+    ).trim()
+
+
+  return contenido ||
+    respaldo
+}
+
+
+/* ==========================================================
+   OBTENER CURSOS
    ========================================================== */
 
 const obtenerListaCursos = (
   respuesta
 ) => {
 
-  /*
-   * El backend puede devolver
-   * directamente un array.
-   */
   if (
     Array.isArray(
       respuesta
@@ -137,14 +144,6 @@ const obtenerListaCursos = (
   }
 
 
-  /*
-   * Forma utilizada actualmente:
-   *
-   * {
-   *   total_cursos: 1,
-   *   cursos: [...]
-   * }
-   */
   if (
     Array.isArray(
       respuesta?.cursos
@@ -155,9 +154,6 @@ const obtenerListaCursos = (
   }
 
 
-  /*
-   * Compatibilidad.
-   */
   if (
     Array.isArray(
       respuesta?.data
@@ -187,7 +183,7 @@ const obtenerListaCursos = (
 
 
 /* ==========================================================
-   NORMALIZAR MODULOS
+   OBTENER MODULOS
    ========================================================== */
 
 const obtenerModulos = (
@@ -208,10 +204,6 @@ const obtenerModulos = (
         : []
 
 
-  /*
-   * Ordenamos utilizando el campo
-   * orden que ya existe en la base.
-   */
   return [
     ...modulos
   ].sort(
@@ -220,37 +212,66 @@ const obtenerModulos = (
       b
     ) =>
       Number(
-        a?.orden || 0
+        a?.orden ||
+        0
       ) -
       Number(
-        b?.orden || 0
+        b?.orden ||
+        0
       )
   )
 }
 
 
 /* ==========================================================
-   TEXTO SEGURO
+   FORMULARIO CURSO VACIO
    ========================================================== */
 
-const texto = (
-  valor,
-  respaldo = "—"
-) => {
+const cursoVacio = () => ({
+  nombre:
+    "",
 
-  const resultado =
-    String(
-      valor ?? ""
-    ).trim()
+  slug:
+    "",
 
+  descripcion:
+    "",
 
-  return resultado ||
-    respaldo
-}
+  orden:
+    "",
+
+  activo:
+    true
+})
 
 
 /* ==========================================================
-   ADMINISTRACION DE CURSOS
+   FORMULARIO MODULO VACIO
+   ========================================================== */
+
+const moduloVacio = () => ({
+  nombre:
+    "",
+
+  slug:
+    "",
+
+  clave:
+    "",
+
+  descripcion:
+    "",
+
+  orden:
+    "",
+
+  activo:
+    true
+})
+
+
+/* ==========================================================
+   ADMIN CURSOS
    ========================================================== */
 
 const AdminCursos = () => {
@@ -270,10 +291,6 @@ const AdminCursos = () => {
     useState([])
 
 
-  /* ========================================================
-     ESTADO
-     ======================================================== */
-
   const [
     cargando,
     setCargando
@@ -284,6 +301,13 @@ const AdminCursos = () => {
   const [
     error,
     setError
+  ] =
+    useState("")
+
+
+  const [
+    aviso,
+    setAviso
   ] =
     useState("")
 
@@ -303,15 +327,129 @@ const AdminCursos = () => {
 
 
   /* ========================================================
+     PROCESOS
+     ======================================================== */
+
+  const [
+    procesando,
+    setProcesando
+  ] =
+    useState("")
+
+
+  /* ========================================================
+     MODAL CURSO
+     ======================================================== */
+
+  const [
+    modalCurso,
+    setModalCurso
+  ] =
+    useState(null)
+
+
+  const [
+    formularioCurso,
+    setFormularioCurso
+  ] =
+    useState(
+      cursoVacio()
+    )
+
+
+  const [
+    guardandoCurso,
+    setGuardandoCurso
+  ] =
+    useState(false)
+
+
+  const [
+    errorCurso,
+    setErrorCurso
+  ] =
+    useState("")
+
+
+  /* ========================================================
+     MODAL MODULO
+     ======================================================== */
+
+  const [
+    modalModulo,
+    setModalModulo
+  ] =
+    useState(null)
+
+
+  const [
+    formularioModulo,
+    setFormularioModulo
+  ] =
+    useState(
+      moduloVacio()
+    )
+
+
+  const [
+    guardandoModulo,
+    setGuardandoModulo
+  ] =
+    useState(false)
+
+
+  const [
+    errorModulo,
+    setErrorModulo
+  ] =
+    useState("")
+
+
+  /* ========================================================
+     AVISO
+     ======================================================== */
+
+  const mostrarAviso =
+    (
+      mensaje
+    ) => {
+
+      setAviso(
+        mensaje
+      )
+
+
+      window.setTimeout(
+        () => {
+
+          setAviso(
+            ""
+          )
+
+        },
+        3500
+      )
+    }
+
+
+  /* ========================================================
      CARGAR CATALOGO
      ======================================================== */
 
   const cargarCatalogo =
-    async () => {
-
-      setCargando(
+    async (
+      mostrarCarga =
         true
-      )
+    ) => {
+
+      if (
+        mostrarCarga
+      ) {
+
+        setCargando(
+          true
+        )
+      }
 
 
       setError(
@@ -322,34 +460,61 @@ const AdminCursos = () => {
       try {
 
         const respuesta =
-          await obtenerCatalogoCursos()
+          await listarCatalogoAdminCursos()
 
 
         const lista =
           obtenerListaCursos(
             respuesta
           )
-
-
-        const ordenados =
-          [
-            ...lista
-          ].sort(
-            (
-              a,
-              b
-            ) =>
-              Number(
-                a?.orden || 0
-              ) -
-              Number(
-                b?.orden || 0
-              )
-          )
+            .sort(
+              (
+                a,
+                b
+              ) =>
+                Number(
+                  a?.orden ||
+                  0
+                ) -
+                Number(
+                  b?.orden ||
+                  0
+                )
+            )
 
 
         setCursos(
-          ordenados
+          lista
+        )
+
+
+        setCursoAbierto(
+          (
+            actual
+          ) => {
+
+            if (
+              actual &&
+              lista.some(
+                (
+                  curso
+                ) =>
+                  String(
+                    curso.id
+                  ) ===
+                  String(
+                    actual
+                  )
+              )
+            ) {
+
+              return actual
+            }
+
+
+            return lista[0]?.id ??
+              null
+          }
         )
 
       } catch (
@@ -362,22 +527,22 @@ const AdminCursos = () => {
           )
         )
 
-
-        setCursos(
-          []
-        )
-
       } finally {
 
-        setCargando(
-          false
-        )
+        if (
+          mostrarCarga
+        ) {
+
+          setCargando(
+            false
+          )
+        }
       }
     }
 
 
   /* ========================================================
-     PRIMERA CARGA
+     CARGA INICIAL
      ======================================================== */
 
   useEffect(
@@ -391,66 +556,83 @@ const AdminCursos = () => {
 
 
   /* ========================================================
-     TOTAL DE MODULOS
+     METRICAS
      ======================================================== */
 
-  const totalModulos =
+  const metricas =
     useMemo(
       () => {
 
-        return cursos.reduce(
-          (
-            total,
-            curso
-          ) =>
-            total +
-            obtenerModulos(
+        const todosModulos =
+          cursos.flatMap(
+            (
               curso
-            ).length,
-          0
-        )
-
-      },
-      [
-        cursos
-      ]
-    )
-
-
-  /* ========================================================
-     MODULOS CON PANTALLA
-     ======================================================== */
-
-  const totalImplementados =
-    useMemo(
-      () => {
-
-        return cursos.reduce(
-          (
-            total,
-            curso
-          ) => {
-
-            const implementados =
+            ) =>
               obtenerModulos(
                 curso
-              ).filter(
-                (
-                  modulo
-                ) =>
-                  Boolean(
-                    RUTAS_IMPLEMENTADAS[
-                      modulo?.clave
-                    ]
-                  )
-              ).length
+              )
+          )
 
 
-            return total +
-              implementados
-          },
-          0
-        )
+        const cursosActivos =
+          cursos.filter(
+            (
+              curso
+            ) =>
+              curso?.activo !==
+              false
+          ).length
+
+
+        const cursosInactivos =
+          cursos.length -
+          cursosActivos
+
+
+        const modulosActivos =
+          todosModulos.filter(
+            (
+              modulo
+            ) =>
+              modulo?.activo !==
+              false
+          ).length
+
+
+        const implementados =
+          todosModulos.filter(
+            (
+              modulo
+            ) =>
+              Boolean(
+                RUTAS_IMPLEMENTADAS[
+                  modulo?.clave
+                ]
+              )
+          ).length
+
+
+        return {
+
+          cursos:
+            cursos.length,
+
+          cursosActivos,
+
+          cursosInactivos,
+
+          modulos:
+            todosModulos.length,
+
+          modulosActivos,
+
+          implementados,
+
+          pendientes:
+            todosModulos.length -
+            implementados
+
+        }
 
       },
       [
@@ -460,19 +642,7 @@ const AdminCursos = () => {
 
 
   /* ========================================================
-     MODULOS SIN PANTALLA
-     ======================================================== */
-
-  const totalPendientes =
-    Math.max(
-      totalModulos -
-        totalImplementados,
-      0
-    )
-
-
-  /* ========================================================
-     FILTRO
+     BUSQUEDA
      ======================================================== */
 
   const cursosFiltrados =
@@ -480,7 +650,10 @@ const AdminCursos = () => {
       () => {
 
         const termino =
-          busqueda
+          String(
+            busqueda ||
+            ""
+          )
             .trim()
             .toLowerCase()
 
@@ -498,67 +671,54 @@ const AdminCursos = () => {
             curso
           ) => {
 
-            const modulos =
-              obtenerModulos(
-                curso
-              )
-
-
-            const coincideCurso =
+            const contenidoCurso =
               [
                 curso?.nombre,
                 curso?.slug,
-                curso?.descripcion
+                curso?.descripcion,
+                curso?.id
               ]
-                .filter(
-                  Boolean
+                .join(
+                  " "
                 )
-                .some(
-                  (
-                    valor
-                  ) =>
-                    String(
-                      valor
-                    )
-                      .toLowerCase()
-                      .includes(
-                        termino
-                      )
-                )
+                .toLowerCase()
 
 
-            const coincideModulo =
-              modulos.some(
-                (
-                  modulo
-                ) =>
+            if (
+              contenidoCurso.includes(
+                termino
+              )
+            ) {
+
+              return true
+            }
+
+
+            return obtenerModulos(
+              curso
+            ).some(
+              (
+                modulo
+              ) => {
+
+                const contenidoModulo =
                   [
                     modulo?.nombre,
                     modulo?.slug,
                     modulo?.clave,
-                    modulo?.descripcion
+                    modulo?.descripcion,
+                    modulo?.id
                   ]
-                    .filter(
-                      Boolean
+                    .join(
+                      " "
                     )
-                    .some(
-                      (
-                        valor
-                      ) =>
-                        String(
-                          valor
-                        )
-                          .toLowerCase()
-                          .includes(
-                            termino
-                          )
-                    )
-              )
+                    .toLowerCase()
 
 
-            return (
-              coincideCurso ||
-              coincideModulo
+                return contenidoModulo.includes(
+                  termino
+                )
+              }
             )
           }
         )
@@ -572,56 +732,675 @@ const AdminCursos = () => {
 
 
   /* ========================================================
-     ABRIR / CERRAR CURSO
+     ABRIR CREAR CURSO
      ======================================================== */
 
-  const alternarCurso =
-    (
-      cursoId
-    ) => {
+  const abrirCrearCurso =
+    () => {
 
-      setCursoAbierto(
-        (
-          actual
-        ) =>
-          String(
-            actual
-          ) ===
-          String(
-            cursoId
-          )
-            ? null
-            : cursoId
+      setFormularioCurso(
+        cursoVacio()
       )
+
+
+      setErrorCurso(
+        ""
+      )
+
+
+      setModalCurso({
+        modo:
+          "crear"
+      })
     }
 
 
   /* ========================================================
-     ABRIR MODULO
+     ABRIR EDITAR CURSO
      ======================================================== */
 
-  const abrirModulo =
+  const abrirEditarCurso =
     (
-      modulo
+      curso
     ) => {
 
-      const configuracion =
-        RUTAS_IMPLEMENTADAS[
-          modulo?.clave
-        ]
+      setFormularioCurso({
+
+        nombre:
+          curso?.nombre ||
+          "",
+
+        slug:
+          curso?.slug ||
+          "",
+
+        descripcion:
+          curso?.descripcion ||
+          "",
+
+        orden:
+          curso?.orden ??
+          "",
+
+        activo:
+          curso?.activo !==
+          false
+
+      })
+
+
+      setErrorCurso(
+        ""
+      )
+
+
+      setModalCurso({
+        modo:
+          "editar",
+
+        curso
+      })
+    }
+
+
+  /* ========================================================
+     GUARDAR CURSO
+     ======================================================== */
+
+  const guardarCurso =
+    async () => {
+
+      setErrorCurso(
+        ""
+      )
+
+
+      const nombre =
+        String(
+          formularioCurso.nombre ||
+          ""
+        ).trim()
 
 
       if (
-        !configuracion?.ruta
+        !nombre
       ) {
 
+        return setErrorCurso(
+          "Ingresa el nombre del curso."
+        )
+      }
+
+
+      setGuardandoCurso(
+        true
+      )
+
+
+      try {
+
+        if (
+          modalCurso?.modo ===
+          "crear"
+        ) {
+
+          const resultado =
+            await crearCursoAdmin({
+
+              nombre,
+
+              slug:
+                formularioCurso.slug,
+
+              descripcion:
+                formularioCurso.descripcion,
+
+              orden:
+                formularioCurso.orden,
+
+              activo:
+                formularioCurso.activo
+
+            })
+
+
+          setModalCurso(
+            null
+          )
+
+
+          await cargarCatalogo(
+            false
+          )
+
+
+          mostrarAviso(
+            resultado?.mensaje ||
+            `Curso "${nombre}" creado correctamente.`
+          )
+
+        } else {
+
+          const curso =
+            modalCurso?.curso
+
+
+          if (
+            !curso?.id
+          ) {
+
+            throw new Error(
+              "Curso no válido"
+            )
+          }
+
+
+          const resultado =
+            await actualizarCursoAdmin(
+              curso.id,
+              {
+
+                nombre,
+
+                slug:
+                  formularioCurso.slug,
+
+                descripcion:
+                  formularioCurso.descripcion,
+
+                orden:
+                  formularioCurso.orden
+
+              }
+            )
+
+
+          setModalCurso(
+            null
+          )
+
+
+          await cargarCatalogo(
+            false
+          )
+
+
+          mostrarAviso(
+            resultado?.mensaje ||
+            `Curso "${nombre}" actualizado correctamente.`
+          )
+        }
+
+      } catch (
+        problema
+      ) {
+
+        setErrorCurso(
+          getMessage(
+            problema
+          )
+        )
+
+      } finally {
+
+        setGuardandoCurso(
+          false
+        )
+      }
+    }
+
+
+  /* ========================================================
+     ACTIVAR / DESACTIVAR CURSO
+     ======================================================== */
+
+  const cambiarEstadoCurso =
+    async (
+      curso
+    ) => {
+
+      if (
+        !curso?.id
+      ) {
         return
       }
 
 
-      navigate(
-        configuracion.ruta
+      const nuevoEstado =
+        curso?.activo ===
+        false
+
+
+      const accion =
+        nuevoEstado
+          ? "activar"
+          : "desactivar"
+
+
+      const confirmado =
+        window.confirm(
+          `¿Deseas ${accion} el curso "${curso.nombre}"?`
+        )
+
+
+      if (
+        !confirmado
+      ) {
+        return
+      }
+
+
+      const clave =
+        `curso-estado-${curso.id}`
+
+
+      setProcesando(
+        clave
       )
+
+
+      setError(
+        ""
+      )
+
+
+      try {
+
+        const resultado =
+          await cambiarEstadoCursoAdmin(
+            curso.id,
+            nuevoEstado
+          )
+
+
+        await cargarCatalogo(
+          false
+        )
+
+
+        mostrarAviso(
+          resultado?.mensaje ||
+          (
+            nuevoEstado
+              ? "Curso activado correctamente."
+              : "Curso desactivado correctamente."
+          )
+        )
+
+      } catch (
+        problema
+      ) {
+
+        setError(
+          getMessage(
+            problema
+          )
+        )
+
+      } finally {
+
+        setProcesando(
+          ""
+        )
+      }
+    }
+
+
+  /* ========================================================
+     ABRIR CREAR MODULO
+     ======================================================== */
+
+  const abrirCrearModulo =
+    (
+      curso
+    ) => {
+
+      setFormularioModulo(
+        moduloVacio()
+      )
+
+
+      setErrorModulo(
+        ""
+      )
+
+
+      setModalModulo({
+
+        modo:
+          "crear",
+
+        curso
+
+      })
+    }
+
+
+  /* ========================================================
+     ABRIR EDITAR MODULO
+     ======================================================== */
+
+  const abrirEditarModulo =
+    (
+      curso,
+      modulo
+    ) => {
+
+      setFormularioModulo({
+
+        nombre:
+          modulo?.nombre ||
+          "",
+
+        slug:
+          modulo?.slug ||
+          "",
+
+        clave:
+          modulo?.clave ||
+          "",
+
+        descripcion:
+          modulo?.descripcion ||
+          "",
+
+        orden:
+          modulo?.orden ??
+          "",
+
+        activo:
+          modulo?.activo !==
+          false
+
+      })
+
+
+      setErrorModulo(
+        ""
+      )
+
+
+      setModalModulo({
+
+        modo:
+          "editar",
+
+        curso,
+
+        modulo
+
+      })
+    }
+
+
+  /* ========================================================
+     GUARDAR MODULO
+     ======================================================== */
+
+  const guardarModulo =
+    async () => {
+
+      setErrorModulo(
+        ""
+      )
+
+
+      const nombre =
+        String(
+          formularioModulo.nombre ||
+          ""
+        ).trim()
+
+
+      if (
+        !nombre
+      ) {
+
+        return setErrorModulo(
+          "Ingresa el nombre del módulo."
+        )
+      }
+
+
+      setGuardandoModulo(
+        true
+      )
+
+
+      try {
+
+        if (
+          modalModulo?.modo ===
+          "crear"
+        ) {
+
+          const curso =
+            modalModulo?.curso
+
+
+          if (
+            !curso?.id
+          ) {
+
+            throw new Error(
+              "Curso no válido"
+            )
+          }
+
+
+          const resultado =
+            await crearModuloAdmin(
+              curso.id,
+              {
+
+                nombre,
+
+                slug:
+                  formularioModulo.slug,
+
+                clave:
+                  formularioModulo.clave,
+
+                descripcion:
+                  formularioModulo.descripcion,
+
+                orden:
+                  formularioModulo.orden,
+
+                activo:
+                  formularioModulo.activo
+
+              }
+            )
+
+
+          setModalModulo(
+            null
+          )
+
+
+          setCursoAbierto(
+            curso.id
+          )
+
+
+          await cargarCatalogo(
+            false
+          )
+
+
+          mostrarAviso(
+            resultado?.mensaje ||
+            `Módulo "${nombre}" creado correctamente.`
+          )
+
+        } else {
+
+          const modulo =
+            modalModulo?.modulo
+
+
+          if (
+            !modulo?.id
+          ) {
+
+            throw new Error(
+              "Módulo no válido"
+            )
+          }
+
+
+          const resultado =
+            await actualizarModuloAdmin(
+              modulo.id,
+              {
+
+                nombre,
+
+                slug:
+                  formularioModulo.slug,
+
+                clave:
+                  formularioModulo.clave,
+
+                descripcion:
+                  formularioModulo.descripcion,
+
+                orden:
+                  formularioModulo.orden
+
+              }
+            )
+
+
+          setModalModulo(
+            null
+          )
+
+
+          await cargarCatalogo(
+            false
+          )
+
+
+          mostrarAviso(
+            resultado?.mensaje ||
+            `Módulo "${nombre}" actualizado correctamente.`
+          )
+        }
+
+      } catch (
+        problema
+      ) {
+
+        setErrorModulo(
+          getMessage(
+            problema
+          )
+        )
+
+      } finally {
+
+        setGuardandoModulo(
+          false
+        )
+      }
+    }
+
+
+  /* ========================================================
+     ACTIVAR / DESACTIVAR MODULO
+     ======================================================== */
+
+  const cambiarEstadoModulo =
+    async (
+      modulo
+    ) => {
+
+      if (
+        !modulo?.id
+      ) {
+        return
+      }
+
+
+      const nuevoEstado =
+        modulo?.activo ===
+        false
+
+
+      const accion =
+        nuevoEstado
+          ? "activar"
+          : "desactivar"
+
+
+      const confirmado =
+        window.confirm(
+          `¿Deseas ${accion} el módulo "${modulo.nombre}"?`
+        )
+
+
+      if (
+        !confirmado
+      ) {
+        return
+      }
+
+
+      const clave =
+        `modulo-estado-${modulo.id}`
+
+
+      setProcesando(
+        clave
+      )
+
+
+      setError(
+        ""
+      )
+
+
+      try {
+
+        const resultado =
+          await cambiarEstadoModuloAdmin(
+            modulo.id,
+            nuevoEstado
+          )
+
+
+        await cargarCatalogo(
+          false
+        )
+
+
+        mostrarAviso(
+          resultado?.mensaje ||
+          (
+            nuevoEstado
+              ? "Módulo activado correctamente."
+              : "Módulo desactivado correctamente."
+          )
+        )
+
+      } catch (
+        problema
+      ) {
+
+        setError(
+          getMessage(
+            problema
+          )
+        )
+
+      } finally {
+
+        setProcesando(
+          ""
+        )
+      }
     }
 
 
@@ -646,7 +1425,7 @@ const AdminCursos = () => {
 
 
           <p>
-            Revisa la estructura académica disponible en RIMBERIO y las funciones asociadas a cada curso.
+            Administra la estructura de cursos y módulos disponibles en RIMBERIO.
           </p>
 
         </div>
@@ -656,17 +1435,12 @@ const AdminCursos = () => {
 
           <button
             type="button"
-            className="btn btn-ghost"
+            className="btn"
             onClick={
-              cargarCatalogo
-            }
-            disabled={
-              cargando
+              abrirCrearCurso
             }
           >
-            {cargando
-              ? "Actualizando..."
-              : "Actualizar"}
+            + Crear curso
           </button>
 
 
@@ -689,36 +1463,54 @@ const AdminCursos = () => {
 
 
       {/* ====================================================
-          ERROR
+          MENSAJES
           ==================================================== */}
+
+      {aviso && (
+
+        <div className="alert alert-success">
+          {aviso}
+        </div>
+
+      )}
+
 
       {error && (
 
         <div className="alert alert-error">
-
           {error}
-
         </div>
 
       )}
 
 
       {/* ====================================================
-          INDICADORES
+          METRICAS
           ==================================================== */}
 
-      <div className="metrics metrics-4">
+      <div
+        className="metrics"
+        style={{
+          gridTemplateColumns:
+            "repeat(4, minmax(0, 1fr))",
+          marginBottom:
+            "20px"
+        }}
+      >
 
         <div className="metric">
 
           <span>
-            Cursos activos
+            Cursos
           </span>
 
-
           <strong>
-            {cursos.length}
+            {metricas.cursos}
           </strong>
+
+          <small className="muted">
+            {metricas.cursosActivos} activos
+          </small>
 
         </div>
 
@@ -726,13 +1518,16 @@ const AdminCursos = () => {
         <div className="metric">
 
           <span>
-            Módulos activos
+            Módulos
           </span>
 
-
           <strong>
-            {totalModulos}
+            {metricas.modulos}
           </strong>
+
+          <small className="muted">
+            {metricas.modulosActivos} activos
+          </small>
 
         </div>
 
@@ -743,10 +1538,13 @@ const AdminCursos = () => {
             Funciones conectadas
           </span>
 
-
           <strong>
-            {totalImplementados}
+            {metricas.implementados}
           </strong>
+
+          <small className="muted">
+            con interfaz disponible
+          </small>
 
         </div>
 
@@ -757,107 +1555,13 @@ const AdminCursos = () => {
             Pendientes de integrar
           </span>
 
-
           <strong>
-            {totalPendientes}
+            {metricas.pendientes}
           </strong>
 
-        </div>
-
-      </div>
-
-
-      {/* ====================================================
-          INFORMACION
-          ==================================================== */}
-
-      <div
-        className="card"
-        style={{
-          marginBottom:
-            "20px",
-
-          borderLeft:
-            "4px solid var(--primary)"
-        }}
-      >
-
-        <div
-          style={{
-            display:
-              "flex",
-
-            alignItems:
-              "flex-start",
-
-            gap:
-              "14px"
-          }}
-        >
-
-          <div
-            style={{
-              width:
-                "34px",
-
-              height:
-                "34px",
-
-              minWidth:
-                "34px",
-
-              borderRadius:
-                "9px",
-
-              display:
-                "flex",
-
-              alignItems:
-                "center",
-
-              justifyContent:
-                "center",
-
-              background:
-                "var(--primary-soft)",
-
-              color:
-                "var(--primary)",
-
-              fontWeight:
-                800
-            }}
-          >
-            i
-          </div>
-
-
-          <div>
-
-            <strong
-              style={{
-                display:
-                  "block",
-
-                marginBottom:
-                  "5px"
-              }}
-            >
-              Catálogo estructural del ERP
-            </strong>
-
-
-            <p
-              className="muted"
-              style={{
-                lineHeight:
-                  1.6
-              }}
-            >
-              Aquí aparecen los cursos y módulos que actualmente están activos en la base de datos. Los módulos con una pantalla ya desarrollada pueden abrirse directamente desde esta vista.
-            </p>
-
-          </div>
+          <small className="muted">
+            módulos sin pantalla
+          </small>
 
         </div>
 
@@ -868,15 +1572,33 @@ const AdminCursos = () => {
           BUSCADOR
           ==================================================== */}
 
-      <div className="toolbar">
+      <div
+        className="card"
+        style={{
+          marginBottom:
+            "20px"
+        }}
+      >
 
-        <div className="toolbar-left">
+        <div
+          style={{
+            display:
+              "flex",
+
+            alignItems:
+              "center",
+
+            gap:
+              "12px"
+          }}
+        >
 
           <input
-            type="search"
+            type="text"
             value={
               busqueda
             }
+            placeholder="Buscar curso, módulo, slug o clave..."
             onChange={
               (
                 event
@@ -885,77 +1607,54 @@ const AdminCursos = () => {
                   event.target.value
                 )
             }
-            placeholder="Buscar curso, módulo o permiso"
             style={{
+              flex:
+                1,
               minWidth:
-                "280px"
+                0
             }}
           />
 
-        </div>
 
+          <button
+            type="button"
+            className="btn btn-light"
+            onClick={
+              () =>
+                cargarCatalogo()
+            }
+            disabled={
+              cargando
+            }
+          >
+            {cargando
+              ? "Actualizando..."
+              : "Actualizar"}
+          </button>
 
-        <div
-          className="muted"
-          style={{
-            fontSize:
-              "13px"
-          }}
-        >
-          {cursosFiltrados.length} de {cursos.length} cursos
         </div>
 
       </div>
 
 
       {/* ====================================================
-          CARGANDO
+          CONTENIDO
           ==================================================== */}
 
-      {cargando && (
+      {cargando ? (
 
-        <div className="card">
-
-          <div className="loading">
-            Cargando cursos y módulos...
-          </div>
-
+        <div className="loading">
+          Cargando cursos y módulos...
         </div>
 
-      )}
+      ) : cursosFiltrados.length ===
+        0 ? (
 
-
-      {/* ====================================================
-          SIN CURSOS
-          ==================================================== */}
-
-      {!cargando &&
-        cursosFiltrados.length ===
-          0 && (
-
-        <div className="card">
-
-          <div className="empty">
-
-            {cursos.length ===
-              0
-              ? "No existen cursos activos configurados."
-              : "No se encontraron cursos o módulos con esa búsqueda."}
-
-          </div>
-
+        <div className="empty">
+          No se encontraron cursos.
         </div>
 
-      )}
-
-
-      {/* ====================================================
-          CURSOS
-          ==================================================== */}
-
-      {!cargando &&
-        cursosFiltrados.length >
-          0 && (
+      ) : (
 
         <div
           style={{
@@ -966,7 +1665,7 @@ const AdminCursos = () => {
               "column",
 
             gap:
-              "16px"
+              "18px"
           }}
         >
 
@@ -982,6 +1681,12 @@ const AdminCursos = () => {
 
 
               const abierto =
+                Boolean(
+                  String(
+                    busqueda ||
+                    ""
+                  ).trim()
+                ) ||
                 String(
                   cursoAbierto
                 ) ===
@@ -990,201 +1695,222 @@ const AdminCursos = () => {
                 )
 
 
-              const implementados =
-                modulos.filter(
-                  (
-                    modulo
-                  ) =>
-                    Boolean(
-                      RUTAS_IMPLEMENTADAS[
-                        modulo?.clave
-                      ]
-                    )
-                ).length
+              const cursoActivo =
+                curso?.activo !==
+                false
+
+
+              const cambiandoEstado =
+                procesando ===
+                `curso-estado-${curso.id}`
 
 
               return (
-
                 <div
-                  className="card"
                   key={
                     curso.id
                   }
+                  className="card"
                   style={{
                     padding:
                       0,
-
                     overflow:
                       "hidden"
                   }}
                 >
 
                   {/* =========================================
-                      CABECERA DEL CURSO
+                      CABECERA CURSO
                       ========================================= */}
 
-                  <button
-                    type="button"
-                    onClick={
-                      () =>
-                        alternarCurso(
-                          curso.id
-                        )
-                    }
+                  <div
                     style={{
-                      width:
-                        "100%",
-
                       display:
                         "flex",
+
+                      justifyContent:
+                        "space-between",
 
                       alignItems:
                         "center",
 
                       gap:
-                        "14px",
+                        "18px",
 
                       padding:
-                        "20px 22px",
-
-                      border:
-                        "none",
+                        "18px 20px",
 
                       background:
-                        "#ffffff",
-
-                      cursor:
-                        "pointer",
-
-                      textAlign:
-                        "left"
+                        cursoActivo
+                          ? "#ffffff"
+                          : "#f8fafc"
                     }}
                   >
 
-                    {/* =======================================
-                        ICONO
-                        ======================================= */}
-
                     <div
                       style={{
-                        width:
-                          "46px",
-
-                        height:
-                          "46px",
-
-                        minWidth:
-                          "46px",
-
-                        borderRadius:
-                          "12px",
-
-                        background:
-                          "var(--primary-soft)",
-
-                        color:
-                          "var(--primary)",
-
                         display:
                           "flex",
 
                         alignItems:
                           "center",
 
-                        justifyContent:
-                          "center",
-
-                        fontWeight:
-                          800,
-
-                        fontSize:
-                          "18px"
-                      }}
-                    >
-                      {texto(
-                        curso?.nombre,
-                        "C"
-                      )
-                        .charAt(
-                          0
-                        )
-                        .toUpperCase()}
-                    </div>
-
-
-                    {/* =======================================
-                        INFORMACION
-                        ======================================= */}
-
-                    <div
-                      style={{
-                        flex:
-                          1,
+                        gap:
+                          "14px",
 
                         minWidth:
-                          0
+                          0,
+
+                        flex:
+                          1
                       }}
                     >
 
+                      <button
+                        type="button"
+                        className="btn btn-light btn-sm"
+                        onClick={
+                          () =>
+                            setCursoAbierto(
+                              abierto
+                                ? null
+                                : curso.id
+                            )
+                        }
+                        style={{
+                          width:
+                            "36px",
+                          minWidth:
+                            "36px",
+                          padding:
+                            "7px"
+                        }}
+                      >
+                        {abierto
+                          ? "−"
+                          : "+"}
+                      </button>
+
+
                       <div
                         style={{
-                          display:
-                            "flex",
-
-                          alignItems:
-                            "center",
-
-                          gap:
-                            "8px",
-
-                          flexWrap:
-                            "wrap"
+                          minWidth:
+                            0
                         }}
                       >
 
-                        <strong
+                        <div
                           style={{
-                            fontSize:
-                              "17px"
+                            display:
+                              "flex",
+
+                            alignItems:
+                              "center",
+
+                            gap:
+                              "9px",
+
+                            flexWrap:
+                              "wrap"
                           }}
                         >
-                          {texto(
-                            curso?.nombre,
-                            "Curso"
-                          )}
-                        </strong>
+
+                          <strong
+                            style={{
+                              fontSize:
+                                "17px"
+                            }}
+                          >
+                            {texto(
+                              curso.nombre,
+                              "Curso"
+                            )}
+                          </strong>
 
 
-                        <span
-                          className="chip chip-capacidad"
+                          <span
+                            style={{
+                              display:
+                                "inline-flex",
+
+                              alignItems:
+                                "center",
+
+                              padding:
+                                "4px 8px",
+
+                              borderRadius:
+                                "999px",
+
+                              fontSize:
+                                "11px",
+
+                              fontWeight:
+                                700,
+
+                              background:
+                                cursoActivo
+                                  ? "#dcfce7"
+                                  : "#f1f5f9",
+
+                              color:
+                                cursoActivo
+                                  ? "#166534"
+                                  : "#64748b"
+                            }}
+                          >
+                            {cursoActivo
+                              ? "ACTIVO"
+                              : "INACTIVO"}
+                          </span>
+
+                        </div>
+
+
+                        <div
+                          className="muted"
+                          style={{
+                            marginTop:
+                              "4px"
+                          }}
                         >
-                          Activo
-                        </span>
+                          ID {curso.id}
+                          {" · "}
+                          {texto(
+                            curso.slug
+                          )}
+                          {" · "}
+                          Orden {curso.orden ?? 0}
+                          {" · "}
+                          {modulos.length} módulo
+                          {modulos.length ===
+                          1
+                            ? ""
+                            : "s"}
+                        </div>
 
-                      </div>
 
+                        {curso.descripcion && (
 
-                      <div
-                        className="muted"
-                        style={{
-                          marginTop:
-                            "5px",
+                          <div
+                            className="muted"
+                            style={{
+                              marginTop:
+                                "5px"
+                            }}
+                          >
+                            {curso.descripcion}
+                          </div>
 
-                          lineHeight:
-                            1.5
-                        }}
-                      >
-                        {texto(
-                          curso?.descripcion,
-                          "Sin descripción"
                         )}
+
                       </div>
 
                     </div>
 
 
                     {/* =======================================
-                        RESUMEN
+                        ACCIONES CURSO
                         ======================================= */}
 
                     <div
@@ -1196,124 +1922,87 @@ const AdminCursos = () => {
                           "center",
 
                         gap:
-                          "22px",
+                          "8px",
 
                         flexWrap:
-                          "wrap"
+                          "wrap",
+
+                        justifyContent:
+                          "flex-end"
                       }}
                     >
 
-                      <div
-                        style={{
-                          textAlign:
-                            "right"
-                        }}
+                      <button
+                        type="button"
+                        className="btn btn-light btn-sm"
+                        onClick={
+                          () =>
+                            abrirCrearModulo(
+                              curso
+                            )
+                        }
                       >
-
-                        <strong
-                          style={{
-                            display:
-                              "block",
-
-                            fontSize:
-                              "17px"
-                          }}
-                        >
-                          {modulos.length}
-                        </strong>
+                        + Módulo
+                      </button>
 
 
-                        <span
-                          className="muted"
-                          style={{
-                            fontSize:
-                              "11px"
-                          }}
-                        >
-                          módulos
-                        </span>
-
-                      </div>
-
-
-                      <div
-                        style={{
-                          textAlign:
-                            "right"
-                        }}
+                      <button
+                        type="button"
+                        className="btn btn-light btn-sm"
+                        onClick={
+                          () =>
+                            abrirEditarCurso(
+                              curso
+                            )
+                        }
                       >
-
-                        <strong
-                          style={{
-                            display:
-                              "block",
-
-                            fontSize:
-                              "17px"
-                          }}
-                        >
-                          {implementados}
-                        </strong>
+                        Editar
+                      </button>
 
 
-                        <span
-                          className="muted"
-                          style={{
-                            fontSize:
-                              "11px"
-                          }}
-                        >
-                          conectados
-                        </span>
-
-                      </div>
-
-
-                      <span
+                      <button
+                        type="button"
+                        className="btn btn-sm"
+                        disabled={
+                          cambiandoEstado
+                        }
+                        onClick={
+                          () =>
+                            cambiarEstadoCurso(
+                              curso
+                            )
+                        }
                         style={{
-                          width:
-                            "28px",
-
-                          height:
-                            "28px",
-
-                          borderRadius:
-                            "8px",
-
-                          display:
-                            "flex",
-
-                          alignItems:
-                            "center",
-
-                          justifyContent:
-                            "center",
-
                           background:
-                            "var(--bg)",
+                            cursoActivo
+                              ? "#ffffff"
+                              : "#f0fdf4",
 
-                          fontSize:
-                            "16px",
+                          color:
+                            cursoActivo
+                              ? "#b91c1c"
+                              : "#166534",
 
-                          transform:
-                            abierto
-                              ? "rotate(180deg)"
-                              : "rotate(0deg)",
-
-                          transition:
-                            "transform .18s ease"
+                          border:
+                            cursoActivo
+                              ? "1px solid #fecaca"
+                              : "1px solid #bbf7d0"
                         }}
                       >
-                        ▾
-                      </span>
+                        {cambiandoEstado
+                          ? "Guardando..."
+                          : cursoActivo
+                            ? "Desactivar"
+                            : "Activar"}
+                      </button>
 
                     </div>
 
-                  </button>
+                  </div>
 
 
                   {/* =========================================
-                      DETALLE
+                      MODULOS
                       ========================================= */}
 
                   {abierto && (
@@ -1321,173 +2010,49 @@ const AdminCursos = () => {
                     <div
                       style={{
                         borderTop:
-                          "1px solid var(--border)",
+                          "1px solid #e5e7eb",
 
                         padding:
-                          "20px 22px",
+                          "18px 20px",
 
                         background:
-                          "#fffdfb"
+                          "#fafafa"
                       }}
                     >
-
-                      {/* =====================================
-                          DATOS DEL CURSO
-                          ===================================== */}
 
                       <div
                         style={{
                           display:
-                            "grid",
+                            "flex",
 
-                          gridTemplateColumns:
-                            "repeat(auto-fit, minmax(170px, 1fr))",
+                          justifyContent:
+                            "space-between",
 
-                          gap:
-                            "12px",
+                          alignItems:
+                            "center",
 
                           marginBottom:
-                            "20px"
+                            "14px"
                         }}
                       >
 
-                        <div>
-
-                          <span
-                            className="muted"
-                            style={{
-                              display:
-                                "block",
-
-                              fontSize:
-                                "11px",
-
-                              marginBottom:
-                                "4px"
-                            }}
-                          >
-                            ID
-                          </span>
+                        <strong>
+                          Módulos del curso
+                        </strong>
 
 
-                          <strong>
-                            {texto(
-                              curso?.id
-                            )}
-                          </strong>
+                        <span className="muted">
+                          {modulos.length} registrados
+                        </span>
 
-                        </div>
-
-
-                        <div>
-
-                          <span
-                            className="muted"
-                            style={{
-                              display:
-                                "block",
-
-                              fontSize:
-                                "11px",
-
-                              marginBottom:
-                                "4px"
-                            }}
-                          >
-                            Slug
-                          </span>
-
-
-                          <code>
-                            {texto(
-                              curso?.slug
-                            )}
-                          </code>
-
-                        </div>
-
-
-                        <div>
-
-                          <span
-                            className="muted"
-                            style={{
-                              display:
-                                "block",
-
-                              fontSize:
-                                "11px",
-
-                              marginBottom:
-                                "4px"
-                            }}
-                          >
-                            Orden
-                          </span>
-
-
-                          <strong>
-                            {texto(
-                              curso?.orden,
-                              "0"
-                            )}
-                          </strong>
-
-                        </div>
-
-
-                        <div>
-
-                          <span
-                            className="muted"
-                            style={{
-                              display:
-                                "block",
-
-                              fontSize:
-                                "11px",
-
-                              marginBottom:
-                                "4px"
-                            }}
-                          >
-                            Estado
-                          </span>
-
-
-                          <span className="status">
-
-                            <span className="dot dot-green" />
-
-                            Activo
-
-                          </span>
-
-                        </div>
-
-                      </div>
-
-
-                      {/* =====================================
-                          MODULOS
-                          ===================================== */}
-
-                      <div
-                        className="chart-title"
-                        style={{
-                          marginBottom:
-                            "12px"
-                        }}
-                      >
-                        Módulos del curso
                       </div>
 
 
                       {modulos.length ===
-                        0 ? (
+                      0 ? (
 
                         <div className="empty">
-                          Este curso todavía no tiene módulos activos.
+                          Este curso todavía no tiene módulos.
                         </div>
 
                       ) : (
@@ -1501,7 +2066,7 @@ const AdminCursos = () => {
                               "column",
 
                             gap:
-                              "9px"
+                              "10px"
                           }}
                         >
 
@@ -1510,20 +2075,23 @@ const AdminCursos = () => {
                               modulo
                             ) => {
 
-                              const configuracion =
+                              const moduloActivo =
+                                modulo?.activo !==
+                                false
+
+
+                              const implementacion =
                                 RUTAS_IMPLEMENTADAS[
                                   modulo?.clave
                                 ]
 
 
-                              const conectado =
-                                Boolean(
-                                  configuracion
-                                )
+                              const cambiandoModulo =
+                                procesando ===
+                                `modulo-estado-${modulo.id}`
 
 
                               return (
-
                                 <div
                                   key={
                                     modulo.id
@@ -1532,79 +2100,47 @@ const AdminCursos = () => {
                                     display:
                                       "flex",
 
+                                    justifyContent:
+                                      "space-between",
+
                                     alignItems:
                                       "center",
 
                                     gap:
-                                      "14px",
+                                      "18px",
 
                                     padding:
-                                      "14px",
+                                      "14px 16px",
 
                                     border:
-                                      "1px solid var(--border)",
+                                      "1px solid #e5e7eb",
 
                                     borderRadius:
                                       "10px",
 
                                     background:
-                                      "#ffffff"
+                                      moduloActivo
+                                        ? "#ffffff"
+                                        : "#f8fafc",
+
+                                    opacity:
+                                      moduloActivo
+                                        ? 1
+                                        : 0.72
                                   }}
                                 >
 
                                   {/* =========================
-                                      NUMERO
+                                      DATOS MODULO
                                       ========================= */}
 
                                   <div
                                     style={{
-                                      width:
-                                        "34px",
-
-                                      height:
-                                        "34px",
-
                                       minWidth:
-                                        "34px",
+                                        0,
 
-                                      borderRadius:
-                                        "9px",
-
-                                      display:
-                                        "flex",
-
-                                      alignItems:
-                                        "center",
-
-                                      justifyContent:
-                                        "center",
-
-                                      background:
-                                        "var(--bg)",
-
-                                      color:
-                                        "var(--primary)",
-
-                                      fontWeight:
-                                        700
-                                    }}
-                                  >
-                                    {modulo?.orden ??
-                                      "•"}
-                                  </div>
-
-
-                                  {/* =========================
-                                      DATOS
-                                      ========================= */}
-
-                                  <div
-                                    style={{
                                       flex:
-                                        1,
-
-                                      minWidth:
-                                        0
+                                        1
                                     }}
                                   >
 
@@ -1617,7 +2153,7 @@ const AdminCursos = () => {
                                           "center",
 
                                         gap:
-                                          "7px",
+                                          "8px",
 
                                         flexWrap:
                                           "wrap"
@@ -1626,53 +2162,124 @@ const AdminCursos = () => {
 
                                       <strong>
                                         {texto(
-                                          modulo?.nombre,
+                                          modulo.nombre,
                                           "Módulo"
                                         )}
                                       </strong>
 
 
                                       <span
-                                        className="chip chip-capacidad"
+                                        style={{
+                                          padding:
+                                            "3px 7px",
+
+                                          borderRadius:
+                                            "999px",
+
+                                          fontSize:
+                                            "10px",
+
+                                          fontWeight:
+                                            700,
+
+                                          background:
+                                            moduloActivo
+                                              ? "#dcfce7"
+                                              : "#f1f5f9",
+
+                                          color:
+                                            moduloActivo
+                                              ? "#166534"
+                                              : "#64748b"
+                                        }}
                                       >
-                                        Activo
+                                        {moduloActivo
+                                          ? "ACTIVO"
+                                          : "INACTIVO"}
                                       </span>
 
 
-                                      {conectado ? (
+                                      <span
+                                        style={{
+                                          padding:
+                                            "3px 7px",
 
-                                        <span
-                                          className="chip chip-add_column"
-                                        >
-                                          Conectado
-                                        </span>
+                                          borderRadius:
+                                            "999px",
 
-                                      ) : (
+                                          fontSize:
+                                            "10px",
 
-                                        <span
-                                          className="chip chip-tipo"
-                                        >
-                                          Sin pantalla
-                                        </span>
+                                          fontWeight:
+                                            700,
 
-                                      )}
+                                          background:
+                                            implementacion
+                                              ? "#ffedd5"
+                                              : "#f1f5f9",
+
+                                          color:
+                                            implementacion
+                                              ? "#9a3412"
+                                              : "#64748b"
+                                        }}
+                                      >
+                                        {implementacion
+                                          ? "CONECTADO"
+                                          : "PENDIENTE"}
+                                      </span>
 
                                     </div>
 
 
-                                    {modulo?.descripcion && (
+                                    <div
+                                      className="muted"
+                                      style={{
+                                        marginTop:
+                                          "5px",
+
+                                        fontSize:
+                                          "12px"
+                                      }}
+                                    >
+                                      ID {modulo.id}
+                                      {" · "}
+                                      Orden {modulo.orden ?? 0}
+                                      {" · "}
+                                      slug: {texto(modulo.slug)}
+                                    </div>
+
+
+                                    <div
+                                      className="muted"
+                                      style={{
+                                        marginTop:
+                                          "3px",
+
+                                        fontSize:
+                                          "11px",
+
+                                        fontFamily:
+                                          "monospace"
+                                      }}
+                                    >
+                                      {texto(
+                                        modulo.clave,
+                                        "Sin clave"
+                                      )}
+                                    </div>
+
+
+                                    {modulo.descripcion && (
 
                                       <div
                                         className="muted"
                                         style={{
                                           marginTop:
-                                            "4px",
+                                            "5px",
 
                                           fontSize:
-                                            "12px",
-
-                                          lineHeight:
-                                            1.45
+                                            "12px"
                                         }}
                                       >
                                         {modulo.descripcion}
@@ -1681,111 +2288,119 @@ const AdminCursos = () => {
                                     )}
 
 
-                                    <div
-                                      style={{
-                                        display:
-                                          "flex",
+                                    {implementacion && (
 
-                                        gap:
-                                          "8px",
-
-                                        flexWrap:
-                                          "wrap",
-
-                                        marginTop:
-                                          "7px"
-                                      }}
-                                    >
-
-                                      <code
+                                      <div
+                                        className="muted"
                                         style={{
-                                          fontSize:
-                                            "11px",
-
-                                          padding:
-                                            "3px 7px",
-
-                                          borderRadius:
+                                          marginTop:
                                             "5px",
 
-                                          background:
-                                            "var(--bg)"
+                                          fontSize:
+                                            "11px"
                                         }}
                                       >
-                                        {texto(
-                                          modulo?.clave,
-                                          "sin-clave"
-                                        )}
-                                      </code>
+                                        {implementacion.tipo}
+                                      </div>
 
-
-                                      {modulo?.slug && (
-
-                                        <span
-                                          className="muted"
-                                          style={{
-                                            fontSize:
-                                              "11px"
-                                          }}
-                                        >
-                                          {modulo.slug}
-                                        </span>
-
-                                      )}
-
-
-                                      {configuracion?.tipo && (
-
-                                        <span
-                                          className="muted"
-                                          style={{
-                                            fontSize:
-                                              "11px"
-                                          }}
-                                        >
-                                          {configuracion.tipo}
-                                        </span>
-
-                                      )}
-
-                                    </div>
+                                    )}
 
                                   </div>
 
 
                                   {/* =========================
-                                      ACCION
+                                      ACCIONES MODULO
                                       ========================= */}
 
-                                  {conectado ? (
+                                  <div
+                                    style={{
+                                      display:
+                                        "flex",
+
+                                      alignItems:
+                                        "center",
+
+                                      gap:
+                                        "7px",
+
+                                      flexWrap:
+                                        "wrap",
+
+                                      justifyContent:
+                                        "flex-end"
+                                    }}
+                                  >
+
+                                    {implementacion && (
+                                      <button
+                                        type="button"
+                                        className="btn btn-light btn-sm"
+                                        onClick={
+                                          () =>
+                                            navigate(
+                                              implementacion.ruta
+                                            )
+                                        }
+                                      >
+                                        Ver
+                                      </button>
+                                    )}
+
 
                                     <button
                                       type="button"
                                       className="btn btn-light btn-sm"
                                       onClick={
                                         () =>
-                                          abrirModulo(
+                                          abrirEditarModulo(
+                                            curso,
                                             modulo
                                           )
                                       }
                                     >
-                                      Abrir
+                                      Editar
                                     </button>
 
-                                  ) : (
 
                                     <button
                                       type="button"
-                                      className="btn btn-ghost btn-sm"
-                                      disabled
+                                      className="btn btn-sm"
+                                      disabled={
+                                        cambiandoModulo
+                                      }
+                                      onClick={
+                                        () =>
+                                          cambiarEstadoModulo(
+                                            modulo
+                                          )
+                                      }
+                                      style={{
+                                        background:
+                                          moduloActivo
+                                            ? "#ffffff"
+                                            : "#f0fdf4",
+
+                                        color:
+                                          moduloActivo
+                                            ? "#b91c1c"
+                                            : "#166534",
+
+                                        border:
+                                          moduloActivo
+                                            ? "1px solid #fecaca"
+                                            : "1px solid #bbf7d0"
+                                      }}
                                     >
-                                      Pendiente
+                                      {cambiandoModulo
+                                        ? "Guardando..."
+                                        : moduloActivo
+                                          ? "Desactivar"
+                                          : "Activar"}
                                     </button>
 
-                                  )}
+                                  </div>
 
                                 </div>
-
                               )
                             }
                           )}
@@ -1799,12 +2414,596 @@ const AdminCursos = () => {
                   )}
 
                 </div>
-
               )
             }
           )}
 
         </div>
+
+      )}
+
+
+      {/* ====================================================
+          MODAL CURSO
+          ==================================================== */}
+
+      {modalCurso && (
+
+        <Modal
+          title={
+            modalCurso.modo ===
+            "crear"
+              ? "Crear curso"
+              : "Editar curso"
+          }
+          onClose={
+            () => {
+
+              if (
+                guardandoCurso
+              ) {
+                return
+              }
+
+
+              setModalCurso(
+                null
+              )
+
+
+              setErrorCurso(
+                ""
+              )
+            }
+          }
+          footer={
+            (
+              cerrar
+            ) => (
+              <>
+
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  disabled={
+                    guardandoCurso
+                  }
+                  onClick={
+                    cerrar
+                  }
+                >
+                  Cancelar
+                </button>
+
+
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={
+                    guardandoCurso
+                  }
+                  onClick={
+                    guardarCurso
+                  }
+                >
+                  {guardandoCurso
+                    ? "Guardando..."
+                    : modalCurso.modo ===
+                      "crear"
+                      ? "Crear curso"
+                      : "Guardar cambios"}
+                </button>
+
+              </>
+            )
+          }
+        >
+
+          <div className="field">
+
+            <label>
+              Nombre *
+            </label>
+
+            <input
+              type="text"
+              autoFocus
+              value={
+                formularioCurso.nombre
+              }
+              disabled={
+                guardandoCurso
+              }
+              placeholder="Ej. Big Data"
+              onChange={
+                (
+                  event
+                ) =>
+                  setFormularioCurso({
+                    ...formularioCurso,
+
+                    nombre:
+                      event.target.value
+                  })
+              }
+            />
+
+          </div>
+
+
+          <div className="field">
+
+            <label>
+              Slug
+            </label>
+
+            <input
+              type="text"
+              value={
+                formularioCurso.slug
+              }
+              disabled={
+                guardandoCurso
+              }
+              placeholder="Ej. big-data"
+              onChange={
+                (
+                  event
+                ) =>
+                  setFormularioCurso({
+                    ...formularioCurso,
+
+                    slug:
+                      event.target.value
+                  })
+              }
+            />
+
+            {modalCurso.modo ===
+              "crear" && (
+
+              <span className="muted">
+                Puedes dejarlo vacío y el backend lo generará automáticamente.
+              </span>
+
+            )}
+
+          </div>
+
+
+          <div className="field">
+
+            <label>
+              Descripción
+            </label>
+
+            <textarea
+              value={
+                formularioCurso.descripcion
+              }
+              disabled={
+                guardandoCurso
+              }
+              rows={4}
+              placeholder="Descripción del curso"
+              onChange={
+                (
+                  event
+                ) =>
+                  setFormularioCurso({
+                    ...formularioCurso,
+
+                    descripcion:
+                      event.target.value
+                  })
+              }
+            />
+
+          </div>
+
+
+          <div className="field">
+
+            <label>
+              Orden
+            </label>
+
+            <input
+              type="number"
+              min="0"
+              value={
+                formularioCurso.orden
+              }
+              disabled={
+                guardandoCurso
+              }
+              placeholder="Automático"
+              onChange={
+                (
+                  event
+                ) =>
+                  setFormularioCurso({
+                    ...formularioCurso,
+
+                    orden:
+                      event.target.value
+                  })
+              }
+            />
+
+          </div>
+
+
+          {modalCurso.modo ===
+            "crear" && (
+
+            <label
+              style={{
+                display:
+                  "flex",
+
+                alignItems:
+                  "center",
+
+                gap:
+                  "9px",
+
+                marginTop:
+                  "14px"
+              }}
+            >
+
+              <input
+                type="checkbox"
+                checked={
+                  formularioCurso.activo
+                }
+                disabled={
+                  guardandoCurso
+                }
+                onChange={
+                  (
+                    event
+                  ) =>
+                    setFormularioCurso({
+                      ...formularioCurso,
+
+                      activo:
+                        event.target.checked
+                    })
+                }
+              />
+
+              Crear curso activo
+
+            </label>
+
+          )}
+
+
+          {errorCurso && (
+
+            <div
+              className="alert alert-error"
+              style={{
+                marginTop:
+                  "16px"
+              }}
+            >
+              {errorCurso}
+            </div>
+
+          )}
+
+        </Modal>
+
+      )}
+
+
+      {/* ====================================================
+          MODAL MODULO
+          ==================================================== */}
+
+      {modalModulo && (
+
+        <Modal
+          title={
+            modalModulo.modo ===
+            "crear"
+              ? `Agregar módulo a ${modalModulo.curso?.nombre || "curso"}`
+              : "Editar módulo"
+          }
+          onClose={
+            () => {
+
+              if (
+                guardandoModulo
+              ) {
+                return
+              }
+
+
+              setModalModulo(
+                null
+              )
+
+
+              setErrorModulo(
+                ""
+              )
+            }
+          }
+          footer={
+            (
+              cerrar
+            ) => (
+              <>
+
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  disabled={
+                    guardandoModulo
+                  }
+                  onClick={
+                    cerrar
+                  }
+                >
+                  Cancelar
+                </button>
+
+
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={
+                    guardandoModulo
+                  }
+                  onClick={
+                    guardarModulo
+                  }
+                >
+                  {guardandoModulo
+                    ? "Guardando..."
+                    : modalModulo.modo ===
+                      "crear"
+                      ? "Crear módulo"
+                      : "Guardar cambios"}
+                </button>
+
+              </>
+            )
+          }
+        >
+
+          <div className="field">
+
+            <label>
+              Nombre *
+            </label>
+
+            <input
+              type="text"
+              autoFocus
+              value={
+                formularioModulo.nombre
+              }
+              disabled={
+                guardandoModulo
+              }
+              placeholder="Ej. Análisis"
+              onChange={
+                (
+                  event
+                ) =>
+                  setFormularioModulo({
+                    ...formularioModulo,
+
+                    nombre:
+                      event.target.value
+                  })
+              }
+            />
+
+          </div>
+
+
+          <div className="field">
+
+            <label>
+              Slug
+            </label>
+
+            <input
+              type="text"
+              value={
+                formularioModulo.slug
+              }
+              disabled={
+                guardandoModulo
+              }
+              placeholder="Ej. analisis"
+              onChange={
+                (
+                  event
+                ) =>
+                  setFormularioModulo({
+                    ...formularioModulo,
+
+                    slug:
+                      event.target.value
+                  })
+              }
+            />
+
+          </div>
+
+
+          <div className="field">
+
+            <label>
+              Clave de permiso
+            </label>
+
+            <input
+              type="text"
+              value={
+                formularioModulo.clave
+              }
+              disabled={
+                guardandoModulo
+              }
+              placeholder="Ej. big_data.analisis"
+              onChange={
+                (
+                  event
+                ) =>
+                  setFormularioModulo({
+                    ...formularioModulo,
+
+                    clave:
+                      event.target.value
+                  })
+              }
+            />
+
+            {modalModulo.modo ===
+              "crear" && (
+
+              <span className="muted">
+                Puedes dejarla vacía y el backend generará una clave automáticamente.
+              </span>
+
+            )}
+
+          </div>
+
+
+          <div className="field">
+
+            <label>
+              Descripción
+            </label>
+
+            <textarea
+              rows={4}
+              value={
+                formularioModulo.descripcion
+              }
+              disabled={
+                guardandoModulo
+              }
+              placeholder="Descripción del módulo"
+              onChange={
+                (
+                  event
+                ) =>
+                  setFormularioModulo({
+                    ...formularioModulo,
+
+                    descripcion:
+                      event.target.value
+                  })
+              }
+            />
+
+          </div>
+
+
+          <div className="field">
+
+            <label>
+              Orden
+            </label>
+
+            <input
+              type="number"
+              min="0"
+              value={
+                formularioModulo.orden
+              }
+              disabled={
+                guardandoModulo
+              }
+              placeholder="Automático"
+              onChange={
+                (
+                  event
+                ) =>
+                  setFormularioModulo({
+                    ...formularioModulo,
+
+                    orden:
+                      event.target.value
+                  })
+              }
+            />
+
+          </div>
+
+
+          {modalModulo.modo ===
+            "crear" && (
+
+            <label
+              style={{
+                display:
+                  "flex",
+
+                alignItems:
+                  "center",
+
+                gap:
+                  "9px",
+
+                marginTop:
+                  "14px"
+              }}
+            >
+
+              <input
+                type="checkbox"
+                checked={
+                  formularioModulo.activo
+                }
+                disabled={
+                  guardandoModulo
+                }
+                onChange={
+                  (
+                    event
+                  ) =>
+                    setFormularioModulo({
+                      ...formularioModulo,
+
+                      activo:
+                        event.target.checked
+                    })
+                }
+              />
+
+              Crear módulo activo
+
+            </label>
+
+          )}
+
+
+          {errorModulo && (
+
+            <div
+              className="alert alert-error"
+              style={{
+                marginTop:
+                  "16px"
+              }}
+            >
+              {errorModulo}
+            </div>
+
+          )}
+
+        </Modal>
 
       )}
 

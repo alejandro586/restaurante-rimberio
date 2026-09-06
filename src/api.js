@@ -1106,6 +1106,691 @@ export const crearUsuario =
   }
 
 
+  /* ==========================================================
+   ADMINISTRACION - CURSOS Y MODULOS
+   ========================================================== */
+
+
+/* ==========================================================
+   UTILIDAD - ID ADMINISTRATIVO
+   ========================================================== */
+
+const validarIdAdministrativo = (
+  valor,
+  nombre =
+    "Registro"
+) => {
+
+  const numero =
+    Number(
+      valor
+    )
+
+
+  if (
+    !Number.isInteger(
+      numero
+    ) ||
+    numero <=
+      0
+  ) {
+
+    throw new Error(
+      `${nombre} no válido`
+    )
+  }
+
+
+  return encodeURIComponent(
+    String(
+      numero
+    )
+  )
+}
+
+
+/* ==========================================================
+   ADMIN CURSOS - LISTAR CATALOGO COMPLETO
+   ========================================================== */
+
+/**
+ * GET
+ * /api/admin/courses
+ *
+ * Devuelve:
+ *
+ * - cursos activos
+ * - cursos desactivados
+ * - módulos activos
+ * - módulos desactivados
+ */
+
+export const listarCatalogoAdminCursos =
+  async () => {
+
+    const response =
+      await api.get(
+        "/admin/courses"
+      )
+
+
+    return response.data
+  }
+
+
+/* ==========================================================
+   ADMIN CURSOS - CREAR CURSO
+   ========================================================== */
+
+/**
+ * POST
+ * /api/admin/courses
+ *
+ * nombre es obligatorio.
+ *
+ * slug puede omitirse porque
+ * el backend puede generarlo.
+ */
+
+export const crearCursoAdmin =
+  async ({
+    nombre,
+    slug =
+      "",
+    descripcion =
+      "",
+    orden =
+      "",
+    activo =
+      true
+  } = {}) => {
+
+    const nombreFinal =
+      String(
+        nombre ||
+        ""
+      ).trim()
+
+
+    if (
+      !nombreFinal
+    ) {
+
+      throw new Error(
+        "El nombre del curso es obligatorio"
+      )
+    }
+
+
+    if (
+      typeof activo !==
+      "boolean"
+    ) {
+
+      throw new Error(
+        "El estado del curso debe ser true o false"
+      )
+    }
+
+
+    const response =
+      await api.post(
+        "/admin/courses",
+        {
+          nombre:
+            nombreFinal,
+
+          slug:
+            String(
+              slug ||
+              ""
+            ).trim(),
+
+          descripcion:
+            String(
+              descripcion ||
+              ""
+            ).trim(),
+
+          orden,
+
+          activo
+        }
+      )
+
+
+    return response.data
+  }
+
+
+/* ==========================================================
+   ADMIN CURSOS - ACTUALIZAR CURSO
+   ========================================================== */
+
+/**
+ * PATCH
+ * /api/admin/courses/:courseId
+ *
+ * Campos permitidos:
+ *
+ * - nombre
+ * - slug
+ * - descripcion
+ * - orden
+ */
+
+export const actualizarCursoAdmin =
+  async (
+    courseId,
+    cambios =
+      {}
+  ) => {
+
+    const id =
+      validarIdAdministrativo(
+        courseId,
+        "Curso"
+      )
+
+
+    if (
+      !cambios ||
+      typeof cambios !==
+        "object" ||
+      Array.isArray(
+        cambios
+      )
+    ) {
+
+      throw new Error(
+        "Los cambios del curso no son válidos"
+      )
+    }
+
+
+    const payload =
+      {}
+
+
+    if (
+      Object.prototype
+        .hasOwnProperty
+        .call(
+          cambios,
+          "nombre"
+        )
+    ) {
+
+      const nombre =
+        String(
+          cambios.nombre ||
+          ""
+        ).trim()
+
+
+      if (
+        !nombre
+      ) {
+
+        throw new Error(
+          "El nombre del curso es obligatorio"
+        )
+      }
+
+
+      payload.nombre =
+        nombre
+    }
+
+
+    if (
+      Object.prototype
+        .hasOwnProperty
+        .call(
+          cambios,
+          "slug"
+        )
+    ) {
+
+      payload.slug =
+        String(
+          cambios.slug ||
+          ""
+        ).trim()
+    }
+
+
+    if (
+      Object.prototype
+        .hasOwnProperty
+        .call(
+          cambios,
+          "descripcion"
+        )
+    ) {
+
+      payload.descripcion =
+        String(
+          cambios.descripcion ??
+          ""
+        ).trim()
+    }
+
+
+    if (
+      Object.prototype
+        .hasOwnProperty
+        .call(
+          cambios,
+          "orden"
+        )
+    ) {
+
+      payload.orden =
+        cambios.orden
+    }
+
+
+    if (
+      Object.keys(
+        payload
+      ).length ===
+        0
+    ) {
+
+      throw new Error(
+        "No se enviaron cambios para el curso"
+      )
+    }
+
+
+    const response =
+      await api.patch(
+        `/admin/courses/${id}`,
+        payload
+      )
+
+
+    return response.data
+  }
+
+
+/* ==========================================================
+   ADMIN CURSOS - CAMBIAR ESTADO
+   ========================================================== */
+
+/**
+ * PATCH
+ * /api/admin/courses/:courseId/status
+ *
+ * activo:
+ *
+ * true  -> activar
+ * false -> desactivar
+ */
+
+export const cambiarEstadoCursoAdmin =
+  async (
+    courseId,
+    activo
+  ) => {
+
+    const id =
+      validarIdAdministrativo(
+        courseId,
+        "Curso"
+      )
+
+
+    if (
+      typeof activo !==
+      "boolean"
+    ) {
+
+      throw new Error(
+        "El estado del curso debe ser true o false"
+      )
+    }
+
+
+    const response =
+      await api.patch(
+        `/admin/courses/${id}/status`,
+        {
+          activo
+        }
+      )
+
+
+    return response.data
+  }
+
+
+/* ==========================================================
+   ADMIN MODULOS - CREAR MODULO
+   ========================================================== */
+
+/**
+ * POST
+ * /api/admin/courses/:courseId/modules
+ *
+ * nombre es obligatorio.
+ *
+ * slug y clave pueden ser generados
+ * automáticamente por el backend.
+ */
+
+export const crearModuloAdmin =
+  async (
+    courseId,
+    {
+      nombre,
+      slug =
+        "",
+      clave =
+        "",
+      descripcion =
+        "",
+      orden =
+        "",
+      activo =
+        true
+    } = {}
+  ) => {
+
+    const curso =
+      validarIdAdministrativo(
+        courseId,
+        "Curso"
+      )
+
+
+    const nombreFinal =
+      String(
+        nombre ||
+        ""
+      ).trim()
+
+
+    if (
+      !nombreFinal
+    ) {
+
+      throw new Error(
+        "El nombre del módulo es obligatorio"
+      )
+    }
+
+
+    if (
+      typeof activo !==
+      "boolean"
+    ) {
+
+      throw new Error(
+        "El estado del módulo debe ser true o false"
+      )
+    }
+
+
+    const response =
+      await api.post(
+        `/admin/courses/${curso}/modules`,
+        {
+          nombre:
+            nombreFinal,
+
+          slug:
+            String(
+              slug ||
+              ""
+            ).trim(),
+
+          clave:
+            String(
+              clave ||
+              ""
+            ).trim(),
+
+          descripcion:
+            String(
+              descripcion ||
+              ""
+            ).trim(),
+
+          orden,
+
+          activo
+        }
+      )
+
+
+    return response.data
+  }
+
+
+/* ==========================================================
+   ADMIN MODULOS - ACTUALIZAR MODULO
+   ========================================================== */
+
+/**
+ * PATCH
+ * /api/admin/courses/modules/:moduleId
+ *
+ * Campos permitidos:
+ *
+ * - nombre
+ * - slug
+ * - clave
+ * - descripcion
+ * - orden
+ */
+
+export const actualizarModuloAdmin =
+  async (
+    moduleId,
+    cambios =
+      {}
+  ) => {
+
+    const id =
+      validarIdAdministrativo(
+        moduleId,
+        "Módulo"
+      )
+
+
+    if (
+      !cambios ||
+      typeof cambios !==
+        "object" ||
+      Array.isArray(
+        cambios
+      )
+    ) {
+
+      throw new Error(
+        "Los cambios del módulo no son válidos"
+      )
+    }
+
+
+    const payload =
+      {}
+
+
+    if (
+      Object.prototype
+        .hasOwnProperty
+        .call(
+          cambios,
+          "nombre"
+        )
+    ) {
+
+      const nombre =
+        String(
+          cambios.nombre ||
+          ""
+        ).trim()
+
+
+      if (
+        !nombre
+      ) {
+
+        throw new Error(
+          "El nombre del módulo es obligatorio"
+        )
+      }
+
+
+      payload.nombre =
+        nombre
+    }
+
+
+    if (
+      Object.prototype
+        .hasOwnProperty
+        .call(
+          cambios,
+          "slug"
+        )
+    ) {
+
+      payload.slug =
+        String(
+          cambios.slug ||
+          ""
+        ).trim()
+    }
+
+
+    if (
+      Object.prototype
+        .hasOwnProperty
+        .call(
+          cambios,
+          "clave"
+        )
+    ) {
+
+      payload.clave =
+        String(
+          cambios.clave ||
+          ""
+        ).trim()
+    }
+
+
+    if (
+      Object.prototype
+        .hasOwnProperty
+        .call(
+          cambios,
+          "descripcion"
+        )
+    ) {
+
+      payload.descripcion =
+        String(
+          cambios.descripcion ??
+          ""
+        ).trim()
+    }
+
+
+    if (
+      Object.prototype
+        .hasOwnProperty
+        .call(
+          cambios,
+          "orden"
+        )
+    ) {
+
+      payload.orden =
+        cambios.orden
+    }
+
+
+    if (
+      Object.keys(
+        payload
+      ).length ===
+        0
+    ) {
+
+      throw new Error(
+        "No se enviaron cambios para el módulo"
+      )
+    }
+
+
+    const response =
+      await api.patch(
+        `/admin/courses/modules/${id}`,
+        payload
+      )
+
+
+    return response.data
+  }
+
+
+/* ==========================================================
+   ADMIN MODULOS - CAMBIAR ESTADO
+   ========================================================== */
+
+/**
+ * PATCH
+ * /api/admin/courses/modules/:moduleId/status
+ *
+ * activo:
+ *
+ * true  -> activar
+ * false -> desactivar
+ */
+
+export const cambiarEstadoModuloAdmin =
+  async (
+    moduleId,
+    activo
+  ) => {
+
+    const id =
+      validarIdAdministrativo(
+        moduleId,
+        "Módulo"
+      )
+
+
+    if (
+      typeof activo !==
+      "boolean"
+    ) {
+
+      throw new Error(
+        "El estado del módulo debe ser true o false"
+      )
+    }
+
+
+    const response =
+      await api.patch(
+        `/admin/courses/modules/${id}/status`,
+        {
+          activo
+        }
+      )
+
+
+    return response.data
+  }
+
+
+
 /* ==========================================================
    RECUPERACION DE CONTRASEÑA - SOLICITAR
    ========================================================== */
