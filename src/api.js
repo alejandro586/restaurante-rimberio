@@ -1586,6 +1586,498 @@ export const rechazarRecuperacionPassword =
   }
 
 
+  /* ==========================================================
+   DOCUMENTOS DE CURSOS
+   ========================================================== */
+
+/*
+ * Backend:
+ *
+ * GET
+ * /api/course-documents/courses/:courseId
+ *
+ * POST
+ * /api/course-documents/courses/:courseId
+ *
+ * GET
+ * /api/course-documents/:documentId/url
+ *
+ * DELETE
+ * /api/course-documents/:documentId
+ */
+
+
+const DOCUMENTO_MAX_BYTES =
+  25 * 1024 * 1024
+
+
+const DOCUMENTO_EXTENSIONES =
+  new Set([
+    "pdf",
+    "doc",
+    "docx",
+    "xls",
+    "xlsx",
+    "ppt",
+    "pptx"
+  ])
+
+
+/* ==========================================================
+   UTILIDAD - ID
+   ========================================================== */
+
+const normalizarIdDocumento =
+  (
+    valor,
+    mensaje
+  ) => {
+
+    const numero =
+      Number(
+        valor
+      )
+
+
+    if (
+      !Number.isInteger(
+        numero
+      ) ||
+      numero <=
+        0
+    ) {
+
+      throw new Error(
+        mensaje
+      )
+    }
+
+
+    return numero
+  }
+
+
+/* ==========================================================
+   UTILIDAD - EXTENSION
+   ========================================================== */
+
+const obtenerExtensionDocumento =
+  (
+    nombre
+  ) => {
+
+    const texto =
+      String(
+        nombre ||
+        ""
+      )
+
+
+    const partes =
+      texto.split(".")
+
+
+    if (
+      partes.length <
+      2
+    ) {
+
+      return ""
+    }
+
+
+    return String(
+      partes.pop() ||
+      ""
+    )
+      .trim()
+      .toLowerCase()
+  }
+
+
+/* ==========================================================
+   LISTAR DOCUMENTOS DEL CURSO
+   ========================================================== */
+
+/**
+ * Ejemplos:
+ *
+ * listarDocumentosCurso(1)
+ *
+ * listarDocumentosCurso(
+ *   1,
+ *   3
+ * )
+ *
+ *
+ * Si moduloId es null:
+ * devuelve todos los documentos
+ * que el usuario tiene permitido ver.
+ *
+ *
+ * Si moduloId tiene valor:
+ * filtra por ese módulo.
+ */
+export const listarDocumentosCurso =
+  async (
+    cursoId,
+    moduloId =
+      null
+  ) => {
+
+    const curso =
+      normalizarIdDocumento(
+        cursoId,
+        "Curso no válido"
+      )
+
+
+    const params =
+      {}
+
+
+    if (
+      moduloId !==
+        null &&
+      moduloId !==
+        undefined &&
+      moduloId !==
+        ""
+    ) {
+
+      params.modulo_id =
+        normalizarIdDocumento(
+          moduloId,
+          "Módulo no válido"
+        )
+    }
+
+
+    const response =
+      await api.get(
+        `/course-documents/courses/${encodeURIComponent(
+          String(
+            curso
+          )
+        )}`,
+        {
+          params
+        }
+      )
+
+
+    return response.data
+  }
+
+
+/* ==========================================================
+   SUBIR DOCUMENTO
+   ========================================================== */
+
+/**
+ * Uso:
+ *
+ * subirDocumentoCurso({
+ *   cursoId: 1,
+ *   moduloId: null,
+ *   archivo,
+ *   descripcion: "Material semana 1"
+ * })
+ */
+export const subirDocumentoCurso =
+  async ({
+    cursoId,
+    moduloId =
+      null,
+    archivo,
+    descripcion =
+      ""
+  }) => {
+
+    const curso =
+      normalizarIdDocumento(
+        cursoId,
+        "Curso no válido"
+      )
+
+
+    /* ------------------------------------------------------
+       ARCHIVO
+       ------------------------------------------------------ */
+
+    if (
+      !archivo ||
+      typeof archivo !==
+        "object"
+    ) {
+
+      throw new Error(
+        "Selecciona un archivo"
+      )
+    }
+
+
+    if (
+      typeof archivo.size !==
+        "number" ||
+      archivo.size <=
+        0
+    ) {
+
+      throw new Error(
+        "El archivo está vacío"
+      )
+    }
+
+
+    if (
+      archivo.size >
+      DOCUMENTO_MAX_BYTES
+    ) {
+
+      throw new Error(
+        "El archivo supera el límite máximo de 25 MB"
+      )
+    }
+
+
+    /* ------------------------------------------------------
+       EXTENSION
+       ------------------------------------------------------ */
+
+    const extension =
+      obtenerExtensionDocumento(
+        archivo.name
+      )
+
+
+    if (
+      !DOCUMENTO_EXTENSIONES
+        .has(
+          extension
+        )
+    ) {
+
+      throw new Error(
+        "Formato no permitido. Usa PDF, Word, Excel o PowerPoint"
+      )
+    }
+
+
+    /* ------------------------------------------------------
+       FORM DATA
+       ------------------------------------------------------ */
+
+    const formData =
+      new FormData()
+
+
+    formData.append(
+      "archivo",
+      archivo
+    )
+
+
+    if (
+      moduloId !==
+        null &&
+      moduloId !==
+        undefined &&
+      moduloId !==
+        ""
+    ) {
+
+      const modulo =
+        normalizarIdDocumento(
+          moduloId,
+          "Módulo no válido"
+        )
+
+
+      formData.append(
+        "modulo_id",
+        String(
+          modulo
+        )
+      )
+    }
+
+
+    const descripcionFinal =
+      String(
+        descripcion ||
+        ""
+      )
+        .trim()
+
+
+    if (
+      descripcionFinal
+    ) {
+
+      formData.append(
+        "descripcion",
+        descripcionFinal
+      )
+    }
+
+
+    /*
+     * IMPORTANTE:
+     *
+     * No configuramos manualmente:
+     *
+     * Content-Type: multipart/form-data
+     *
+     * El navegador/Axios agrega automáticamente
+     * el boundary correcto.
+     */
+    const response =
+      await api.post(
+        `/course-documents/courses/${encodeURIComponent(
+          String(
+            curso
+          )
+        )}`,
+        formData
+      )
+
+
+    return response.data
+  }
+
+
+/* ==========================================================
+   OBTENER URL PRIVADA DEL DOCUMENTO
+   ========================================================== */
+
+/**
+ * Solicita al backend una URL firmada
+ * temporal de Supabase Storage.
+ *
+ * El backend vuelve a comprobar
+ * los permisos antes de generarla.
+ */
+export const obtenerUrlDocumento =
+  async (
+    documentoId
+  ) => {
+
+    const documento =
+      normalizarIdDocumento(
+        documentoId,
+        "Documento no válido"
+      )
+
+
+    const response =
+      await api.get(
+        `/course-documents/${encodeURIComponent(
+          String(
+            documento
+          )
+        )}/url`
+      )
+
+
+    return response.data
+  }
+
+
+/* ==========================================================
+   ABRIR DOCUMENTO
+   ========================================================== */
+
+/**
+ * Esta función es auxiliar.
+ *
+ * Primero pide la URL temporal al backend
+ * y luego la abre en una nueva pestaña.
+ *
+ * Para PDF normalmente se mostrará
+ * directamente en el navegador.
+ *
+ * Word / Excel / PowerPoint dependerán
+ * del soporte del navegador.
+ */
+export const abrirDocumentoCurso =
+  async (
+    documentoId
+  ) => {
+
+    const resultado =
+      await obtenerUrlDocumento(
+        documentoId
+      )
+
+
+    const url =
+      String(
+        resultado?.url ||
+        ""
+      )
+
+
+    if (
+      !url
+    ) {
+
+      throw new Error(
+        "No se pudo obtener la URL del documento"
+      )
+    }
+
+
+    window.open(
+      url,
+      "_blank",
+      "noopener,noreferrer"
+    )
+
+
+    return resultado
+  }
+
+
+/* ==========================================================
+   ELIMINAR DOCUMENTO
+   ========================================================== */
+
+/**
+ * ADMIN:
+ * puede eliminar cualquier documento.
+ *
+ * USUARIO:
+ * solamente sus propios documentos,
+ * según las reglas del backend.
+ */
+export const eliminarDocumentoCurso =
+  async (
+    documentoId
+  ) => {
+
+    const documento =
+      normalizarIdDocumento(
+        documentoId,
+        "Documento no válido"
+      )
+
+
+    const response =
+      await api.delete(
+        `/course-documents/${encodeURIComponent(
+          String(
+            documento
+          )
+        )}`
+      )
+
+
+    return response.data
+  }
+
+
+
 /* ==========================================================
    FORMATO DE NUMEROS
    ========================================================== */

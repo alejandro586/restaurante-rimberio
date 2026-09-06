@@ -27,8 +27,24 @@ import Importar from "./pages/Importar"
 import DatosEmpresa from "./pages/DatosEmpresa"
 import Archivos from "./pages/Archivos"
 import Comparar from "./pages/Comparar"
+import DocumentosCurso from "./pages/DocumentosCurso"
 
 import AdminUsuarios from "./pages/AdminUsuarios"
+
+
+/* ==========================================================
+   BIG DATA
+   ========================================================== */
+
+/*
+ * Actualmente Big Data es el curso ID 1.
+ *
+ * Este ID ya fue confirmado en las pruebas reales:
+ *
+ * /api/course-documents/courses/1
+ */
+const BIG_DATA_CURSO_ID =
+  1
 
 
 /* ==========================================================
@@ -36,6 +52,7 @@ import AdminUsuarios from "./pages/AdminUsuarios"
    ========================================================== */
 
 const RUTA_POR_PERMISO = {
+
   "big_data.importar":
     "/big-data/importar",
 
@@ -57,16 +74,26 @@ const RUTA_POR_PERMISO = {
 
 
 /*
- * Orden que utilizaremos para decidir
- * la pagina inicial de un usuario.
+ * Orden utilizado para decidir
+ * la página inicial de un usuario.
+ *
+ * Documentación NO aparece aquí
+ * porque no es un módulo.
  */
 const ORDEN_PERMISOS = [
+
   "big_data.importar",
+
   "big_data.datasets",
+
   "big_data.analisis",
+
   "big_data.comparar",
+
   "big_data.estructura",
+
   "big_data.graficos"
+
 ]
 
 
@@ -74,298 +101,377 @@ const ORDEN_PERMISOS = [
    NORMALIZAR RESPUESTA DE PERMISOS
    ========================================================== */
 
-const obtenerCursosRespuesta = (
-  respuesta
-) => {
+const obtenerCursosRespuesta =
+  (
+    respuesta
+  ) => {
 
-  if (
-    Array.isArray(
-      respuesta?.cursos
-    )
-  ) {
-    return respuesta.cursos
+    if (
+      Array.isArray(
+        respuesta?.cursos
+      )
+    ) {
+
+      return respuesta.cursos
+    }
+
+
+    if (
+      Array.isArray(
+        respuesta?.permisos?.cursos
+      )
+    ) {
+
+      return respuesta.permisos.cursos
+    }
+
+
+    return []
   }
-
-
-  if (
-    Array.isArray(
-      respuesta?.permisos?.cursos
-    )
-  ) {
-    return respuesta.permisos.cursos
-  }
-
-
-  return []
-}
 
 
 /* ==========================================================
    EXTRAER CLAVES DE MODULOS
    ========================================================== */
 
-const obtenerClavesPermisos = (
-  respuesta
-) => {
+const obtenerClavesPermisos =
+  (
+    respuesta
+  ) => {
 
-  const cursos =
-    obtenerCursosRespuesta(
-      respuesta
-    )
-
-
-  const claves =
-    new Set()
+    const cursos =
+      obtenerCursosRespuesta(
+        respuesta
+      )
 
 
-  for (
-    const curso
-    of cursos
-  ) {
+    const claves =
+      new Set()
+
 
     for (
-      const modulo
-      of curso.modulos || []
+      const curso
+      of cursos
     ) {
 
-      if (
-        modulo.clave
+      for (
+        const modulo
+        of curso.modulos || []
       ) {
-        claves.add(
-          modulo.clave
-        )
-      }
 
+        if (
+          modulo.clave
+        ) {
+
+          claves.add(
+            modulo.clave
+          )
+        }
+      }
     }
 
+
+    return claves
   }
 
 
-  return claves
-}
+/* ==========================================================
+   EXTRAER IDS DE CURSOS
+   ========================================================== */
+
+/**
+ * Documentación utiliza permisos
+ * a nivel de curso.
+ *
+ * No depende de:
+ *
+ * big_data.importar
+ * big_data.datasets
+ * etc.
+ */
+const obtenerIdsCursos =
+  (
+    respuesta
+  ) => {
+
+    const cursos =
+      obtenerCursosRespuesta(
+        respuesta
+      )
+
+
+    const ids =
+      new Set()
+
+
+    for (
+      const curso
+      of cursos
+    ) {
+
+      const id =
+        curso?.curso_id ??
+        curso?.id
+
+
+      if (
+        id !==
+          null &&
+        id !==
+          undefined
+      ) {
+
+        ids.add(
+          String(
+            id
+          )
+        )
+      }
+    }
+
+
+    return ids
+  }
 
 
 /* ==========================================================
    RUTA PRIVADA
    ========================================================== */
 
-const Privada = ({
-  rol,
-  permiso,
-  children
-}) => {
+const Privada =
+  ({
+    rol,
+    permiso,
+    cursoId,
+    children
+  }) => {
 
-  const [
-    permisos,
-    setPermisos
-  ] = useState(null)
-
-
-  const [
-    errorPermisos,
-    setErrorPermisos
-  ] = useState(false)
-
-
-  const conectado =
-    isLogged()
-
-
-  const administrador =
-    esAdmin()
-
-
-  const trabajador =
-    esTrabajador()
-
-
-  /* ========================================================
-     COMPROBAR PERMISO DEL MODULO
-     ======================================================== */
-
-  useEffect(() => {
-
-    /*
-     * No necesitamos consultar permisos:
-     *
-     * - si no hay sesion
-     * - si es administrador
-     * - si la ruta no pide permiso
-     */
-    if (
-      !conectado ||
-      administrador ||
-      !permiso
-    ) {
-
-      setPermisos(
-        new Set()
+    const [
+      permisos,
+      setPermisos
+    ] =
+      useState(
+        null
       )
 
-      return
-    }
+
+    const [
+      cursosPermitidos,
+      setCursosPermitidos
+    ] =
+      useState(
+        null
+      )
 
 
-    let activo =
-      true
+    const [
+      errorPermisos,
+      setErrorPermisos
+    ] =
+      useState(
+        false
+      )
 
 
-    const cargar =
-      async () => {
-
-        try {
-
-          setErrorPermisos(
-            false
-          )
+    const conectado =
+      isLogged()
 
 
-          const respuesta =
-            await obtenerMisPermisos()
+    const administrador =
+      esAdmin()
 
 
-          if (
-            !activo
-          ) {
-            return
-          }
+    const trabajador =
+      esTrabajador()
 
 
-          setPermisos(
-            obtenerClavesPermisos(
-              respuesta
-            )
-          )
+    /* ========================================================
+       COMPROBAR PERMISOS
+       ======================================================== */
 
-        } catch (
-          error
+    useEffect(
+      () => {
+
+        /*
+         * Sin sesión:
+         * no realizamos consultas.
+         */
+        if (
+          !conectado
         ) {
-
-          if (
-            !activo
-          ) {
-            return
-          }
-
 
           setPermisos(
             new Set()
           )
 
 
-          setErrorPermisos(
-            true
+          setCursosPermitidos(
+            new Set()
           )
+
+
+          return
         }
 
-      }
+
+        /*
+         * El administrador tiene acceso
+         * completo.
+         */
+        if (
+          administrador
+        ) {
+
+          setPermisos(
+            new Set()
+          )
 
 
-    cargar()
+          setCursosPermitidos(
+            new Set()
+          )
 
 
-    return () => {
-      activo =
-        false
-    }
-
-  }, [
-    conectado,
-    administrador,
-    permiso
-  ])
+          return
+        }
 
 
-  /* ========================================================
-     SIN SESION
-     ======================================================== */
+        /*
+         * Si esta ruta no requiere
+         * permiso de módulo ni de curso,
+         * no necesitamos consultar nada.
+         */
+        if (
+          !permiso &&
+          !cursoId
+        ) {
 
-  if (
-    !conectado
-  ) {
+          setPermisos(
+            new Set()
+          )
 
-    return (
-      <Navigate
-        to="/login"
-        replace
-      />
+
+          setCursosPermitidos(
+            new Set()
+          )
+
+
+          return
+        }
+
+
+        let activo =
+          true
+
+
+        const cargar =
+          async () => {
+
+            try {
+
+              setErrorPermisos(
+                false
+              )
+
+
+              const respuesta =
+                await obtenerMisPermisos()
+
+
+              if (
+                !activo
+              ) {
+
+                return
+              }
+
+
+              setPermisos(
+                obtenerClavesPermisos(
+                  respuesta
+                )
+              )
+
+
+              setCursosPermitidos(
+                obtenerIdsCursos(
+                  respuesta
+                )
+              )
+
+            } catch (
+              error
+            ) {
+
+              if (
+                !activo
+              ) {
+
+                return
+              }
+
+
+              setPermisos(
+                new Set()
+              )
+
+
+              setCursosPermitidos(
+                new Set()
+              )
+
+
+              setErrorPermisos(
+                true
+              )
+            }
+          }
+
+
+        cargar()
+
+
+        return () => {
+
+          activo =
+            false
+        }
+
+      },
+      [
+        conectado,
+        administrador,
+        permiso,
+        cursoId
+      ]
     )
 
-  }
 
-
-  /* ========================================================
-     RUTA SOLO ADMIN
-     ======================================================== */
-
-  if (
-    rol ===
-      "admin" &&
-    !administrador
-  ) {
-
-    return (
-      <Navigate
-        to="/"
-        replace
-      />
-    )
-
-  }
-
-
-  /* ========================================================
-     RUTA DE USUARIO
-     ======================================================== */
-
-  if (
-    rol ===
-      "trabajador" &&
-    !trabajador
-  ) {
-
-    return (
-      <Navigate
-        to="/"
-        replace
-      />
-    )
-
-  }
-
-
-  /* ========================================================
-     ADMIN NO NECESITA PERMISO INDIVIDUAL
-     ======================================================== */
-
-  if (
-    permiso &&
-    !administrador
-  ) {
+    /* ========================================================
+       SIN SESION
+       ======================================================== */
 
     if (
-      permisos ===
-      null
+      !conectado
     ) {
 
       return (
-        <Layout>
-
-          <div className="loading">
-            Comprobando permiso...
-          </div>
-
-        </Layout>
+        <Navigate
+          to="/login"
+          replace
+        />
       )
-
     }
 
 
+    /* ========================================================
+       RUTA SOLO ADMIN
+       ======================================================== */
+
     if (
-      errorPermisos ||
-      !permisos.has(
-        permiso
-      )
+      rol ===
+        "admin" &&
+      !administrador
     ) {
 
       return (
@@ -374,53 +480,152 @@ const Privada = ({
           replace
         />
       )
-
     }
 
+
+    /* ========================================================
+       RUTA SOLO TRABAJADOR
+       ======================================================== */
+
+    if (
+      rol ===
+        "trabajador" &&
+      !trabajador
+    ) {
+
+      return (
+        <Navigate
+          to="/"
+          replace
+        />
+      )
+    }
+
+
+    /* ========================================================
+       COMPROBAR PERMISO DE MODULO
+       ======================================================== */
+
+    if (
+      permiso &&
+      !administrador
+    ) {
+
+      if (
+        permisos ===
+        null
+      ) {
+
+        return (
+          <Layout>
+
+            <div className="loading">
+              Comprobando permiso...
+            </div>
+
+          </Layout>
+        )
+      }
+
+
+      if (
+        errorPermisos ||
+        !permisos.has(
+          permiso
+        )
+      ) {
+
+        return (
+          <Navigate
+            to="/"
+            replace
+          />
+        )
+      }
+    }
+
+
+    /* ========================================================
+       COMPROBAR PERMISO DEL CURSO
+       ======================================================== */
+
+    if (
+      cursoId &&
+      !administrador
+    ) {
+
+      if (
+        cursosPermitidos ===
+        null
+      ) {
+
+        return (
+          <Layout>
+
+            <div className="loading">
+              Comprobando acceso al curso...
+            </div>
+
+          </Layout>
+        )
+      }
+
+
+      if (
+        errorPermisos ||
+        !cursosPermitidos.has(
+          String(
+            cursoId
+          )
+        )
+      ) {
+
+        return (
+          <Navigate
+            to="/"
+            replace
+          />
+        )
+      }
+    }
+
+
+    /* ========================================================
+       ACCESO PERMITIDO
+       ======================================================== */
+
+    return (
+      <Layout>
+        {children}
+      </Layout>
+    )
   }
-
-
-  /* ========================================================
-     ACCESO PERMITIDO
-     ======================================================== */
-
-  return (
-    <Layout>
-      {children}
-    </Layout>
-  )
-}
 
 
 /* ==========================================================
    RUTA PUBLICA
    ========================================================== */
 
-const Publica = ({
-  children
-}) => {
+const Publica =
+  ({
+    children
+  }) => {
 
-  /*
-   * Si ya existe sesión activa,
-   * no necesitamos mostrar Login,
-   * Registro o Recuperación.
-   */
-  if (
-    isLogged()
-  ) {
+    if (
+      isLogged()
+    ) {
 
-    return (
-      <Navigate
-        to="/"
-        replace
-      />
-    )
+      return (
+        <Navigate
+          to="/"
+          replace
+        />
+      )
+    }
 
+
+    return children
   }
-
-
-  return children
-}
 
 
 /* ==========================================================
@@ -433,152 +638,185 @@ const InicioPrivado =
     const [
       cargando,
       setCargando
-    ] = useState(true)
+    ] =
+      useState(
+        true
+      )
 
 
     const [
       ruta,
       setRuta
-    ] = useState("")
+    ] =
+      useState(
+        ""
+      )
 
 
     /* ========================================================
        BUSCAR PRIMER MODULO DISPONIBLE
        ======================================================== */
 
-    useEffect(() => {
+    useEffect(
+      () => {
 
-      if (
-        !isLogged()
-      ) {
+        if (
+          !isLogged()
+        ) {
 
-        setCargando(
-          false
-        )
+          setCargando(
+            false
+          )
 
-        return
-      }
-
-
-      /*
-       * El administrador mantiene
-       * su pagina principal actual.
-       */
-      if (
-        esAdmin()
-      ) {
-
-        setRuta(
-          "/archivos"
-        )
-
-
-        setCargando(
-          false
-        )
-
-
-        return
-      }
-
-
-      let activo =
-        true
-
-
-      const cargar =
-        async () => {
-
-          try {
-
-            const respuesta =
-              await obtenerMisPermisos()
-
-
-            if (
-              !activo
-            ) {
-              return
-            }
-
-
-            const claves =
-              obtenerClavesPermisos(
-                respuesta
-              )
-
-
-            const primero =
-              ORDEN_PERMISOS.find(
-                (
-                  clave
-                ) =>
-                  claves.has(
-                    clave
-                  )
-              )
-
-
-            if (
-              primero
-            ) {
-
-              setRuta(
-                RUTA_POR_PERMISO[
-                  primero
-                ]
-              )
-
-            } else {
-
-              setRuta(
-                ""
-              )
-
-            }
-
-          } catch (
-            error
-          ) {
-
-            if (
-              activo
-            ) {
-
-              setRuta(
-                ""
-              )
-
-            }
-
-          } finally {
-
-            if (
-              activo
-            ) {
-
-              setCargando(
-                false
-              )
-
-            }
-
-          }
-
+          return
         }
 
 
-      cargar()
+        /*
+         * El administrador mantiene
+         * su página principal actual.
+         */
+        if (
+          esAdmin()
+        ) {
+
+          setRuta(
+            "/archivos"
+          )
 
 
-      return () => {
+          setCargando(
+            false
+          )
 
-        activo =
-          false
 
-      }
+          return
+        }
 
-    }, [])
+
+        let activo =
+          true
+
+
+        const cargar =
+          async () => {
+
+            try {
+
+              const respuesta =
+                await obtenerMisPermisos()
+
+
+              if (
+                !activo
+              ) {
+
+                return
+              }
+
+
+              const claves =
+                obtenerClavesPermisos(
+                  respuesta
+                )
+
+
+              const primero =
+                ORDEN_PERMISOS.find(
+                  (
+                    clave
+                  ) =>
+                    claves.has(
+                      clave
+                    )
+                )
+
+
+              if (
+                primero
+              ) {
+
+                setRuta(
+                  RUTA_POR_PERMISO[
+                    primero
+                  ]
+                )
+
+              } else {
+
+                /*
+                 * El usuario podría tener
+                 * acceso al curso aunque
+                 * todavía no tenga módulos.
+                 *
+                 * En ese caso puede utilizar
+                 * Documentación.
+                 */
+                const cursos =
+                  obtenerIdsCursos(
+                    respuesta
+                  )
+
+
+                if (
+                  cursos.has(
+                    String(
+                      BIG_DATA_CURSO_ID
+                    )
+                  )
+                ) {
+
+                  setRuta(
+                    "/big-data/documentos"
+                  )
+
+                } else {
+
+                  setRuta(
+                    ""
+                  )
+                }
+              }
+
+            } catch (
+              error
+            ) {
+
+              if (
+                activo
+              ) {
+
+                setRuta(
+                  ""
+                )
+              }
+
+            } finally {
+
+              if (
+                activo
+              ) {
+
+                setCargando(
+                  false
+                )
+              }
+            }
+          }
+
+
+        cargar()
+
+
+        return () => {
+
+          activo =
+            false
+        }
+
+      },
+      []
+    )
 
 
     /* ========================================================
@@ -595,7 +833,6 @@ const InicioPrivado =
           replace
         />
       )
-
     }
 
 
@@ -616,12 +853,11 @@ const InicioPrivado =
 
         </Layout>
       )
-
     }
 
 
     /* ========================================================
-       TIENE MODULOS
+       TIENE ACCESO
        ======================================================== */
 
     if (
@@ -636,12 +872,11 @@ const InicioPrivado =
           replace
         />
       )
-
     }
 
 
     /* ========================================================
-       SIN MODULOS
+       SIN CURSOS / MODULOS
        ======================================================== */
 
     return (
@@ -655,9 +890,9 @@ const InicioPrivado =
               RIMBERIO
             </h1>
 
+
             <p>
-              Sistema de gestión
-              por cursos.
+              Sistema de gestión por cursos.
             </p>
 
           </div>
@@ -678,15 +913,12 @@ const InicioPrivado =
                   8
               }}
             >
-              No tienes módulos
-              habilitados
+              No tienes cursos o módulos habilitados
             </strong>
 
 
             <span>
-              Un administrador debe
-              asignarte al menos un
-              módulo para comenzar.
+              Un administrador debe asignarte acceso para comenzar.
             </span>
 
           </div>
@@ -731,12 +963,6 @@ const App =
       />
 
 
-      {/* ======================================================
-          RECUPERAR CONTRASEÑA
-
-          NO requiere iniciar sesión.
-          ====================================================== */}
-
       <Route
         path="/recuperar-password"
         element={
@@ -746,17 +972,6 @@ const App =
         }
       />
 
-
-      {/* ======================================================
-          RESTABLECER CONTRASEÑA
-
-          Usuario utiliza:
-          - correo
-          - código
-          - contraseña nueva
-
-          NO requiere iniciar sesión.
-          ====================================================== */}
 
       <Route
         path="/restablecer-password"
@@ -781,10 +996,7 @@ const App =
 
 
       {/* ======================================================
-          BIG DATA - IMPORTAR
-
-          Reutiliza:
-          Importar.jsx
+          BIG DATA - IMPORTAR DATOS
           ====================================================== */}
 
       <Route
@@ -804,9 +1016,6 @@ const App =
 
       {/* ======================================================
           BIG DATA - DATASETS
-
-          Reutiliza:
-          Archivos.jsx
           ====================================================== */}
 
       <Route
@@ -826,9 +1035,6 @@ const App =
 
       {/* ======================================================
           BIG DATA - ANALISIS
-
-          Reutiliza:
-          Comparar.jsx
           ====================================================== */}
 
       <Route
@@ -850,9 +1056,6 @@ const App =
 
       {/* ======================================================
           BIG DATA - COMPARACION
-
-          Reutiliza:
-          Comparar.jsx
           ====================================================== */}
 
       <Route
@@ -874,9 +1077,6 @@ const App =
 
       {/* ======================================================
           BIG DATA - ESTRUCTURA
-
-          Reutiliza:
-          DatosEmpresa.jsx
           ====================================================== */}
 
       <Route
@@ -896,9 +1096,6 @@ const App =
 
       {/* ======================================================
           BIG DATA - GRAFICOS
-
-          Reutiliza:
-          Comparar.jsx
           ====================================================== */}
 
       <Route
@@ -911,6 +1108,37 @@ const App =
 
             <Comparar
               modo="graficos"
+            />
+
+          </Privada>
+        }
+      />
+
+
+      {/* ======================================================
+          BIG DATA - DOCUMENTACION
+
+          IMPORTANTE:
+
+          NO es un séptimo módulo.
+
+          Se protege mediante el acceso
+          al curso Big Data.
+          ====================================================== */}
+
+      <Route
+        path="/big-data/documentos"
+        element={
+          <Privada
+            cursoId={
+              BIG_DATA_CURSO_ID
+            }
+          >
+
+            <DocumentosCurso
+              cursoId={
+                BIG_DATA_CURSO_ID
+              }
             />
 
           </Privada>
@@ -966,9 +1194,6 @@ const App =
 
       {/* ======================================================
           RUTAS ANTIGUAS
-
-          Las conservamos como redireccion
-          para no romper enlaces anteriores.
           ====================================================== */}
 
       <Route

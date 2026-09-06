@@ -6,548 +6,1017 @@ import {
 
 import {
   NavLink,
+  useLocation,
   useNavigate
 } from "react-router-dom"
 
 import {
   clearSession,
-  esAdmin,
-  getEmpresa,
-  getInitials,
-  getMessage,
   getUserName,
+  getInitials,
+  getRol,
+  getEmpresa,
+  esAdmin,
   obtenerMisPermisos
 } from "../api"
 
-import Confirm from "./Confirm"
+import Confirm
+  from "./Confirm"
 
 
 /* ==========================================================
-   RUTAS REALES DE LOS MODULOS
+   CONFIGURACION
    ========================================================== */
 
-/*
- * NO creamos nuevas paginas.
- *
- * Cada modulo apunta a un componente
- * que YA existe en RIMBERIO.
- */
-const RUTAS_MODULOS = {
-  "big_data.importar": "/big-data/importar",
-  "big_data.datasets": "/big-data/datasets",
-  "big_data.analisis": "/big-data/analisis",
-  "big_data.comparar": "/big-data/comparar",
-  "big_data.estructura": "/big-data/estructura",
-  "big_data.graficos": "/big-data/graficos"
-}
+const BIG_DATA_CURSO_ID =
+  1
 
 
-/* ==========================================================
-   MENU DEL ADMINISTRADOR
-   ========================================================== */
+const MODULOS_BIG_DATA = [
 
-const MENU_ADMIN = [
   {
-    to: "/archivos",
-    label: "Archivos cargados"
+    clave:
+      "big_data.importar",
+
+    to:
+      "/big-data/importar",
+
+    label:
+      "Importar datos"
   },
+
   {
-    to: "/comparar",
-    label: "Comparar restaurantes"
+    clave:
+      "big_data.datasets",
+
+    to:
+      "/big-data/datasets",
+
+    label:
+      "Datasets"
   },
+
   {
-    to: "/administracion/usuarios",
-    label: "Administración de usuarios"
+    clave:
+      "big_data.analisis",
+
+    to:
+      "/big-data/analisis",
+
+    label:
+      "Análisis"
+  },
+
+  {
+    clave:
+      "big_data.comparar",
+
+    to:
+      "/big-data/comparar",
+
+    label:
+      "Comparación"
+  },
+
+  {
+    clave:
+      "big_data.estructura",
+
+    to:
+      "/big-data/estructura",
+
+    label:
+      "Estructura de datos"
+  },
+
+  {
+    clave:
+      "big_data.graficos",
+
+    to:
+      "/big-data/graficos",
+
+    label:
+      "Gráficos"
   }
+
 ]
 
 
 /* ==========================================================
-   NORMALIZAR RESPUESTA
+   NORMALIZAR CURSOS
    ========================================================== */
 
-const obtenerCursos = (respuesta) => {
-  if (
-    Array.isArray(
-      respuesta?.cursos
-    )
-  ) {
-    return respuesta.cursos
+const obtenerCursosRespuesta =
+  (
+    respuesta
+  ) => {
+
+    if (
+      Array.isArray(
+        respuesta?.cursos
+      )
+    ) {
+
+      return respuesta.cursos
+    }
+
+
+    if (
+      Array.isArray(
+        respuesta?.permisos?.cursos
+      )
+    ) {
+
+      return respuesta.permisos.cursos
+    }
+
+
+    return []
   }
-
-
-  if (
-    Array.isArray(
-      respuesta?.permisos?.cursos
-    )
-  ) {
-    return respuesta.permisos.cursos
-  }
-
-
-  return []
-}
 
 
 /* ==========================================================
-   COMPONENTE
+   EXTRAER CURSOS Y MODULOS PERMITIDOS
    ========================================================== */
 
-const Layout = ({
-  children
-}) => {
+const normalizarPermisos =
+  (
+    respuesta
+  ) => {
 
-  const navigate =
-    useNavigate()
-
-
-  const [
-    asking,
-    setAsking
-  ] = useState(false)
+    const cursosRespuesta =
+      obtenerCursosRespuesta(
+        respuesta
+      )
 
 
-  const [
-    cursos,
-    setCursos
-  ] = useState([])
+    const cursos =
+      new Set()
 
 
-  const [
-    cargando,
-    setCargando
-  ] = useState(
-    !esAdmin()
-  )
+    const modulos =
+      new Set()
 
 
-  const [
-    error,
-    setError
-  ] = useState("")
+    for (
+      const curso
+      of cursosRespuesta
+    ) {
+
+      const cursoId =
+        curso?.curso_id ??
+        curso?.id
 
 
-  /* ========================================================
-     CARGAR PERMISOS
-     ======================================================== */
+      if (
+        cursoId !==
+          null &&
+        cursoId !==
+          undefined
+      ) {
 
-  useEffect(() => {
-    if (esAdmin()) {
-      setCargando(false)
-      return
-    }
-
-
-    let activo = true
-
-
-    const cargar = async () => {
-      setCargando(true)
-      setError("")
-
-
-      try {
-        const respuesta =
-          await obtenerMisPermisos()
-
-
-        if (!activo) {
-          return
-        }
-
-
-        setCursos(
-          obtenerCursos(
-            respuesta
+        cursos.add(
+          String(
+            cursoId
           )
         )
-
-      } catch (error) {
-        if (!activo) {
-          return
-        }
-
-
-        setCursos([])
-
-        setError(
-          getMessage(error)
-        )
-
-      } finally {
-        if (activo) {
-          setCargando(false)
-        }
       }
-    }
 
 
-    cargar()
-
-
-    return () => {
-      activo = false
-    }
-  }, [])
-
-
-  /* ========================================================
-     ORDENAR CURSOS Y MODULOS
-     ======================================================== */
-
-  const cursosOrdenados =
-    useMemo(() => {
-
-      return [...cursos]
-        .sort(
-          (a, b) =>
-            Number(a.orden || 0) -
-            Number(b.orden || 0)
+      const listaModulos =
+        Array.isArray(
+          curso?.modulos
         )
-        .map(
-          (curso) => ({
-            ...curso,
-
-            modulos: [
-              ...(curso.modulos || [])
-            ].sort(
-              (a, b) =>
-                Number(a.orden || 0) -
-                Number(b.orden || 0)
+          ? curso.modulos
+          : Array.isArray(
+              curso?.modules
             )
-          })
-        )
-
-    }, [
-      cursos
-    ])
+            ? curso.modules
+            : []
 
 
-  /* ========================================================
-     LOGOUT
-     ======================================================== */
+      for (
+        const modulo
+        of listaModulos
+      ) {
 
-  const logout = () => {
-    clearSession()
+        if (
+          modulo?.activo ===
+          false
+        ) {
 
-    navigate(
-      "/login",
-      {
-        replace: true
+          continue
+        }
+
+
+        if (
+          modulo?.clave
+        ) {
+
+          modulos.add(
+            String(
+              modulo.clave
+            )
+          )
+        }
       }
-    )
+    }
+
+
+    /*
+     * Compatibilidad por si el backend
+     * devuelve módulos separados.
+     */
+    const modulosSeparados =
+      Array.isArray(
+        respuesta?.modulos
+      )
+        ? respuesta.modulos
+        : Array.isArray(
+            respuesta?.permisos?.modulos
+          )
+          ? respuesta.permisos.modulos
+          : []
+
+
+    for (
+      const modulo
+      of modulosSeparados
+    ) {
+
+      if (
+        modulo?.activo ===
+        false
+      ) {
+
+        continue
+      }
+
+
+      if (
+        modulo?.clave
+      ) {
+
+        modulos.add(
+          String(
+            modulo.clave
+          )
+        )
+      }
+
+
+      if (
+        modulo?.curso_id
+      ) {
+
+        cursos.add(
+          String(
+            modulo.curso_id
+          )
+        )
+      }
+    }
+
+
+    return {
+      cursos,
+      modulos
+    }
   }
 
 
-  return (
-    <div className="layout">
+/* ==========================================================
+   COMPONENTE DEL MENU
+   ========================================================== */
 
-      {/* ====================================================
-          SIDEBAR
-          ==================================================== */}
+const EnlaceMenu =
+  ({
+    to,
+    children
+  }) => (
 
-      <aside className="sidebar">
+    <NavLink
+      to={
+        to
+      }
+      end={
+        false
+      }
+    >
+      {children}
+    </NavLink>
 
-        {/* ==================================================
-            LOGO
-            ================================================== */}
-
-        <div className="sidebar-brand">
-          <img
-            src="/icono.png"
-            alt="RIMBERIO"
-            className="brand-logo"
-          />
-
-          <span>
-            RIMBERIO
-          </span>
-        </div>
+  )
 
 
-        {/* ==================================================
-            ADMINISTRADOR
-            ================================================== */}
+/* ==========================================================
+   LAYOUT
+   ========================================================== */
 
-        {esAdmin() ? (
+const Layout =
+  ({
+    children
+  }) => {
 
-          <nav
-            className="sidebar-nav"
-            aria-label="Navegación principal"
-          >
-            {MENU_ADMIN.map(
-              (enlace) => (
-                <NavLink
-                  key={enlace.to}
-                  to={enlace.to}
-                  className={({
-                    isActive
-                  }) =>
-                    isActive
-                      ? "active"
-                      : ""
-                  }
-                >
-                  {enlace.label}
-                </NavLink>
-              )
-            )}
-          </nav>
-
-        ) : (
-
-          /* ==================================================
-             USUARIO
-             ================================================== */
-
-          <nav
-            className="sidebar-nav"
-            aria-label="Cursos y módulos"
-          >
-
-            {cargando && (
-              <div
-                style={{
-                  padding: "12px",
-                  fontSize: 13,
-                  opacity: 0.7
-                }}
-              >
-                Cargando permisos...
-              </div>
-            )}
+    const navigate =
+      useNavigate()
 
 
-            {!cargando &&
-              error && (
-                <div
-                  style={{
-                    padding: "12px",
-                    fontSize: 13
-                  }}
-                >
-                  No se pudieron cargar
-                  tus permisos.
-                </div>
-              )}
+    const location =
+      useLocation()
 
 
-            {!cargando &&
-              !error &&
-              cursosOrdenados.length ===
-                0 && (
-                <div
-                  style={{
-                    padding: "12px",
-                    fontSize: 13,
-                    lineHeight: 1.5
-                  }}
-                >
-                  No tienes cursos
-                  asignados.
-                </div>
-              )}
+    /* ========================================================
+       CONFIRMACION LOGOUT
+       ======================================================== */
+
+    const [
+      asking,
+      setAsking
+    ] =
+      useState(
+        false
+      )
 
 
-            {!cargando &&
-              !error &&
-              cursosOrdenados.map(
-                (curso) => (
-                  <div
-                    key={curso.id}
-                    style={{
-                      marginBottom: 18
-                    }}
-                  >
+    /* ========================================================
+       PERMISOS
+       ======================================================== */
 
-                    {/* ==============================
-                        CURSO
-                        ============================== */}
+    const [
+      permisos,
+      setPermisos
+    ] =
+      useState({
+        cursos:
+          new Set(),
 
-                    <div
-                      style={{
-                        padding:
-                          "8px 13px 7px",
-                        fontSize: 12,
-                        fontWeight: 800,
-                        letterSpacing:
-                          "0.08em",
-                        textTransform:
-                          "uppercase",
-                        opacity: 0.65
-                      }}
-                    >
-                      {curso.nombre}
-                    </div>
+        modulos:
+          new Set()
+      })
 
 
-                    {/* ==============================
-                        SIN MODULOS
-                        ============================== */}
-
-                    {(curso.modulos ||
-                      []).length ===
-                      0 && (
-                      <div
-                        style={{
-                          padding:
-                            "5px 14px",
-                          fontSize: 12,
-                          opacity: 0.55
-                        }}
-                      >
-                        Sin módulos
-                        habilitados
-                      </div>
-                    )}
+    const [
+      cargandoPermisos,
+      setCargandoPermisos
+    ] =
+      useState(
+        true
+      )
 
 
-                    {/* ==============================
-                        MODULOS
-                        ============================== */}
-
-                    {(curso.modulos ||
-                      []).map(
-                      (modulo) => {
-
-                        const ruta =
-                          RUTAS_MODULOS[
-                            modulo.clave
-                          ]
+    const [
+      errorPermisos,
+      setErrorPermisos
+    ] =
+      useState(
+        false
+      )
 
 
-                        /*
-                         * Si existe un permiso pero
-                         * todavía no existe una ruta
-                         * conocida, simplemente no
-                         * mostramos un enlace roto.
-                         */
-                        if (!ruta) {
-                          return null
-                        }
+    const rol =
+      getRol()
 
 
-                        return (
-                          <NavLink
-                            key={
-                              modulo.id
-                            }
-                            to={ruta}
-                            className={({
-                              isActive
-                            }) =>
-                              isActive
-                                ? "active"
-                                : ""
-                            }
-                          >
-                            {modulo.nombre}
-                          </NavLink>
-                        )
-                      }
-                    )}
+    const administrador =
+      esAdmin()
 
-                  </div>
+
+    /* ========================================================
+       CARGAR PERMISOS DEL USUARIO
+       ======================================================== */
+
+    useEffect(
+      () => {
+
+        /*
+         * El administrador no necesita
+         * permisos individuales.
+         */
+        if (
+          administrador
+        ) {
+
+          setPermisos({
+            cursos:
+              new Set([
+                String(
+                  BIG_DATA_CURSO_ID
                 )
-              )}
+              ]),
 
-          </nav>
-        )}
+            modulos:
+              new Set(
+                MODULOS_BIG_DATA.map(
+                  (
+                    modulo
+                  ) =>
+                    modulo.clave
+                )
+              )
+          })
 
 
-        {/* ==================================================
-            PIE DEL SIDEBAR
-            ================================================== */}
+          setCargandoPermisos(
+            false
+          )
 
-        <div className="sidebar-foot">
 
-          <div className="sidebar-user">
+          return
+        }
 
-            <span
-              className="avatar avatar-light"
-            >
-              {getInitials()}
+
+        let activo =
+          true
+
+
+        const cargar =
+          async () => {
+
+            setCargandoPermisos(
+              true
+            )
+
+
+            setErrorPermisos(
+              false
+            )
+
+
+            try {
+
+              const respuesta =
+                await obtenerMisPermisos()
+
+
+              if (
+                !activo
+              ) {
+
+                return
+              }
+
+
+              setPermisos(
+                normalizarPermisos(
+                  respuesta
+                )
+              )
+
+            } catch (
+              error
+            ) {
+
+              if (
+                !activo
+              ) {
+
+                return
+              }
+
+
+              setPermisos({
+                cursos:
+                  new Set(),
+
+                modulos:
+                  new Set()
+              })
+
+
+              setErrorPermisos(
+                true
+              )
+
+            } finally {
+
+              if (
+                activo
+              ) {
+
+                setCargandoPermisos(
+                  false
+                )
+              }
+            }
+          }
+
+
+        cargar()
+
+
+        return () => {
+
+          activo =
+            false
+        }
+
+      },
+      [
+        administrador
+      ]
+    )
+
+
+    /* ========================================================
+       ACCESO A BIG DATA
+       ======================================================== */
+
+    const tieneBigData =
+      administrador ||
+      permisos.cursos.has(
+        String(
+          BIG_DATA_CURSO_ID
+        )
+      )
+
+
+    /* ========================================================
+       MODULOS VISIBLES
+       ======================================================== */
+
+    const modulosVisibles =
+      useMemo(
+        () => {
+
+          if (
+            administrador
+          ) {
+
+            /*
+             * Actualmente conservamos las
+             * rutas administrativas existentes.
+             *
+             * Los módulos normales siguen
+             * mostrándose al trabajador según
+             * sus permisos.
+             */
+            return []
+          }
+
+
+          return MODULOS_BIG_DATA.filter(
+            (
+              modulo
+            ) =>
+              permisos.modulos.has(
+                modulo.clave
+              )
+          )
+
+        },
+        [
+          administrador,
+          permisos
+        ]
+      )
+
+
+    /* ========================================================
+       CERRAR SESION
+       ======================================================== */
+
+    const logout =
+      () => {
+
+        clearSession()
+
+
+        navigate(
+          "/login"
+        )
+      }
+
+
+    /* ========================================================
+       RENDER
+       ======================================================== */
+
+    return (
+
+      <div className="layout">
+
+        {/* ====================================================
+            SIDEBAR
+            ==================================================== */}
+
+        <aside className="sidebar">
+
+          {/* ==================================================
+              MARCA
+              ================================================== */}
+
+          <div className="sidebar-brand">
+
+            <img
+              src="/icono.png"
+              alt="RIMBERIO"
+              className="brand-logo"
+            />
+
+
+            <span>
+              RIMBERIO
             </span>
 
-
-            <div className="sidebar-ident">
-
-              <span className="sidebar-name">
-                {getUserName()}
-              </span>
-
-
-              <span
-                className={
-                  `rol-chip ${
-                    esAdmin()
-                      ? "rol-admin"
-                      : "rol-trabajador"
-                  }`
-                }
-              >
-                {esAdmin()
-                  ? "Administrador"
-                  : "Usuario"}
-              </span>
-
-            </div>
           </div>
 
 
-          <span className="sidebar-empresa">
-            {getEmpresa()}
-          </span>
+          {/* ==================================================
+              NAVEGACION
+              ================================================== */}
+
+          <nav className="sidebar-nav">
+
+            {/* ================================================
+                USUARIO NORMAL
+                ================================================ */}
+
+            {!administrador && (
+
+              <>
+
+                {/* =============================================
+                    CURSO BIG DATA
+                    ============================================= */}
+
+                {tieneBigData && (
+
+                  <div
+                    style={{
+                      margin:
+                        "8px 0 6px",
+
+                      padding:
+                        "0 12px",
+
+                      fontSize:
+                        "11px",
+
+                      fontWeight:
+                        800,
+
+                      letterSpacing:
+                        "0.08em",
+
+                      textTransform:
+                        "uppercase",
+
+                      opacity:
+                        0.65
+                    }}
+                  >
+                    Big Data
+                  </div>
+
+                )}
 
 
-          <button
-            type="button"
-            className="btn btn-logout"
-            onClick={
+                {/* =============================================
+                    MODULOS DEL CURSO
+                    ============================================= */}
+
+                {modulosVisibles.map(
+                  (
+                    modulo
+                  ) => (
+
+                    <EnlaceMenu
+                      key={
+                        modulo.clave
+                      }
+                      to={
+                        modulo.to
+                      }
+                    >
+                      {modulo.label}
+                    </EnlaceMenu>
+
+                  )
+                )}
+
+
+                {/* =============================================
+                    DOCUMENTACION
+
+                    NO es un séptimo módulo.
+                    Solo requiere acceso al curso.
+                    ============================================= */}
+
+                {tieneBigData && (
+
+                  <EnlaceMenu
+                    to="/big-data/documentos"
+                  >
+                    Documentación
+                  </EnlaceMenu>
+
+                )}
+
+
+                {/* =============================================
+                    CARGANDO
+                    ============================================= */}
+
+                {cargandoPermisos && (
+
+                  <div
+                    style={{
+                      padding:
+                        "10px 12px",
+
+                      fontSize:
+                        "12px",
+
+                      opacity:
+                        0.65
+                    }}
+                  >
+                    Cargando accesos...
+                  </div>
+
+                )}
+
+
+                {/* =============================================
+                    ERROR
+                    ============================================= */}
+
+                {!cargandoPermisos &&
+                  errorPermisos && (
+
+                  <div
+                    style={{
+                      padding:
+                        "10px 12px",
+
+                      fontSize:
+                        "12px",
+
+                      lineHeight:
+                        1.4,
+
+                      opacity:
+                        0.75
+                    }}
+                  >
+                    No se pudieron cargar tus permisos.
+                  </div>
+
+                )}
+
+
+                {/* =============================================
+                    SIN ACCESO
+                    ============================================= */}
+
+                {!cargandoPermisos &&
+                  !errorPermisos &&
+                  !tieneBigData && (
+
+                  <div
+                    style={{
+                      padding:
+                        "10px 12px",
+
+                      fontSize:
+                        "12px",
+
+                      lineHeight:
+                        1.4,
+
+                      opacity:
+                        0.7
+                    }}
+                  >
+                    No tienes cursos habilitados.
+                  </div>
+
+                )}
+
+              </>
+
+            )}
+
+
+            {/* ================================================
+                ADMINISTRADOR
+                ================================================ */}
+
+            {administrador && (
+
+              <>
+
+                {/* =============================================
+                    BIG DATA
+                    ============================================= */}
+
+                <div
+                  style={{
+                    margin:
+                      "8px 0 6px",
+
+                    padding:
+                      "0 12px",
+
+                    fontSize:
+                      "11px",
+
+                    fontWeight:
+                      800,
+
+                    letterSpacing:
+                      "0.08em",
+
+                    textTransform:
+                      "uppercase",
+
+                    opacity:
+                      0.65
+                  }}
+                >
+                  Big Data
+                </div>
+
+
+                <EnlaceMenu
+                  to="/archivos"
+                >
+                  Datasets
+                </EnlaceMenu>
+
+
+                <EnlaceMenu
+                  to="/comparar"
+                >
+                  Comparación
+                </EnlaceMenu>
+
+
+                <EnlaceMenu
+                  to="/big-data/documentos"
+                >
+                  Documentación
+                </EnlaceMenu>
+
+
+                {/* =============================================
+                    ADMINISTRACION
+                    ============================================= */}
+
+                <div
+                  style={{
+                    margin:
+                      "18px 0 6px",
+
+                    padding:
+                      "0 12px",
+
+                    fontSize:
+                      "11px",
+
+                    fontWeight:
+                      800,
+
+                    letterSpacing:
+                      "0.08em",
+
+                    textTransform:
+                      "uppercase",
+
+                    opacity:
+                      0.65
+                  }}
+                >
+                  Administración
+                </div>
+
+
+                <EnlaceMenu
+                  to="/administracion/usuarios"
+                >
+                  Usuarios y permisos
+                </EnlaceMenu>
+
+              </>
+
+            )}
+
+          </nav>
+
+
+          {/* ==================================================
+              PIE DEL SIDEBAR
+              ================================================== */}
+
+          <div className="sidebar-foot">
+
+            <div className="sidebar-user">
+
+              <span className="avatar avatar-light">
+                {getInitials()}
+              </span>
+
+
+              <div className="sidebar-ident">
+
+                <span className="sidebar-name">
+                  {getUserName()}
+                </span>
+
+
+                <span
+                  className={
+                    `rol-chip ${
+                      administrador
+                        ? "rol-admin"
+                        : "rol-trabajador"
+                    }`
+                  }
+                >
+
+                  {administrador
+                    ? "Administrador"
+                    : rol ===
+                        "trabajador"
+                      ? "Usuario"
+                      : rol ||
+                        "Usuario"}
+
+                </span>
+
+              </div>
+
+            </div>
+
+
+            <span className="sidebar-empresa">
+              {getEmpresa()}
+            </span>
+
+
+            <button
+              type="button"
+              className="btn btn-logout"
+              onClick={
+                () =>
+                  setAsking(
+                    true
+                  )
+              }
+            >
+              Cerrar sesión
+            </button>
+
+          </div>
+
+        </aside>
+
+
+        {/* ====================================================
+            CONTENIDO
+            ==================================================== */}
+
+        <main
+          className="main"
+          key={
+            location.pathname
+          }
+        >
+          {children}
+        </main>
+
+
+        {/* ====================================================
+            CONFIRMACION LOGOUT
+            ==================================================== */}
+
+        {asking && (
+
+          <Confirm
+            title="Cerrar sesión"
+            message="¿Estás seguro de que deseas cerrar la sesión?"
+            detail="Tendrás que ingresar tus credenciales nuevamente."
+            confirmLabel="Cerrar sesión"
+            danger
+            onCancel={
               () =>
-                setAsking(true)
+                setAsking(
+                  false
+                )
             }
-          >
-            Cerrar sesión
-          </button>
+            onConfirm={
+              logout
+            }
+          />
 
-        </div>
-      </aside>
+        )}
 
+      </div>
 
-      {/* ====================================================
-          CONTENIDO
-          ==================================================== */}
-
-      <main className="main">
-        {children}
-      </main>
-
-
-      {/* ====================================================
-          CONFIRMACION
-          ==================================================== */}
-
-      {asking && (
-        <Confirm
-          title="Cerrar sesión"
-          message="¿Estás seguro de que deseas cerrar la sesión?"
-          detail="Tendrás que ingresar tus credenciales nuevamente."
-          confirmLabel="Cerrar sesión"
-          danger
-          onCancel={
-            () =>
-              setAsking(false)
-          }
-          onConfirm={
-            logout
-          }
-        />
-      )}
-
-    </div>
-  )
-}
+    )
+  }
 
 
 export default Layout
