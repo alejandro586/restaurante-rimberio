@@ -64,10 +64,6 @@ api.interceptors.response.use(
         .toLowerCase()
 
 
-    /* ======================================================
-       TOKEN INVALIDO / SESION EXPIRADA
-       ====================================================== */
-
     if (
       status ===
       401
@@ -90,22 +86,6 @@ api.interceptors.response.use(
     }
 
 
-    /* ======================================================
-       CUENTA DESACTIVADA
-       ====================================================== */
-
-    /*
-     * No cerramos sesión ante cualquier 403.
-     *
-     * Un 403 puede significar también:
-     *
-     * - sin permiso para un módulo
-     * - no es administrador
-     *
-     * Solo cerramos la sesión cuando
-     * el backend indica específicamente
-     * que la cuenta está desactivada.
-     */
     const cuentaDesactivada =
       status ===
         403 &&
@@ -237,8 +217,12 @@ export const getPerfil =
 
 export const getRol =
   () =>
-    getPerfil().role ||
-    ""
+    String(
+      getPerfil().role ||
+      ""
+    )
+      .trim()
+      .toLowerCase()
 
 
 export const esAdmin =
@@ -247,14 +231,27 @@ export const esAdmin =
     "admin"
 
 
+/* ==========================================================
+   USUARIO NORMAL
+   ========================================================== */
+
+export const esUsuario =
+  () =>
+    [
+      "usuario",
+      "trabajador"
+    ].includes(
+      getRol()
+    )
+
+
 /*
- * Se mantiene trabajador temporalmente
- * por compatibilidad con el backend actual.
+ * Alias temporal para componentes antiguos
+ * que todavía importen esTrabajador().
  */
 export const esTrabajador =
   () =>
-    getRol() ===
-    "trabajador"
+    esUsuario()
 
 
 /* ==========================================================
@@ -267,11 +264,6 @@ export const esUsuarioActivo =
       getPerfil()
 
 
-    /*
-     * Si activo todavía no existe
-     * en una sesión antigua,
-     * se considera activo.
-     */
     return (
       perfil.activo !==
       false
@@ -1106,13 +1098,8 @@ export const crearUsuario =
   }
 
 
-  /* ==========================================================
-   ADMINISTRACION - CURSOS Y MODULOS
-   ========================================================== */
-
-
 /* ==========================================================
-   UTILIDAD - ID ADMINISTRATIVO
+   ADMINISTRACION - CURSOS Y MODULOS
    ========================================================== */
 
 const validarIdAdministrativo = (
@@ -1149,22 +1136,6 @@ const validarIdAdministrativo = (
 }
 
 
-/* ==========================================================
-   ADMIN CURSOS - LISTAR CATALOGO COMPLETO
-   ========================================================== */
-
-/**
- * GET
- * /api/admin/courses
- *
- * Devuelve:
- *
- * - cursos activos
- * - cursos desactivados
- * - módulos activos
- * - módulos desactivados
- */
-
 export const listarCatalogoAdminCursos =
   async () => {
 
@@ -1177,20 +1148,6 @@ export const listarCatalogoAdminCursos =
     return response.data
   }
 
-
-/* ==========================================================
-   ADMIN CURSOS - CREAR CURSO
-   ========================================================== */
-
-/**
- * POST
- * /api/admin/courses
- *
- * nombre es obligatorio.
- *
- * slug puede omitirse porque
- * el backend puede generarlo.
- */
 
 export const crearCursoAdmin =
   async ({
@@ -1262,22 +1219,6 @@ export const crearCursoAdmin =
     return response.data
   }
 
-
-/* ==========================================================
-   ADMIN CURSOS - ACTUALIZAR CURSO
-   ========================================================== */
-
-/**
- * PATCH
- * /api/admin/courses/:courseId
- *
- * Campos permitidos:
- *
- * - nombre
- * - slug
- * - descripcion
- * - orden
- */
 
 export const actualizarCursoAdmin =
   async (
@@ -1415,20 +1356,6 @@ export const actualizarCursoAdmin =
   }
 
 
-/* ==========================================================
-   ADMIN CURSOS - CAMBIAR ESTADO
-   ========================================================== */
-
-/**
- * PATCH
- * /api/admin/courses/:courseId/status
- *
- * activo:
- *
- * true  -> activar
- * false -> desactivar
- */
-
 export const cambiarEstadoCursoAdmin =
   async (
     courseId,
@@ -1465,20 +1392,6 @@ export const cambiarEstadoCursoAdmin =
     return response.data
   }
 
-
-/* ==========================================================
-   ADMIN MODULOS - CREAR MODULO
-   ========================================================== */
-
-/**
- * POST
- * /api/admin/courses/:courseId/modules
- *
- * nombre es obligatorio.
- *
- * slug y clave pueden ser generados
- * automáticamente por el backend.
- */
 
 export const crearModuloAdmin =
   async (
@@ -1568,23 +1481,6 @@ export const crearModuloAdmin =
     return response.data
   }
 
-
-/* ==========================================================
-   ADMIN MODULOS - ACTUALIZAR MODULO
-   ========================================================== */
-
-/**
- * PATCH
- * /api/admin/courses/modules/:moduleId
- *
- * Campos permitidos:
- *
- * - nombre
- * - slug
- * - clave
- * - descripcion
- * - orden
- */
 
 export const actualizarModuloAdmin =
   async (
@@ -1739,20 +1635,6 @@ export const actualizarModuloAdmin =
   }
 
 
-/* ==========================================================
-   ADMIN MODULOS - CAMBIAR ESTADO
-   ========================================================== */
-
-/**
- * PATCH
- * /api/admin/courses/modules/:moduleId/status
- *
- * activo:
- *
- * true  -> activar
- * false -> desactivar
- */
-
 export const cambiarEstadoModuloAdmin =
   async (
     moduleId,
@@ -1790,19 +1672,10 @@ export const cambiarEstadoModuloAdmin =
   }
 
 
-
 /* ==========================================================
    RECUPERACION DE CONTRASEÑA - SOLICITAR
    ========================================================== */
 
-/**
- * PUBLICO.
- *
- * El usuario NO necesita iniciar sesión.
- *
- * El backend devuelve una respuesta neutra
- * aunque el correo no exista.
- */
 export const solicitarRecuperacionPassword =
   async (
     email
@@ -1855,22 +1728,6 @@ export const solicitarRecuperacionPassword =
    RECUPERACION DE CONTRASEÑA - COMPLETAR
    ========================================================== */
 
-/**
- * PUBLICO.
- *
- * El usuario todavía NO ha iniciado sesión.
- *
- * Después de que un administrador aprueba
- * la solicitud, RIMBERIO envía automáticamente
- * el código al correo del usuario.
- *
- * Para completar la recuperación necesita:
- *
- * - correo
- * - código recibido por correo
- * - contraseña nueva
- * - confirmación
- */
 export const completarRecuperacionPassword =
   async ({
     email,
@@ -1888,15 +1745,6 @@ export const completarRecuperacionPassword =
         .toLowerCase()
 
 
-    /*
-     * El código se mantiene como STRING.
-     *
-     * Así un código como:
-     *
-     * 012345
-     *
-     * no pierde el cero inicial.
-     */
     const codigoFinal =
       String(
         codigo ||
@@ -1904,11 +1752,6 @@ export const completarRecuperacionPassword =
       ).trim()
 
 
-    /*
-     * IMPORTANTE:
-     *
-     * NO hacemos trim() a las contraseñas.
-     */
     const nuevaPassword =
       String(
         password ??
@@ -2037,10 +1880,6 @@ export const completarRecuperacionPassword =
   }
 
 
-/* ==========================================================
-   RECUPERACION DE CONTRASEÑA - ESTADOS
-   ========================================================== */
-
 const ESTADOS_RECUPERACION_VALIDOS =
   new Set([
     "pendiente",
@@ -2051,23 +1890,6 @@ const ESTADOS_RECUPERACION_VALIDOS =
   ])
 
 
-/* ==========================================================
-   RECUPERACION DE CONTRASEÑA - ADMIN LISTAR
-   ========================================================== */
-
-/**
- * ADMIN.
- *
- * estado es opcional.
- *
- * Ejemplos:
- *
- * listarRecuperacionesPassword()
- *
- * listarRecuperacionesPassword(
- *   "pendiente"
- * )
- */
 export const listarRecuperacionesPassword =
   async (
     estado =
@@ -2114,30 +1936,6 @@ export const listarRecuperacionesPassword =
   }
 
 
-/* ==========================================================
-   RECUPERACION DE CONTRASEÑA - ADMIN APROBAR
-   ========================================================== */
-
-/**
- * ADMIN.
- *
- * El administrador solamente autoriza
- * la recuperación.
- *
- * El administrador NO:
- *
- * - genera el código
- * - escribe el código
- * - ve el código
- * - envía el código manualmente
- *
- * El backend:
- *
- * 1. genera un código temporal;
- * 2. guarda únicamente su hash;
- * 3. envía automáticamente el código
- *    al correo del usuario.
- */
 export const aprobarRecuperacionPassword =
   async (
     solicitudId
@@ -2175,16 +1973,6 @@ export const aprobarRecuperacionPassword =
       )
 
 
-    /*
-     * Protección adicional del frontend.
-     *
-     * El backend actual ya NO devuelve
-     * el código de recuperación.
-     *
-     * Aun así, eliminamos cualquier campo
-     * sensible que pudiera devolver una
-     * versión antigua del backend.
-     */
     if (
       response?.data &&
       typeof response.data ===
@@ -2197,6 +1985,7 @@ export const aprobarRecuperacionPassword =
       delete resultado.codigo
       delete resultado.codigo_hash
       delete resultado.code
+
 
       if (
         resultado.solicitud &&
@@ -2212,6 +2001,7 @@ export const aprobarRecuperacionPassword =
         delete resultado.solicitud.code
       }
 
+
       return resultado
     }
 
@@ -2220,16 +2010,6 @@ export const aprobarRecuperacionPassword =
   }
 
 
-/* ==========================================================
-   RECUPERACION DE CONTRASEÑA - ADMIN RECHAZAR
-   ========================================================== */
-
-/**
- * ADMIN.
- *
- * Si estaba aprobada, rechazarla
- * invalida también el código.
- */
 export const rechazarRecuperacionPassword =
   async (
     solicitudId
@@ -2271,26 +2051,9 @@ export const rechazarRecuperacionPassword =
   }
 
 
-  /* ==========================================================
+/* ==========================================================
    DOCUMENTOS DE CURSOS
    ========================================================== */
-
-/*
- * Backend:
- *
- * GET
- * /api/course-documents/courses/:courseId
- *
- * POST
- * /api/course-documents/courses/:courseId
- *
- * GET
- * /api/course-documents/:documentId/url
- *
- * DELETE
- * /api/course-documents/:documentId
- */
-
 
 const DOCUMENTO_MAX_BYTES =
   25 * 1024 * 1024
@@ -2307,10 +2070,6 @@ const DOCUMENTO_EXTENSIONES =
     "pptx"
   ])
 
-
-/* ==========================================================
-   UTILIDAD - ID
-   ========================================================== */
 
 const normalizarIdDocumento =
   (
@@ -2341,10 +2100,6 @@ const normalizarIdDocumento =
     return numero
   }
 
-
-/* ==========================================================
-   UTILIDAD - EXTENSION
-   ========================================================== */
 
 const obtenerExtensionDocumento =
   (
@@ -2380,29 +2135,6 @@ const obtenerExtensionDocumento =
   }
 
 
-/* ==========================================================
-   LISTAR DOCUMENTOS DEL CURSO
-   ========================================================== */
-
-/**
- * Ejemplos:
- *
- * listarDocumentosCurso(1)
- *
- * listarDocumentosCurso(
- *   1,
- *   3
- * )
- *
- *
- * Si moduloId es null:
- * devuelve todos los documentos
- * que el usuario tiene permitido ver.
- *
- *
- * Si moduloId tiene valor:
- * filtra por ese módulo.
- */
 export const listarDocumentosCurso =
   async (
     cursoId,
@@ -2455,20 +2187,6 @@ export const listarDocumentosCurso =
   }
 
 
-/* ==========================================================
-   SUBIR DOCUMENTO
-   ========================================================== */
-
-/**
- * Uso:
- *
- * subirDocumentoCurso({
- *   cursoId: 1,
- *   moduloId: null,
- *   archivo,
- *   descripcion: "Material semana 1"
- * })
- */
 export const subirDocumentoCurso =
   async ({
     cursoId,
@@ -2485,10 +2203,6 @@ export const subirDocumentoCurso =
         "Curso no válido"
       )
 
-
-    /* ------------------------------------------------------
-       ARCHIVO
-       ------------------------------------------------------ */
 
     if (
       !archivo ||
@@ -2526,10 +2240,6 @@ export const subirDocumentoCurso =
     }
 
 
-    /* ------------------------------------------------------
-       EXTENSION
-       ------------------------------------------------------ */
-
     const extension =
       obtenerExtensionDocumento(
         archivo.name
@@ -2548,10 +2258,6 @@ export const subirDocumentoCurso =
       )
     }
 
-
-    /* ------------------------------------------------------
-       FORM DATA
-       ------------------------------------------------------ */
 
     const formData =
       new FormData()
@@ -2607,16 +2313,6 @@ export const subirDocumentoCurso =
     }
 
 
-    /*
-     * IMPORTANTE:
-     *
-     * No configuramos manualmente:
-     *
-     * Content-Type: multipart/form-data
-     *
-     * El navegador/Axios agrega automáticamente
-     * el boundary correcto.
-     */
     const response =
       await api.post(
         `/course-documents/courses/${encodeURIComponent(
@@ -2632,17 +2328,6 @@ export const subirDocumentoCurso =
   }
 
 
-/* ==========================================================
-   OBTENER URL PRIVADA DEL DOCUMENTO
-   ========================================================== */
-
-/**
- * Solicita al backend una URL firmada
- * temporal de Supabase Storage.
- *
- * El backend vuelve a comprobar
- * los permisos antes de generarla.
- */
 export const obtenerUrlDocumento =
   async (
     documentoId
@@ -2669,22 +2354,6 @@ export const obtenerUrlDocumento =
   }
 
 
-/* ==========================================================
-   ABRIR DOCUMENTO
-   ========================================================== */
-
-/**
- * Esta función es auxiliar.
- *
- * Primero pide la URL temporal al backend
- * y luego la abre en una nueva pestaña.
- *
- * Para PDF normalmente se mostrará
- * directamente en el navegador.
- *
- * Word / Excel / PowerPoint dependerán
- * del soporte del navegador.
- */
 export const abrirDocumentoCurso =
   async (
     documentoId
@@ -2724,18 +2393,6 @@ export const abrirDocumentoCurso =
   }
 
 
-/* ==========================================================
-   ELIMINAR DOCUMENTO
-   ========================================================== */
-
-/**
- * ADMIN:
- * puede eliminar cualquier documento.
- *
- * USUARIO:
- * solamente sus propios documentos,
- * según las reglas del backend.
- */
 export const eliminarDocumentoCurso =
   async (
     documentoId
@@ -2760,7 +2417,6 @@ export const eliminarDocumentoCurso =
 
     return response.data
   }
-
 
 
 /* ==========================================================

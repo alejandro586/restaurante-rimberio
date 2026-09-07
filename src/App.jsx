@@ -250,10 +250,6 @@ const obtenerClavesPermisos = (
     )
 
 
-  /* ========================================================
-     MODULOS DENTRO DE CURSOS
-     ======================================================== */
-
   for (
     const curso
     of cursos
@@ -300,10 +296,6 @@ const obtenerClavesPermisos = (
   }
 
 
-  /* ========================================================
-     MODULOS SEPARADOS
-     ======================================================== */
-
   const modulosSeparados =
     Array.isArray(
       origen?.modulos
@@ -343,10 +335,6 @@ const obtenerClavesPermisos = (
     }
   }
 
-
-  /* ========================================================
-     COMPATIBILIDAD CON ARRAYS DE PERMISOS
-     ======================================================== */
 
   const permisosSeparados =
     Array.isArray(
@@ -494,10 +482,6 @@ const RutaModulo = ({
     useState("")
 
 
-  /* ========================================================
-     CONSULTAR PERMISOS
-     ======================================================== */
-
   useEffect(
     () => {
 
@@ -521,10 +505,6 @@ const RutaModulo = ({
       }
 
 
-      /*
-       * Administrador:
-       * acceso completo.
-       */
       if (
         administrador
       ) {
@@ -642,10 +622,6 @@ const RutaModulo = ({
   )
 
 
-  /* ========================================================
-     SIN SESION
-     ======================================================== */
-
   if (
     !conectado
   ) {
@@ -659,10 +635,6 @@ const RutaModulo = ({
   }
 
 
-  /* ========================================================
-     ADMIN
-     ======================================================== */
-
   if (
     administrador
   ) {
@@ -674,10 +646,6 @@ const RutaModulo = ({
     )
   }
 
-
-  /* ========================================================
-     CARGANDO
-     ======================================================== */
 
   if (
     cargando ||
@@ -695,10 +663,6 @@ const RutaModulo = ({
     )
   }
 
-
-  /* ========================================================
-     ERROR
-     ======================================================== */
 
   if (
     errorPermisos
@@ -732,10 +696,6 @@ const RutaModulo = ({
   }
 
 
-  /* ========================================================
-     SIN PERMISO
-     ======================================================== */
-
   if (
     !permisos.has(
       permiso
@@ -750,10 +710,6 @@ const RutaModulo = ({
     )
   }
 
-
-  /* ========================================================
-     PERMITIDO
-     ======================================================== */
 
   return (
     <Layout>
@@ -843,73 +799,45 @@ const App = () => {
 
     <Routes>
 
-      {/* ====================================================
-          LOGIN
-          ==================================================== */}
-
       <Route
         path="/login"
         element={
           <Publica>
-
             <Login />
-
           </Publica>
         }
       />
 
-
-      {/* ====================================================
-          REGISTRO
-          ==================================================== */}
 
       <Route
         path="/registro"
         element={
           <Publica>
-
             <Register />
-
           </Publica>
         }
       />
 
-
-      {/* ====================================================
-          RECUPERAR CONTRASEÑA
-          ==================================================== */}
 
       <Route
         path="/recuperar-password"
         element={
           <Publica>
-
             <RecuperarPassword />
-
           </Publica>
         }
       />
 
-
-      {/* ====================================================
-          RESTABLECER CONTRASEÑA
-          ==================================================== */}
 
       <Route
         path="/restablecer-password"
         element={
           <Publica>
-
             <RestablecerPassword />
-
           </Publica>
         }
       />
 
-
-      {/* ====================================================
-          INICIO
-          ==================================================== */}
 
       <Route
         path="/"
@@ -919,25 +847,15 @@ const App = () => {
       />
 
 
-      {/* ====================================================
-          MIS CURSOS
-          ==================================================== */}
-
       <Route
         path="/mis-cursos"
         element={
           <PrivadaGeneral>
-
             <MisCursos />
-
           </PrivadaGeneral>
         }
       />
 
-
-      {/* ====================================================
-          BIG DATA - CARGAR ARCHIVOS
-          ==================================================== */}
 
       <Route
         path={
@@ -951,17 +869,11 @@ const App = () => {
                 .importar
             }
           >
-
             <Importar />
-
           </RutaModulo>
         }
       />
 
-
-      {/* ====================================================
-          BIG DATA - DATASETS
-          ==================================================== */}
 
       <Route
         path={
@@ -975,17 +887,11 @@ const App = () => {
                 .datasets
             }
           >
-
             <Archivos />
-
           </RutaModulo>
         }
       />
 
-
-      {/* ====================================================
-          BIG DATA - ANALISIS
-          ==================================================== */}
 
       <Route
         path={
@@ -999,19 +905,13 @@ const App = () => {
                 .analisis
             }
           >
-
             <Comparar
               modo="analisis"
             />
-
           </RutaModulo>
         }
       />
 
-
-      {/* ====================================================
-          BIG DATA - COMPARACION
-          ==================================================== */}
 
       <Route
         path={
@@ -1025,19 +925,13 @@ const App = () => {
                 .comparar
             }
           >
-
             <Comparar
               modo="comparacion"
             />
-
           </RutaModulo>
         }
       />
 
-
-      {/* ====================================================
-          BIG DATA - ESTRUCTURA
-          ==================================================== */}
 
       <Route
         path={
@@ -1051,52 +945,31 @@ const App = () => {
                 .estructura
             }
           >
-
             <DatosEmpresa />
-
           </RutaModulo>
         }
       />
 
 
-      {/* ====================================================
-          ADMINISTRACION - USUARIOS
-          ==================================================== */}
-
       <Route
         path="/administracion/usuarios"
         element={
           <RutaAdmin>
-
             <AdminUsuarios />
-
           </RutaAdmin>
         }
       />
 
-
-      {/* ====================================================
-          ADMINISTRACION - CURSOS Y MODULOS
-          ==================================================== */}
 
       <Route
         path="/administracion/cursos"
         element={
           <RutaAdmin>
-
             <AdminCursos />
-
           </RutaAdmin>
         }
       />
 
-
-      {/* ====================================================
-          RUTAS ANTIGUAS
-          ==================================================== */}
-
-
-      {/* IMPORTAR */}
 
       <Route
         path="/importar"
@@ -1112,8 +985,6 @@ const App = () => {
       />
 
 
-      {/* DATASETS */}
-
       <Route
         path="/archivos"
         element={
@@ -1127,8 +998,6 @@ const App = () => {
         }
       />
 
-
-      {/* ESTRUCTURA */}
 
       <Route
         path="/datos-empresa"
@@ -1144,8 +1013,6 @@ const App = () => {
       />
 
 
-      {/* COMPARACION */}
-
       <Route
         path="/comparar"
         element={
@@ -1159,12 +1026,6 @@ const App = () => {
         }
       />
 
-
-      {/* ====================================================
-          GRAFICOS
-
-          Ahora vive dentro de Datasets.
-          ==================================================== */}
 
       <Route
         path="/big-data/graficos"
@@ -1180,12 +1041,6 @@ const App = () => {
       />
 
 
-      {/* ====================================================
-          DOCUMENTACION
-
-          Ahora vive dentro de Cargar archivos.
-          ==================================================== */}
-
       <Route
         path="/big-data/documentos"
         element={
@@ -1200,10 +1055,6 @@ const App = () => {
       />
 
 
-      {/* ====================================================
-          ALIAS MIS CURSOS
-          ==================================================== */}
-
       <Route
         path="/cursos"
         element={
@@ -1214,10 +1065,6 @@ const App = () => {
         }
       />
 
-
-      {/* ====================================================
-          RUTA DESCONOCIDA
-          ==================================================== */}
 
       <Route
         path="*"
