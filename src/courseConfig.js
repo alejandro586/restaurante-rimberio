@@ -6,10 +6,6 @@
  * Supabase decide qué cursos y módulos puede usar cada usuario.
  * Este archivo solo relaciona la clave de cada módulo con una
  * pantalla real del frontend.
- *
- * Al agregar Reconocimiento Facial solo tendremos que registrar
- * aquí sus nuevas rutas, sin volver a mezclar sus opciones con
- * las de Big Data.
  */
 
 export const CURSOS_APP = {
@@ -19,6 +15,15 @@ export const CURSOS_APP = {
     rutaInicio: "/curso/big-data",
     prefijos: [
       "/big-data"
+    ]
+  },
+
+  "reconocimiento-facial": {
+    slug: "reconocimiento-facial",
+    nombre: "Reconocimiento Facial",
+    rutaInicio: "/curso/reconocimiento-facial",
+    prefijos: [
+      "/reconocimiento-facial"
     ]
   }
 }
@@ -60,14 +65,38 @@ export const MODULOS_APP = {
     icono: "≡"
   },
 
-  /*
-   * Gráficos está integrado en Datasets y por eso no tiene una
-   * ruta independiente dentro del menú.
-   */
   "big_data.graficos": {
     curso: "big-data",
     nombre: "Gráficos",
     ruta: "",
+    icono: "▥"
+  },
+
+  "facial.en_vivo": {
+    curso: "reconocimiento-facial",
+    nombre: "Reconocimiento en vivo",
+    ruta: "/reconocimiento-facial/en-vivo",
+    icono: "◉"
+  },
+
+  "facial.analizar_imagen": {
+    curso: "reconocimiento-facial",
+    nombre: "Analizar imagen",
+    ruta: "/reconocimiento-facial/analizar-imagen",
+    icono: "▧"
+  },
+
+  "facial.historial": {
+    curso: "reconocimiento-facial",
+    nombre: "Historial",
+    ruta: "/reconocimiento-facial/historial",
+    icono: "≣"
+  },
+
+  "facial.estadisticas": {
+    curso: "reconocimiento-facial",
+    nombre: "Estadísticas",
+    ruta: "/reconocimiento-facial/estadisticas",
     icono: "▥"
   }
 }
@@ -143,7 +172,6 @@ export const resolverCursoSlugPorRuta = (
     String(pathname || "")
       .trim()
 
-  /* Página de entrada de cualquier curso. */
   const coincidencia =
     ruta.match(/^\/curso\/([^/]+)/)
 
@@ -157,7 +185,6 @@ export const resolverCursoSlugPorRuta = (
     }
   }
 
-  /* Pantallas internas conocidas. */
   for (const curso of Object.values(CURSOS_APP)) {
     const coincide =
       (curso.prefijos || [])

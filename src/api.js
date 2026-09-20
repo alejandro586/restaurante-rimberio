@@ -2390,6 +2390,80 @@ export const eliminarDocumentoCurso =
 
 
 /* ==========================================================
+   RECONOCIMIENTO FACIAL / WORKFLOW VISUAL
+   ========================================================== */
+
+export const obtenerEstadoReconocimientoFacial =
+  async () => {
+    const response =
+      await api.get(
+        "/facial/status"
+      )
+
+    return response.data
+  }
+
+
+export const analizarRostro =
+  async ({
+    imagenBase64,
+    fuente = "archivo"
+  }) => {
+    const imagen =
+      String(
+        imagenBase64 ||
+        ""
+      ).trim()
+
+    if (!imagen) {
+      throw new Error(
+        "La imagen es obligatoria"
+      )
+    }
+
+    const response =
+      await api.post(
+        "/facial/analyze",
+        {
+          image: imagen,
+          source: fuente
+        }
+      )
+
+    return response.data
+  }
+
+
+export const obtenerHistorialFacial =
+  async ({
+    limite = 100
+  } = {}) => {
+    const response =
+      await api.get(
+        "/facial/history",
+        {
+          params: {
+            limit: limite
+          }
+        }
+      )
+
+    return response.data
+  }
+
+
+export const obtenerEstadisticasFaciales =
+  async () => {
+    const response =
+      await api.get(
+        "/facial/stats"
+      )
+
+    return response.data
+  }
+
+
+/* ==========================================================
    FORMATO DE NUMEROS
    ========================================================== */
 

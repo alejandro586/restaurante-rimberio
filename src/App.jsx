@@ -66,6 +66,23 @@ import DatosEmpresa
 
 
 /* ==========================================================
+   RECONOCIMIENTO FACIAL
+   ========================================================== */
+
+import FacialEnVivo
+  from "./pages/FacialEnVivo"
+
+import FacialAnalizarImagen
+  from "./pages/FacialAnalizarImagen"
+
+import FacialHistorial
+  from "./pages/FacialHistorial"
+
+import FacialEstadisticas
+  from "./pages/FacialEstadisticas"
+
+
+/* ==========================================================
    ADMINISTRACION
    ========================================================== */
 
@@ -99,6 +116,26 @@ const PERMISOS_BIG_DATA = {
 
   graficos:
     "big_data.graficos"
+}
+
+
+/* ==========================================================
+   PERMISOS RECONOCIMIENTO FACIAL
+   ========================================================== */
+
+const PERMISOS_FACIAL = {
+
+  enVivo:
+    "facial.en_vivo",
+
+  analizarImagen:
+    "facial.analizar_imagen",
+
+  historial:
+    "facial.historial",
+
+  estadisticas:
+    "facial.estadisticas"
 }
 
 
@@ -967,6 +1004,77 @@ const App = () => {
           >
             <DatosEmpresa />
           </RutaModulo>
+        }
+      />
+
+
+      <Route
+        path="/reconocimiento-facial/en-vivo"
+        element={
+          <RutaModulo
+            permiso={
+              PERMISOS_FACIAL
+                .enVivo
+            }
+          >
+            <FacialEnVivo />
+          </RutaModulo>
+        }
+      />
+
+
+      <Route
+        path="/reconocimiento-facial/analizar-imagen"
+        element={
+          <RutaModulo
+            permiso={
+              PERMISOS_FACIAL
+                .analizarImagen
+            }
+          >
+            <FacialAnalizarImagen />
+          </RutaModulo>
+        }
+      />
+
+
+      <Route
+        path="/reconocimiento-facial/historial"
+        element={
+          <RutaModulo
+            permiso={
+              PERMISOS_FACIAL
+                .historial
+            }
+          >
+            <FacialHistorial />
+          </RutaModulo>
+        }
+      />
+
+
+      <Route
+        path="/reconocimiento-facial/estadisticas"
+        element={
+          <RutaModulo
+            permiso={
+              PERMISOS_FACIAL
+                .estadisticas
+            }
+          >
+            <FacialEstadisticas />
+          </RutaModulo>
+        }
+      />
+
+
+      <Route
+        path="/reconocimiento-facial"
+        element={
+          <Navigate
+            to="/curso/reconocimiento-facial"
+            replace
+          />
         }
       />
 
