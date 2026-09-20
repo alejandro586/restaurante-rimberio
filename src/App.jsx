@@ -44,6 +44,9 @@ import ActivarCuenta
 import MisCursos
   from "./pages/MisCursos"
 
+import CursoInicio
+  from "./pages/CursoInicio"
+
 
 /* ==========================================================
    BIG DATA
@@ -865,6 +868,16 @@ const App = () => {
 
 
       <Route
+        path="/curso/:curso"
+        element={
+          <PrivadaGeneral>
+            <CursoInicio />
+          </PrivadaGeneral>
+        }
+      />
+
+
+      <Route
         path={
           RUTAS_BIG_DATA
             .importar
@@ -974,6 +987,17 @@ const App = () => {
           <RutaAdmin>
             <AdminCursos />
           </RutaAdmin>
+        }
+      />
+
+
+      <Route
+        path="/big-data"
+        element={
+          <Navigate
+            to="/curso/big-data"
+            replace
+          />
         }
       />
 

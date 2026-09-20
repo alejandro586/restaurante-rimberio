@@ -6,6 +6,7 @@ import {
 
 import {
   NavLink,
+  useLocation,
   useNavigate
 } from "react-router-dom"
 
@@ -19,526 +20,248 @@ import {
   obtenerMisPermisos
 } from "../api"
 
-
-/* ==========================================================
-   MODULOS VISIBLES DE BIG DATA
-   ========================================================== */
-
-const MODULOS_BIG_DATA = [
-  {
-    clave:
-      "big_data.importar",
-
-    nombre:
-      "Cargar archivos",
-
-    ruta:
-      "/big-data/importar",
-
-    icono:
-      "↑"
-  },
-
-  {
-    clave:
-      "big_data.datasets",
-
-    nombre:
-      "Datasets",
-
-    ruta:
-      "/big-data/datasets",
-
-    icono:
-      "▦"
-  },
-
-  {
-    clave:
-      "big_data.analisis",
-
-    nombre:
-      "Análisis",
-
-    ruta:
-      "/big-data/analisis",
-
-    icono:
-      "⌁"
-  },
-
-  {
-    clave:
-      "big_data.comparar",
-
-    nombre:
-      "Comparación",
-
-    ruta:
-      "/big-data/comparar",
-
-    icono:
-      "⇄"
-  },
-
-  {
-    clave:
-      "big_data.estructura",
-
-    nombre:
-      "Estructura de datos",
-
-    ruta:
-      "/big-data/estructura",
-
-    icono:
-      "≡"
-  }
-]
+import {
+  obtenerIconoModulo,
+  obtenerNombreModulo,
+  obtenerRutaModulo,
+  resolverCursoSlugPorRuta
+} from "../courseConfig"
 
 
-/* ==========================================================
-   EXTRAER PERMISOS
-   ========================================================== */
-
-const obtenerClavesPermisos = (
+const obtenerListaCursos = (
   respuesta
 ) => {
-
-  const claves =
-    new Set()
-
-
-  const cursos =
-    Array.isArray(
-      respuesta?.cursos
-    )
-      ? respuesta.cursos
-
-      : Array.isArray(
-          respuesta
-            ?.permisos
-            ?.cursos
-        )
-        ? respuesta
-            .permisos
-            .cursos
-
-        : Array.isArray(
-            respuesta
-              ?.data
-              ?.cursos
-          )
-          ? respuesta
-              .data
-              .cursos
-
-          : []
-
-
-  for (
-    const curso
-    of cursos
-  ) {
-
-    if (
-      curso?.activo ===
-      false
-    ) {
-      continue
-    }
-
-
-    const modulos =
-      Array.isArray(
-        curso?.modulos
-      )
-        ? curso.modulos
-
-        : Array.isArray(
-            curso?.modules
-          )
-          ? curso.modules
-
-          : []
-
-
-    for (
-      const modulo
-      of modulos
-    ) {
-
-      if (
-        modulo?.activo ===
-        false
-      ) {
-        continue
-      }
-
-
-      if (
-        modulo?.clave
-      ) {
-
-        claves.add(
-          String(
-            modulo.clave
-          )
-        )
-      }
-    }
+  if (Array.isArray(respuesta)) {
+    return respuesta
   }
 
-
-  /* ========================================================
-     COMPATIBILIDAD CON RESPUESTAS ANTIGUAS
-     ======================================================== */
-
-  const separados =
-    Array.isArray(
-      respuesta?.modulos
-    )
-      ? respuesta.modulos
-
-      : Array.isArray(
-          respuesta
-            ?.permisos
-            ?.modulos
-        )
-        ? respuesta
-            .permisos
-            .modulos
-
-        : []
-
-
-  for (
-    const modulo
-    of separados
-  ) {
-
-    if (
-      modulo?.activo ===
-      false
-    ) {
-      continue
-    }
-
-
-    if (
-      modulo?.clave
-    ) {
-
-      claves.add(
-        String(
-          modulo.clave
-        )
-      )
-    }
+  if (Array.isArray(respuesta?.cursos)) {
+    return respuesta.cursos
   }
 
+  if (
+    Array.isArray(
+      respuesta?.permisos?.cursos
+    )
+  ) {
+    return respuesta.permisos.cursos
+  }
 
-  return claves
+  if (
+    Array.isArray(
+      respuesta?.data?.cursos
+    )
+  ) {
+    return respuesta.data.cursos
+  }
+
+  return []
 }
 
 
-/* ==========================================================
-   ENLACE
-   ========================================================== */
+const obtenerModulos = (
+  curso
+) =>
+  (Array.isArray(curso?.modulos)
+    ? curso.modulos
+    : Array.isArray(curso?.modules)
+      ? curso.modules
+      : []
+  )
+    .filter(
+      (modulo) =>
+        modulo?.activo !== false
+    )
+    .sort(
+      (a, b) =>
+        Number(a?.orden || 0) -
+        Number(b?.orden || 0)
+    )
+
 
 const EnlaceMenu = ({
   to,
   icono,
   children,
   end = false
-}) => {
-
-  return (
-    <NavLink
-      to={
-        to
-      }
-      end={
-        end
-      }
-      className={
-        ({
-          isActive
-        }) =>
-          isActive
-            ? "active"
-            : ""
-      }
+}) => (
+  <NavLink
+    to={to}
+    end={end}
+    className={({ isActive }) =>
+      isActive ? "active" : ""
+    }
+  >
+    <span
+      aria-hidden="true"
+      style={{
+        width: "22px",
+        minWidth: "22px",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        marginRight: "8px",
+        fontSize: "15px",
+        lineHeight: 1
+      }}
     >
-      <span
-        aria-hidden="true"
-        style={{
-          width:
-            "22px",
+      {icono}
+    </span>
 
-          minWidth:
-            "22px",
+    <span style={{ minWidth: 0 }}>
+      {children}
+    </span>
+  </NavLink>
+)
 
-          display:
-            "inline-flex",
-
-          alignItems:
-            "center",
-
-          justifyContent:
-            "center",
-
-          marginRight:
-            "8px",
-
-          fontSize:
-            "15px",
-
-          lineHeight:
-            1
-        }}
-      >
-        {icono}
-      </span>
-
-
-      <span
-        style={{
-          minWidth:
-            0
-        }}
-      >
-        {children}
-      </span>
-    </NavLink>
-  )
-}
-
-
-/* ==========================================================
-   LAYOUT
-   ========================================================== */
 
 const Layout = ({
   children
 }) => {
-
   const navigate =
     useNavigate()
 
+  const location =
+    useLocation()
 
   const administrador =
     esAdmin()
 
-
   const rol =
     getRol()
 
-
   const [
-    permisos,
-    setPermisos
-  ] =
-    useState(
-      administrador
-        ? new Set(
-            MODULOS_BIG_DATA.map(
-              (
-                modulo
-              ) =>
-                modulo.clave
-            )
-          )
-        : null
-    )
-
+    cursos,
+    setCursos
+  ] = useState([])
 
   const [
     cargandoPermisos,
     setCargandoPermisos
-  ] =
-    useState(
-      !administrador
-    )
-
+  ] = useState(true)
 
   const [
     errorPermisos,
     setErrorPermisos
-  ] =
-    useState(false)
+  ] = useState(false)
 
-
-  /* ========================================================
-     CARGAR PERMISOS
-     ======================================================== */
 
   useEffect(
     () => {
+      let activo = true
 
-      if (
-        administrador
-      ) {
+      const cargar = async () => {
+        setCargandoPermisos(true)
+        setErrorPermisos(false)
 
-        setPermisos(
-          new Set(
-            MODULOS_BIG_DATA.map(
-              (
-                modulo
-              ) =>
-                modulo.clave
-            )
-          )
-        )
+        try {
+          const respuesta =
+            await obtenerMisPermisos()
 
+          if (!activo) {
+            return
+          }
 
-        setCargandoPermisos(
-          false
-        )
-
-
-        setErrorPermisos(
-          false
-        )
-
-
-        return
-      }
-
-
-      let activo =
-        true
-
-
-      const cargar =
-        async () => {
-
-          setCargandoPermisos(
-            true
-          )
-
-
-          setErrorPermisos(
-            false
-          )
-
-
-          try {
-
-            const respuesta =
-              await obtenerMisPermisos()
-
-
-            if (
-              !activo
-            ) {
-              return
-            }
-
-
-            setPermisos(
-              obtenerClavesPermisos(
-                respuesta
+          setCursos(
+            obtenerListaCursos(respuesta)
+              .filter(
+                (curso) =>
+                  curso?.activo !== false
               )
-            )
+          )
 
-          } catch (
+        } catch (error) {
+          if (!activo) {
+            return
+          }
+
+          console.error(
+            "Error cargando permisos del menú:",
             error
-          ) {
+          )
 
-            if (
-              !activo
-            ) {
-              return
-            }
+          setCursos([])
+          setErrorPermisos(true)
 
-
-            setPermisos(
-              new Set()
-            )
-
-
-            setErrorPermisos(
-              true
-            )
-
-          } finally {
-
-            if (
-              activo
-            ) {
-
-              setCargandoPermisos(
-                false
-              )
-            }
+        } finally {
+          if (activo) {
+            setCargandoPermisos(false)
           }
         }
-
+      }
 
       cargar()
 
-
       return () => {
-
-        activo =
-          false
+        activo = false
       }
-
     },
-    [
-      administrador
-    ]
+    [administrador]
   )
 
 
-  /* ========================================================
-     MODULOS VISIBLES
-     ======================================================== */
-
-  const modulosVisibles =
+  const cursoSlugActual =
     useMemo(
-      () => {
-
-        if (
-          administrador
-        ) {
-          return MODULOS_BIG_DATA
-        }
-
-
-        if (
-          !permisos
-        ) {
-          return []
-        }
-
-
-        return MODULOS_BIG_DATA.filter(
-          (
-            modulo
-          ) =>
-            permisos.has(
-              modulo.clave
-            )
-        )
-      },
-      [
-        administrador,
-        permisos
-      ]
+      () =>
+        resolverCursoSlugPorRuta(
+          location.pathname
+        ),
+      [location.pathname]
     )
 
 
-  /* ========================================================
-     ROL VISUAL
-     ======================================================== */
+  const cursoActual =
+    useMemo(
+      () => {
+        if (!cursoSlugActual) {
+          return null
+        }
+
+        return (
+          cursos.find(
+            (curso) =>
+              String(curso?.slug || "") ===
+              String(cursoSlugActual)
+          ) || null
+        )
+      },
+      [cursos, cursoSlugActual]
+    )
+
+
+  const modulosVisibles =
+    useMemo(
+      () =>
+        obtenerModulos(cursoActual)
+          .map(
+            (modulo) => ({
+              ...modulo,
+              ruta:
+                obtenerRutaModulo(
+                  modulo?.clave
+                ),
+              nombreVisual:
+                obtenerNombreModulo(
+                  modulo
+                ),
+              iconoVisual:
+                obtenerIconoModulo(
+                  modulo
+                )
+            })
+          )
+          .filter(
+            (modulo) =>
+              Boolean(modulo.ruta)
+          ),
+      [cursoActual]
+    )
+
 
   const nombreRol =
     administrador
       ? "Administrador"
       : "Usuario"
-
 
   const claseRol =
     administrador
@@ -546,142 +269,73 @@ const Layout = ({
       : "rol-chip rol-trabajador"
 
 
-  /* ========================================================
-     CERRAR SESION
-     ======================================================== */
-
-  const cerrarSesion =
-    () => {
-
-      const confirmado =
-        window.confirm(
-          "¿Deseas cerrar tu sesión en RIMBERIO?"
-        )
-
-
-      if (
-        !confirmado
-      ) {
-        return
-      }
-
-
-      clearSession()
-
-
-      navigate(
-        "/login",
-        {
-          replace:
-            true
-        }
+  const cerrarSesion = () => {
+    const confirmado =
+      window.confirm(
+        "¿Deseas cerrar tu sesión en RIMBERIO?"
       )
+
+    if (!confirmado) {
+      return
     }
 
+    clearSession()
 
-  /* ========================================================
-     RENDER
-     ======================================================== */
+    navigate(
+      "/login",
+      {
+        replace: true
+      }
+    )
+  }
+
 
   return (
     <div className="layout">
-
-      {/* ====================================================
-          SIDEBAR
-          ==================================================== */}
-
       <aside className="sidebar">
-
-        {/* ==================================================
-            LOGO / MARCA
-            ================================================== */}
-
         <div
           className="sidebar-brand"
           role="button"
           tabIndex={0}
-          onClick={
-            () =>
-              navigate(
-                "/mis-cursos"
-              )
+          onClick={() =>
+            navigate("/mis-cursos")
           }
-          onKeyDown={
-            (
-              event
-            ) => {
-
-              if (
-                event.key ===
-                  "Enter" ||
-                event.key ===
-                  " "
-              ) {
-
-                navigate(
-                  "/mis-cursos"
-                )
-              }
+          onKeyDown={(event) => {
+            if (
+              event.key === "Enter" ||
+              event.key === " "
+            ) {
+              navigate("/mis-cursos")
             }
-          }
-          style={{
-            cursor:
-              "pointer"
           }}
+          style={{ cursor: "pointer" }}
         >
-
           <div
             className="brand-logo"
             style={{
-              display:
-                "flex",
-
-              alignItems:
-                "center",
-
-              justifyContent:
-                "center",
-
-              background:
-                "#ffffff",
-
-              color:
-                "#c1541f",
-
-              fontWeight:
-                800,
-
-              fontSize:
-                "17px"
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "#ffffff",
+              color: "#c1541f",
+              fontWeight: 800,
+              fontSize: "17px"
             }}
           >
             R
           </div>
 
-
           <span>
             RIMBERIO
           </span>
-
         </div>
 
 
-        {/* ==================================================
-            NAVEGACION
-            ================================================== */}
-
         <nav className="sidebar-nav">
-
-          {/* =================================================
-              MIS CURSOS
-              ================================================= */}
-
           <div>
-
             <div>
               Inicio
             </div>
-
 
             <EnlaceMenu
               to="/mis-cursos"
@@ -690,128 +344,99 @@ const Layout = ({
             >
               Mis cursos
             </EnlaceMenu>
-
           </div>
 
 
-          {/* =================================================
-              BIG DATA
-              ================================================= */}
-
-          {(administrador ||
-            cargandoPermisos ||
-            errorPermisos ||
-            modulosVisibles.length >
-              0) && (
-
+          {cursoSlugActual && (
             <div>
-
               <div>
-                Big Data
+                {cursoActual?.nombre ||
+                  "Curso"}
               </div>
 
+              <EnlaceMenu
+                to="/mis-cursos"
+                icono="←"
+              >
+                Salir del curso
+              </EnlaceMenu>
 
-              {/* =============================================
-                  CARGANDO
-                  ============================================= */}
 
               {cargandoPermisos && (
-
                 <div
                   style={{
-                    padding:
-                      "9px 12px",
-
+                    padding: "9px 12px",
                     color:
                       "rgba(247,241,230,.58)",
-
-                    fontSize:
-                      "11px"
+                    fontSize: "11px"
                   }}
                 >
-                  Cargando...
+                  Cargando actividades...
                 </div>
-
               )}
 
-
-              {/* =============================================
-                  ERROR
-                  ============================================= */}
 
               {!cargandoPermisos &&
                 errorPermisos && (
-
                 <div
                   style={{
-                    padding:
-                      "9px 12px",
-
+                    padding: "9px 12px",
                     color:
                       "rgba(247,241,230,.58)",
-
-                    fontSize:
-                      "11px",
-
-                    lineHeight:
-                      1.4
+                    fontSize: "11px",
+                    lineHeight: 1.4
                   }}
                 >
-                  No se pudieron cargar los módulos.
+                  No se pudieron cargar las actividades.
                 </div>
-
               )}
 
 
-              {/* =============================================
-                  MODULOS
-                  ============================================= */}
+              {!cargandoPermisos &&
+                !errorPermisos &&
+                cursoActual &&
+                modulosVisibles.length === 0 && (
+                <div
+                  style={{
+                    padding: "9px 12px",
+                    color:
+                      "rgba(247,241,230,.58)",
+                    fontSize: "11px",
+                    lineHeight: 1.4
+                  }}
+                >
+                  No hay actividades disponibles en este curso.
+                </div>
+              )}
+
 
               {!cargandoPermisos &&
                 !errorPermisos &&
                 modulosVisibles.map(
-                  (
-                    modulo
-                  ) => (
-
+                  (modulo) => (
                     <EnlaceMenu
                       key={
+                        modulo.id ||
                         modulo.clave
                       }
-                      to={
-                        modulo.ruta
-                      }
+                      to={modulo.ruta}
                       icono={
-                        modulo.icono
+                        modulo.iconoVisual
                       }
                     >
-                      {modulo.nombre}
+                      {modulo.nombreVisual}
                     </EnlaceMenu>
-
                   )
                 )}
-
             </div>
-
           )}
 
 
-          {/* =================================================
-              ADMINISTRACION
-              ================================================= */}
-
           {administrador && (
-
             <div>
-
               <div>
                 Administración
               </div>
-
-
-              {/* =============================================
-                  USUARIOS Y PERMISOS
-                  ============================================= */}
 
               <EnlaceMenu
                 to="/administracion/usuarios"
@@ -820,103 +445,52 @@ const Layout = ({
                 Usuarios y permisos
               </EnlaceMenu>
 
-
-              {/* =============================================
-                  CURSOS Y MODULOS
-                  ============================================= */}
-
               <EnlaceMenu
                 to="/administracion/cursos"
                 icono="▤"
               >
                 Cursos y módulos
               </EnlaceMenu>
-
             </div>
-
           )}
-
         </nav>
 
 
-        {/* ==================================================
-            PIE DEL SIDEBAR
-            ================================================== */}
-
         <div className="sidebar-foot">
-
-          {/* =================================================
-              USUARIO
-              ================================================= */}
-
           <div className="sidebar-user">
-
             <span className="avatar avatar-light">
               {getInitials()}
             </span>
 
-
             <div className="sidebar-ident">
-
               <span className="sidebar-name">
                 {getUserName()}
               </span>
 
-
-              <span
-                className={
-                  claseRol
-                }
-              >
+              <span className={claseRol}>
                 {nombreRol}
               </span>
-
             </div>
-
           </div>
 
-
-          {/* =================================================
-              EMPRESA
-              ================================================= */}
-
-          <span
-            className="sidebar-empresa"
-            title={
-              getEmpresa()
-            }
-          >
+          <span className="sidebar-empresa">
             {getEmpresa()}
           </span>
-
-
-          {/* =================================================
-              CERRAR SESION
-              ================================================= */}
 
           <button
             type="button"
             className="btn btn-logout"
-            onClick={
-              cerrarSesion
-            }
+            onClick={cerrarSesion}
           >
             Cerrar sesión
           </button>
-
         </div>
-
       </aside>
 
-
-      {/* ====================================================
-          CONTENIDO PRINCIPAL
-          ==================================================== */}
 
       <main className="main">
         {children}
       </main>
-
     </div>
   )
 }

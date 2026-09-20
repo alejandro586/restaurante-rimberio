@@ -287,9 +287,7 @@ export const getEmpresa =
 
 export const inicioSegunRol =
   () =>
-    esAdmin()
-      ? "/archivos"
-      : "/importar"
+    "/mis-cursos"
 
 
 /* ==========================================================
