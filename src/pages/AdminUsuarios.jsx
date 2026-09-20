@@ -535,11 +535,12 @@ const AdminUsuarios = () => {
             full_name:
                 "",
 
-            email:
+            correo_acceso:
                 "",
 
-            password:
+            correo_personal:
                 "",
+
 
             empresa:
                 getEmpresa()
@@ -1076,11 +1077,11 @@ const AdminUsuarios = () => {
                 full_name:
                     "",
 
-                email:
-                    "",
+               correo_acceso:
+                "",
 
-                password:
-                    "",
+            correo_personal:
+                "",
 
                 empresa:
                     empresaActual ===
@@ -1111,20 +1112,23 @@ const AdminUsuarios = () => {
                 ).trim();
 
 
-            const correo =
+         const correoAcceso =
                 String(
-                    nuevoUsuario.email ||
+                    nuevoUsuario.correo_acceso ||
                     ""
                 )
                     .trim()
                     .toLowerCase();
 
 
-            const password =
+            const correoPersonal =
                 String(
-                    nuevoUsuario.password ||
+                    nuevoUsuario.correo_personal ||
                     ""
-                );
+                )
+                    .trim()
+                    .toLowerCase();
+
 
 
             const empresa =
@@ -1144,42 +1148,51 @@ const AdminUsuarios = () => {
             }
 
 
-            if (
-                !correo
+               if (
+                !correoAcceso
             ) {
 
                 return setErrorRegistro(
-                    "Ingresa el correo electrónico."
+                    "Ingresa el correo de acceso."
                 );
             }
 
 
-            const correoValido =
-                /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+            if (
+                !/^[^\s@]+@[^\s@]+\.[^\s@]+$/
                     .test(
-                        correo
-                    );
-
-
-            if (
-                !correoValido
+                        correoAcceso
+                    )
             ) {
 
                 return setErrorRegistro(
-                    "Ingresa un correo electrónico válido."
+                    "Ingresa un correo de acceso válido."
                 );
             }
 
 
             if (
-                password.length <
-                8
+                !correoPersonal
             ) {
 
                 return setErrorRegistro(
-                    "La contraseña debe tener al menos 8 caracteres."
+                    "Ingresa el correo personal del empleado."
                 );
             }
+
+
+            if (
+                !/^[^\s@]+@[^\s@]+\.[^\s@]+$/
+                    .test(
+                        correoPersonal
+                    )
+            ) {
+
+                return setErrorRegistro(
+                    "Ingresa un correo personal válido."
+                );
+            }
+           
 
 
             if (
@@ -1190,52 +1203,45 @@ const AdminUsuarios = () => {
                     "Ingresa la empresa."
                 );
             }
-
-
             setRegistrando(
                 true
             );
 
-
             try {
 
-                const resultado =
+                 const resultado =
                     await crearUsuario({
                         full_name:
                             nombre,
 
-                        email:
-                            correo,
+                        correo_acceso:
+                            correoAcceso,
 
-                        password,
+                        correo_personal:
+                            correoPersonal,
 
                         empresa
                     });
 
-
                 const usuarioCreado =
                     resultado?.usuario;
-
 
                 await cargarUsuarios(
                     usuarioCreado?.id ||
                     null
                 );
 
-
                 setMostrarRegistro(
                     false
                 );
-
-
-                setNuevoUsuario({
+                 setNuevoUsuario({
                     full_name:
                         "",
 
-                    email:
+                    correo_acceso:
                         "",
 
-                    password:
+                    correo_personal:
                         "",
 
                     empresa:
@@ -4149,16 +4155,16 @@ const AdminUsuarios = () => {
                     <div className="field">
 
                         <label>
-                            Correo electrónico
+                            Correo de acceso
                         </label>
 
 
                         <input
                             type="email"
                             value={
-                                nuevoUsuario.email
+                                nuevoUsuario.correo_acceso
                             }
-                            placeholder="juan@correo.com"
+                            placeholder="juan.perez@rimberio.com"
                             disabled={
                                 registrando
                             }
@@ -4167,11 +4173,15 @@ const AdminUsuarios = () => {
                                     setNuevoUsuario({
                                         ...nuevoUsuario,
 
-                                        email:
+                                        correo_acceso:
                                             event.target.value
                                     })
                             }
                         />
+
+                        <span className="muted">
+                            Con este correo iniciará sesión en RIMBERIO.
+                        </span>
 
                     </div>
 
@@ -4179,16 +4189,16 @@ const AdminUsuarios = () => {
                     <div className="field">
 
                         <label>
-                            Contraseña temporal
+                            Correo personal
                         </label>
 
 
                         <input
-                            type="password"
+                            type="email"
                             value={
-                                nuevoUsuario.password
+                                nuevoUsuario.correo_personal
                             }
-                            placeholder="Mínimo 8 caracteres"
+                            placeholder="juan@gmail.com"
                             disabled={
                                 registrando
                             }
@@ -4197,20 +4207,19 @@ const AdminUsuarios = () => {
                                     setNuevoUsuario({
                                         ...nuevoUsuario,
 
-                                        password:
+                                        correo_personal:
                                             event.target.value
                                     })
                             }
                         />
 
-
                         <span className="muted">
-                            El usuario utilizará esta contraseña
-                            para iniciar sesión.
+                            Aquí se enviará el correo de activación,
+                            ya que el empleado aún no tiene acceso
+                            a su correo de RIMBERIO.
                         </span>
 
                     </div>
-
 
                     <div className="field">
 
@@ -4283,10 +4292,11 @@ const AdminUsuarios = () => {
                             }}
                         >
 
-                            La cuenta se crea activa y sin permisos
-                            de cursos. Selecciona al nuevo usuario
-                            en esta misma pantalla y habilita solamente
-                            los módulos que necesite.
+                           Se enviará un correo de activación al usuario
+                           para que elija su propia contraseña. La cuenta
+                           queda sin permisos de cursos: selecciona al
+                           nuevo usuario en esta misma pantalla y habilita
+                           solamente los módulos que necesite.
 
                         </div>
 

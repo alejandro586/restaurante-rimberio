@@ -992,111 +992,37 @@ export const quitarModulo =
 /* ==========================================================
    ADMINISTRACION - REGISTRAR USUARIO
    ========================================================== */
+export const crearUsuario = async ({ full_name, correo_acceso, correo_personal, empresa }) => {
+  const nombre = String(full_name || "").trim()
+  const acceso = String(correo_acceso || "").trim().toLowerCase()
+  const personal = String(correo_personal || "").trim().toLowerCase()
+  const empresaFinal = String(empresa || "").trim()
 
-export const crearUsuario =
-  async ({
-    full_name,
-    email,
-    password,
-    empresa
-  }) => {
-    const nombre =
-      String(
-        full_name ||
-        ""
-      ).trim()
-
-
-    const correo =
-      String(
-        email ||
-        ""
-      )
-        .trim()
-        .toLowerCase()
-
-
-    const empresaFinal =
-      String(
-        empresa ||
-        ""
-      ).trim()
-
-
-    if (
-      !nombre
-    ) {
-      throw new Error(
-        "El nombre completo es obligatorio"
-      )
-    }
-
-
-    if (
-      !correo
-    ) {
-      throw new Error(
-        "El correo es obligatorio"
-      )
-    }
-
-
-    if (
-      !password
-    ) {
-      throw new Error(
-        "La contraseña es obligatoria"
-      )
-    }
-
-
-    if (
-      String(
-        password
-      ).length <
-      8
-    ) {
-      throw new Error(
-        "La contraseña debe tener al menos 8 caracteres"
-      )
-    }
-
-
-    if (
-      !empresaFinal
-    ) {
-      throw new Error(
-        "La empresa es obligatoria"
-      )
-    }
-
-
-    const {
-      data
-    } =
-      await api.post(
-        "/admin/users",
-        {
-          full_name:
-            nombre,
-
-          email:
-            correo,
-
-          password:
-            String(
-              password
-            ),
-
-          empresa:
-            empresaFinal
-        }
-      )
-
-
-    return data
+  if (!nombre) {
+    throw new Error("El nombre completo es obligatorio")
   }
 
+  if (!acceso) {
+    throw new Error("El correo de acceso es obligatorio")
+  }
+
+  if (!personal) {
+    throw new Error("El correo personal es obligatorio")
+  }
+
+  if (!empresaFinal) {
+    throw new Error("La empresa es obligatoria")
+  }
+
+  const { data } = await api.post("/admin/users", {
+    full_name: nombre,
+    correo_acceso: acceso,
+    correo_personal: personal,
+    empresa: empresaFinal
+  })
+
+  return data
+}
 
 /* ==========================================================
    ADMINISTRACION - CURSOS Y MODULOS
@@ -2050,7 +1976,53 @@ export const rechazarRecuperacionPassword =
     return response.data
   }
 
+/* ==========================================================
+   ACTIVACION DE CUENTA - CONSULTAR
+   ========================================================== */
 
+export const obtenerActivacion = async (token) => {
+  const tokenFinal = encodeURIComponent(String(token || "").trim())
+
+  if (!tokenFinal) {
+    throw new Error("Enlace de activación no válido")
+  }
+
+  const response = await api.get(`/activation/${tokenFinal}`)
+  return response.data
+}
+
+/* ==========================================================
+   ACTIVACION DE CUENTA - COMPLETAR
+   ========================================================== */
+
+export const completarActivacionCuenta = async ({
+  token,
+  password,
+  passwordConfirm
+}) => {
+  const tokenFinal = encodeURIComponent(String(token || "").trim())
+  const nuevaPassword = String(password ?? "")
+  const confirmacion = String(passwordConfirm ?? "")
+
+  if (!tokenFinal) {
+    throw new Error("Enlace de activación no válido")
+  }
+
+  if (nuevaPassword.length < 8) {
+    throw new Error("La contraseña debe tener al menos 8 caracteres")
+  }
+
+  if (nuevaPassword !== confirmacion) {
+    throw new Error("Las contraseñas no coinciden")
+  }
+
+  const response = await api.post(`/activation/${tokenFinal}/complete`, {
+    password: nuevaPassword,
+    password_confirm: confirmacion
+  })
+
+  return response.data
+}
 /* ==========================================================
    DOCUMENTOS DE CURSOS
    ========================================================== */

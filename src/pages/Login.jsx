@@ -716,45 +716,22 @@ const Login = () => {
               INGRESAR
               ================================================ */}
 
-          <button
-            type="submit"
-            className="btn btn-block"
-            disabled={
-              loading
-            }
-          >
+         <button
+  type="submit"
+  className="btn btn-block"
+  disabled={
+    loading
+  }
+  style={{
+    marginTop: "16px"
+  }}
+>
+  {loading
+    ? "Ingresando..."
+    : "Ingresar"}
+</button>
 
-            {loading
-              ? "Ingresando..."
-              : "Ingresar"}
-
-          </button>
-
-
-          {/* ================================================
-              REGISTRO
-              ================================================ */}
-
-          <div className="auth-footer">
-
-            ¿No tienes cuenta?
-
-
-            <Link
-              to={
-                obtenerUrlRegistro()
-              }
-            >
-
-              <button
-                type="button"
-              >
-                Regístrate
-              </button>
-
-            </Link>
-
-          </div>
+        
 
         </form>
 

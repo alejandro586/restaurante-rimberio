@@ -18,7 +18,6 @@ import {
 import Layout
   from "./components/Layout"
 
-
 /* ==========================================================
    PAGINAS PUBLICAS
    ========================================================== */
@@ -35,6 +34,8 @@ import RecuperarPassword
 import RestablecerPassword
   from "./pages/RestablecerPassword"
 
+import ActivarCuenta
+  from "./pages/ActivarCuenta"
 
 /* ==========================================================
    PAGINAS GENERALES
@@ -818,6 +819,12 @@ const App = () => {
         }
       />
 
+      <Route
+  path="/activar-cuenta"
+  element={
+    <ActivarCuenta />
+  }
+/>
 
       <Route
         path="/recuperar-password"
