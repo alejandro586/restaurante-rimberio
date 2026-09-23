@@ -11,6 +11,10 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",
     "axios": "^1.7.7",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.3",
+    "express": "^5.2.1",
+    "multer": "^2.4.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.2",
@@ -19,5 +23,17 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
     "vite": "^5.4.8"
-  }
+  },
+  "main": "vite.config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alejandro586/restaurante-rimberio.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/alejandro586/restaurante-rimberio/issues"
+  },
+  "homepage": "https://github.com/alejandro586/restaurante-rimberio#readme"
 }

@@ -1224,4 +1224,15 @@ const App = () => {
 }
 
 
-export default App
+import FaceRecognition from './pages/FaceRecognition';
+
+function App() {
+  return (
+    <div>
+      {/* Aquí tus otros componentes o rutas */}
+      <FaceRecognition />
+    </div>
+  );
+}
+
+export default App;
