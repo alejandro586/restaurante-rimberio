@@ -2495,3 +2495,35 @@ export const miles =
 
 
 export default api
+
+
+// En tu archivo src/api.js del frontend
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+
+// Landmarks
+export const fetchLandmarks = async (blob) => {
+  const formData = new FormData();
+  formData.append('image', blob, 'face.jpg');
+
+  const res = await fetch(`${BACKEND_URL}/api/facial/landmarks`, {
+    method: 'POST',
+    body: formData
+  });
+  if (!res.ok) throw new Error('Error al obtener landmarks');
+  return await res.json();
+};
+
+// Comparación 1:1
+export const fetchCompareFaces = async (blobA, blobB) => {
+  const formData = new FormData();
+  formData.append('imageA', blobA, 'photoA.jpg');
+  formData.append('imageB', blobB, 'photoB.jpg');
+
+  const res = await fetch(`${BACKEND_URL}/api/facial/compare`, {
+    method: 'POST',
+    body: formData
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Error en la comparación');
+  return data;
+};
