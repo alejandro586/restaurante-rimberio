@@ -1,3 +1,4 @@
+
 import {
   useEffect,
   useState
@@ -80,6 +81,13 @@ import FacialHistorial
 
 import FacialEstadisticas
   from "./pages/FacialEstadisticas"
+
+/*
+ * NUEVA PAGINA:
+ * Comparacion facial mediante Azure/backend.
+ */
+import FaceRecognition
+  from "./pages/FaceRecognition"
 
 
 /* ==========================================================
@@ -840,6 +848,10 @@ const App = () => {
 
     <Routes>
 
+      {/* ====================================================
+          LOGIN
+          ==================================================== */}
+
       <Route
         path="/login"
         element={
@@ -850,6 +862,10 @@ const App = () => {
       />
 
 
+      {/* ====================================================
+          REGISTRO
+          ==================================================== */}
+
       <Route
         path="/registro"
         element={
@@ -859,12 +875,22 @@ const App = () => {
         }
       />
 
+
+      {/* ====================================================
+          ACTIVACION DE CUENTA
+          ==================================================== */}
+
       <Route
-  path="/activar-cuenta"
-  element={
-    <ActivarCuenta />
-  }
-/>
+        path="/activar-cuenta"
+        element={
+          <ActivarCuenta />
+        }
+      />
+
+
+      {/* ====================================================
+          RECUPERACION DE CONTRASEÑA
+          ==================================================== */}
 
       <Route
         path="/recuperar-password"
@@ -886,6 +912,10 @@ const App = () => {
       />
 
 
+      {/* ====================================================
+          INICIO
+          ==================================================== */}
+
       <Route
         path="/"
         element={
@@ -893,6 +923,10 @@ const App = () => {
         }
       />
 
+
+      {/* ====================================================
+          MIS CURSOS
+          ==================================================== */}
 
       <Route
         path="/mis-cursos"
@@ -904,6 +938,10 @@ const App = () => {
       />
 
 
+      {/* ====================================================
+          INICIO DE CURSO
+          ==================================================== */}
+
       <Route
         path="/curso/:curso"
         element={
@@ -913,6 +951,10 @@ const App = () => {
         }
       />
 
+
+      {/* ====================================================
+          BIG DATA - IMPORTAR
+          ==================================================== */}
 
       <Route
         path={
@@ -932,6 +974,10 @@ const App = () => {
       />
 
 
+      {/* ====================================================
+          BIG DATA - DATASETS
+          ==================================================== */}
+
       <Route
         path={
           RUTAS_BIG_DATA
@@ -949,6 +995,10 @@ const App = () => {
         }
       />
 
+
+      {/* ====================================================
+          BIG DATA - ANALISIS
+          ==================================================== */}
 
       <Route
         path={
@@ -970,6 +1020,10 @@ const App = () => {
       />
 
 
+      {/* ====================================================
+          BIG DATA - COMPARAR
+          ==================================================== */}
+
       <Route
         path={
           RUTAS_BIG_DATA
@@ -990,6 +1044,10 @@ const App = () => {
       />
 
 
+      {/* ====================================================
+          BIG DATA - ESTRUCTURA
+          ==================================================== */}
+
       <Route
         path={
           RUTAS_BIG_DATA
@@ -1008,6 +1066,10 @@ const App = () => {
       />
 
 
+      {/* ====================================================
+          RECONOCIMIENTO FACIAL - EN VIVO
+          ==================================================== */}
+
       <Route
         path="/reconocimiento-facial/en-vivo"
         element={
@@ -1022,6 +1084,10 @@ const App = () => {
         }
       />
 
+
+      {/* ====================================================
+          RECONOCIMIENTO FACIAL - ANALIZAR IMAGEN
+          ==================================================== */}
 
       <Route
         path="/reconocimiento-facial/analizar-imagen"
@@ -1038,190 +1104,17 @@ const App = () => {
       />
 
 
+      {/* ====================================================
+          RECONOCIMIENTO FACIAL - COMPARAR ROSTROS
+
+          NUEVA RUTA PARA FaceRecognition.jsx
+          ==================================================== */}
+
       <Route
-        path="/reconocimiento-facial/historial"
+        path="/reconocimiento-facial/comparar"
         element={
           <RutaModulo
             permiso={
               PERMISOS_FACIAL
-                .historial
+                .analizarImagen
             }
-          >
-            <FacialHistorial />
-          </RutaModulo>
-        }
-      />
-
-
-      <Route
-        path="/reconocimiento-facial/estadisticas"
-        element={
-          <RutaModulo
-            permiso={
-              PERMISOS_FACIAL
-                .estadisticas
-            }
-          >
-            <FacialEstadisticas />
-          </RutaModulo>
-        }
-      />
-
-
-      <Route
-        path="/reconocimiento-facial"
-        element={
-          <Navigate
-            to="/curso/reconocimiento-facial"
-            replace
-          />
-        }
-      />
-
-
-      <Route
-        path="/administracion/usuarios"
-        element={
-          <RutaAdmin>
-            <AdminUsuarios />
-          </RutaAdmin>
-        }
-      />
-
-
-      <Route
-        path="/administracion/cursos"
-        element={
-          <RutaAdmin>
-            <AdminCursos />
-          </RutaAdmin>
-        }
-      />
-
-
-      <Route
-        path="/big-data"
-        element={
-          <Navigate
-            to="/curso/big-data"
-            replace
-          />
-        }
-      />
-
-
-      <Route
-        path="/importar"
-        element={
-          <Navigate
-            to={
-              RUTAS_BIG_DATA
-                .importar
-            }
-            replace
-          />
-        }
-      />
-
-
-      <Route
-        path="/archivos"
-        element={
-          <Navigate
-            to={
-              RUTAS_BIG_DATA
-                .datasets
-            }
-            replace
-          />
-        }
-      />
-
-
-      <Route
-        path="/datos-empresa"
-        element={
-          <Navigate
-            to={
-              RUTAS_BIG_DATA
-                .estructura
-            }
-            replace
-          />
-        }
-      />
-
-
-      <Route
-        path="/comparar"
-        element={
-          <Navigate
-            to={
-              RUTAS_BIG_DATA
-                .comparar
-            }
-            replace
-          />
-        }
-      />
-
-
-      <Route
-        path="/big-data/graficos"
-        element={
-          <Navigate
-            to={
-              RUTAS_BIG_DATA
-                .datasets
-            }
-            replace
-          />
-        }
-      />
-
-
-      <Route
-        path="/big-data/documentos"
-        element={
-          <Navigate
-            to={
-              RUTAS_BIG_DATA
-                .importar
-            }
-            replace
-          />
-        }
-      />
-
-
-      <Route
-        path="/cursos"
-        element={
-          <Navigate
-            to="/mis-cursos"
-            replace
-          />
-        }
-      />
-
-
-      <Route
-        path="*"
-        element={
-          <Navigate
-            to={
-              isLogged()
-                ? "/mis-cursos"
-                : "/login"
-            }
-            replace
-          />
-        }
-      />
-
-    </Routes>
-  )
-}
-
-
-export default App;
